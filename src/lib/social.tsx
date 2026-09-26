@@ -36,7 +36,7 @@ type SocialApi = {
   myId: number | null;
   friends: FriendInfo[];
   incoming: FriendRequest[];
-  outgoing: number[];
+  outgoing: FriendRequest[];
   notices: SocialNotice[];
   dismiss: (key: string) => void;
   sendRequest: (id: number, username: string) => void;
@@ -86,7 +86,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   const [me, setMe] = useState<User | null>(null);
   const [friends, setFriends] = useState<FriendInfo[]>([]);
   const [incoming, setIncoming] = useState<FriendRequest[]>([]);
-  const [outgoing, setOutgoing] = useState<number[]>([]);
+  const [outgoing, setOutgoing] = useState<FriendRequest[]>([]);
   const [notices, setNotices] = useState<SocialNotice[]>([]);
 
   useEffect(() => {
@@ -108,7 +108,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
       const list = (message.friends as FriendInfo[]) ?? [];
       setFriends([...list].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || a.username.localeCompare(b.username)));
       setIncoming((message.incoming as FriendRequest[]) ?? []);
-      setOutgoing((message.outgoing as number[]) ?? []);
+      setOutgoing((message.outgoing as FriendRequest[]) ?? []);
       return;
     }
 

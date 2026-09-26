@@ -70,7 +70,7 @@ export default function PlayerPage() {
 
   const isMe = user.id === player.id;
   const friend = social.friends.find((item) => item.id === player.id);
-  const isRequested = social.outgoing.includes(player.id);
+  const isRequested = social.outgoing.some((item) => item.id === player.id);
   const hasIncoming = social.incoming.some((item) => item.id === player.id);
 
   async function copyId() {

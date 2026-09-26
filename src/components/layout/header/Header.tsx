@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { useSocial } from "@/lib/social";
+
 import "./header.scss";
 
 const MENU = [
@@ -23,6 +25,18 @@ const MENU = [
     icon: <path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm6 5-3 5 3 5 3-5z" />,
   },
   {
+    href: "/friends",
+    title: "Друзья",
+    icon: (
+      <>
+        <circle cx="9" cy="8" r="3.6" />
+        <path d="M2 20c0-3.6 3.1-6 7-6s7 2.4 7 6z" />
+        <circle cx="17" cy="9" r="2.8" />
+        <path d="M16.5 13.2c3 .3 5.5 2.4 5.5 5.3V20h-4.5c0-2.6-.4-4.9-1-6.8z" />
+      </>
+    ),
+  },
+  {
     href: "/profile",
     title: "Профиль",
     icon: (
@@ -38,6 +52,7 @@ const PAGES_WITHOUT_MENU = ["/register", "/room", "/game", "/auth"];
 
 export default function Header() {
   const pathname = usePathname();
+  const social = useSocial();
 
   const hideMenu = PAGES_WITHOUT_MENU.some((page) => pathname.startsWith(page));
   if (hideMenu) {
@@ -65,6 +80,9 @@ export default function Header() {
                 {item.icon}
               </svg>
               <span>{item.title}</span>
+              {item.href === "/friends" && social.incoming.length > 0 && (
+                <b className="header-badge">{social.incoming.length}</b>
+              )}
             </Link>
           );
         })}

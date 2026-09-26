@@ -62,7 +62,7 @@ function pushState(id) {
     type: "social-state",
     friends: friendsOf(id).map(presence),
     incoming: data.requests.filter((item) => item.to === id).map((item) => ({ id: item.from, username: nameOf(item.from) })),
-    outgoing: data.requests.filter((item) => item.from === id).map((item) => item.to),
+    outgoing: data.requests.filter((item) => item.from === id).map((item) => ({ id: item.to, username: nameOf(item.to) })),
   });
 }
 

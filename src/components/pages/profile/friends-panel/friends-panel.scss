@@ -138,3 +138,17 @@
     border-color: var(--color-line);
   }
 }
+
+.friends-panel-request-link {
+  font-size: 14px;
+  color: var(--color-text);
+
+  b {
+    margin-left: 4px;
+    color: var(--color-red);
+  }
+
+  &:hover {
+    border-color: var(--color-red);
+  }
+}

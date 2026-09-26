@@ -69,6 +69,22 @@
   }
 }
 
+.header-link {
+  position: relative;
+}
+
+.header-badge {
+  min-width: 18px;
+  margin-left: auto;
+  padding: 0 5px;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  color: #ffffff;
+  background: var(--color-red);
+  border-radius: 999px;
+}
+
 .header-link-active {
   color: #ffffff;
   background: linear-gradient(90deg, rgba(190, 20, 30, 0.55), rgba(120, 10, 16, 0.15));
@@ -161,5 +177,14 @@
 
   .app:has(.header) .app-content {
     padding-bottom: calc(var(--mobile-menu-height) + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (max-width: 860px) {
+  .header-badge {
+    position: absolute;
+    top: 2px;
+    right: calc(50% - 22px);
+    margin: 0;
   }
 }
