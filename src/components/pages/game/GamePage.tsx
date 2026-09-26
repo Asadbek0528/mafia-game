@@ -164,6 +164,11 @@ export default function GamePage() {
 
   const { isLive, notify } = useLiveUpdates(!isDemo && hasGame ? WS_PATHS.game(gameId) : null, (data) => {
     const payload = data as { type?: string; message?: ChatMessage; messages?: ChatMessage[] } | null;
+    if (payload?.type === "room-closed") {
+      showToast("Игра закрыта: в ней никого не было.");
+      router.push("/");
+      return;
+    }
     if (payload?.type === "chat" && payload.message) {
       addChatMessages([payload.message]);
       return;

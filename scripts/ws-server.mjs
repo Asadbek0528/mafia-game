@@ -4,9 +4,14 @@ import { BACKEND_URL, setting } from "./env.mjs";
 
 const PORT = Number(setting("WS_PORT", 3001));
 const OWNER_AWAY_MS = Number(setting("ROOM_OWNER_AWAY_SECONDS", 180)) * 1000;
+const GAME_ABANDONED_MS = Number(setting("GAME_ABANDONED_MINUTES", 5)) * 60 * 1000;
+const GAME_CHECK_MS = Number(setting("GAME_CHECK_SECONDS", 60)) * 1000;
+const startedAt = Date.now();
 
 const channels = new Map();
 const watchedRooms = new Map();
+const gameSeenAt = new Map();
+const channelTokens = new Map();
 const chatHistory = new Map();
 const suspectHistory = new Map();
 const CHAT_LIMIT = 150;
@@ -57,7 +62,73 @@ async function backend(path, token, method = "GET", body) {
 async function closeAbandonedRoom(roomId, token) {
   const room = await backend(`/room/detail?room_id=${roomId}`, token);
   if (room.status !== "WAITING") return false;
+  await removeRoom(roomId, token);
+  return true;
+}
 
+function parseServerDate(value) {
+  if (!value) return 0;
+  const hasZone = /Z$|[+-]\d{2}:?\d{2}$/.test(value);
+  const ms = Date.parse(hasZone ? value : `${value}Z`);
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+function gameIdFromChannel(channel) {
+  return channel.match(/\/game\/(\d+)$/)?.[1] ?? null;
+}
+
+function touchGame(channel) {
+  const gameId = gameIdFromChannel(channel);
+  if (gameId) gameSeenAt.set(gameId, Date.now());
+}
+
+async function lastGameActivity(gameId, token) {
+  const rounds = await backend(`/game-round/list?game_id=${gameId}`, token);
+  const latest = [...rounds].sort((a, b) => b.round_number - a.round_number).slice(0, 3);
+  let last = 0;
+  for (const round of latest) {
+    const [actions, votes] = await Promise.all([
+      backend(`/night-action/list?round_id=${round.id}`, token).catch(() => []),
+      backend(`/vote/list?round_id=${round.id}`, token).catch(() => []),
+    ]);
+    for (const item of [...actions, ...votes]) last = Math.max(last, parseServerDate(item.created_at));
+  }
+  return last;
+}
+
+async function cleanAbandonedGames() {
+  const games = await backend("/game/list");
+  const now = Date.now();
+
+  for (const game of games) {
+    if (game.winner !== null) continue;
+    const id = String(game.id);
+    const channel = `/ws/game/${id}`;
+
+    if (channels.get(channel)?.size) {
+      gameSeenAt.set(id, now);
+      continue;
+    }
+    if (now - (gameSeenAt.get(id) ?? startedAt) < GAME_ABANDONED_MS) continue;
+
+    const token = channelTokens.get(channel) ?? null;
+    const lastActivity = await lastGameActivity(id, token).catch(() => now);
+    if (now - lastActivity < GAME_ABANDONED_MS) continue;
+
+    try {
+      await backend(`/game/delete/${id}`, token, "DELETE").catch(() => null);
+      await removeRoom(String(game.room_id), token);
+      gameSeenAt.delete(id);
+      console.log(`  Игра ${id} (комната ${game.room_id}) удалена: игроков нет больше ${GAME_ABANDONED_MS / 60000} мин`);
+      broadcast(channel, { type: "room-closed", reason: "abandoned" });
+      broadcast(`/ws/room/${game.room_id}`, { type: "room-closed", reason: "abandoned" });
+    } catch (error) {
+      console.log(`  Не удалось удалить брошенную игру ${id}: ${error.message}`);
+    }
+  }
+}
+
+async function removeRoom(roomId, token) {
   const players = await backend(`/room-player/list?room_id=${roomId}`, token).catch(() => []);
   await Promise.all(
     players.map((player) => backend(`/room-player/delete/${player.id}`, token, "DELETE").catch(() => null)),
@@ -68,7 +139,6 @@ async function closeAbandonedRoom(roomId, token) {
   } catch {
     await backend(`/room/update/${roomId}`, token, "PUT", { status: "FINISHED" });
   }
-  return true;
 }
 
 function rememberChat(channel, message) {
@@ -103,7 +173,11 @@ function handleControlMessage(channel, data) {
 }
 
 server.on("connection", (socket, request) => {
-  const channel = new URL(request.url ?? "/", "http://localhost").pathname;
+  const url = new URL(request.url ?? "/", "http://localhost");
+  const channel = url.pathname;
+  const token = url.searchParams.get("token");
+  if (token) channelTokens.set(channel, token);
+  touchGame(channel);
 
   if (!channels.has(channel)) channels.set(channel, new Set());
   const members = channels.get(channel);
@@ -139,6 +213,7 @@ server.on("connection", (socket, request) => {
   });
 
   socket.on("close", () => {
+    touchGame(channel);
     members.delete(socket);
     if (members.size === 0) channels.delete(channel);
   });
@@ -182,3 +257,7 @@ setInterval(async () => {
     }
   }
 }, 10_000).unref();
+
+setInterval(() => {
+  cleanAbandonedGames().catch((error) => console.log(`  Проверка брошенных игр: ${error.message}`));
+}, GAME_CHECK_MS).unref();
