@@ -28,7 +28,7 @@ export default function GameOver({ winner, players, rounds, myRole, backLink }: 
       <div className="game-over-top">
         <Image
           className="game-over-image"
-          src={mafiaWon ? "/img/role-mafia.webp" : "/img/role-citizen.webp"}
+          src={mafiaWon ? "/img/roles/mafia.webp" : "/img/roles/citizen.webp"}
           alt=""
           width={600}
           height={900}
