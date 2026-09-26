@@ -47,6 +47,10 @@ function getPhaseEnd(game: GameState): number {
   return Date.now() + duration;
 }
 
+function isGameOver_(game: GameState): boolean {
+  return game.winner !== null;
+}
+
 type SuspectEvent = { type?: string; round: number; from: number; target: number | null };
 
 function findMe(game: GameState, userId: number | undefined, username: string | undefined): GamePlayer | undefined {
@@ -123,9 +127,20 @@ export default function GamePage() {
     }
   }, [isLoaded, user, router, gameId]);
 
+  const [lastOkAt, setLastOkAt] = useState(0);
+  const [failCount, setFailCount] = useState(0);
+
   const loadGame = useCallback(async () => {
-    const fresh = await api.getGame(gameId);
-    setGame(fresh);
+    try {
+      const fresh = await api.getGame(gameId);
+      setGame(fresh);
+      setLastOkAt(Date.now());
+      setFailCount(0);
+      setLoadError("");
+    } catch (error) {
+      setFailCount((old) => old + 1);
+      throw error;
+    }
   }, [gameId]);
 
   useEffect(() => {
@@ -138,6 +153,14 @@ export default function GamePage() {
 
     loadGame().catch((error: Error) => setLoadError(error.message));
   }, [user, isDemo, gameId, loadGame]);
+
+  useEffect(() => {
+    if (isDemo || game || !user) return;
+    const timer = setInterval(() => {
+      loadGame().catch((error: Error) => setLoadError(error.message));
+    }, 2000);
+    return () => clearInterval(timer);
+  }, [isDemo, game, user, loadGame]);
 
   const isRunning = game !== null && game.winner === null;
 
@@ -349,10 +372,19 @@ export default function GamePage() {
   if (!game) {
     return (
       <div className="game-page game-page-night">
-        <p className="game-page-message">{loadError || "Загружаем игру…"}</p>
+        <div className="game-page-connecting" role="status">
+          <span className="game-page-spinner" />
+          <p className="game-page-connecting-title">Подключаемся к игре…</p>
+          {loadError && <p className="game-page-connecting-error">Нет связи: {loadError}. Пробуем снова…</p>}
+          <button type="button" className="btn btn-dark btn-small" onClick={() => router.push("/")}>
+            В меню
+          </button>
+        </div>
       </div>
     );
   }
+
+  const isOffline = !isDemo && !isGameOver_(game) && failCount >= 2;
 
   const alivePlayers = game.players.filter((player) => player.isAlive);
   const isGameOver = game.winner !== null;
@@ -515,6 +547,12 @@ export default function GamePage() {
 
   return (
     <div className={`game-page game-page-${game.phase.toLowerCase()}`}>
+      {!isDemo && (
+        <p className={isOffline ? "game-page-connection game-page-connection-bad" : "game-page-connection"} role="status">
+          <span />
+          {isOffline ? "Переподключаемся…" : isLive ? "Онлайн" : "Онлайн (без WebSocket)"}
+        </p>
+      )}
       <div className="game-page-content">
         <GameHeader
           phase={game.phase}

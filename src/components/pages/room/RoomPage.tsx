@@ -35,6 +35,9 @@ export default function RoomPage() {
   const [isCloseOpen, setIsCloseOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const isGone = useRef(false);
+  const [isJoining, setIsJoining] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
+  const joinTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (isLoaded && !user) {
@@ -52,6 +55,45 @@ export default function RoomPage() {
     },
     [router],
   );
+
+  const goToGame = useCallback(
+    (knownGameId?: string | null) => {
+      if (isGone.current) return;
+      isGone.current = true;
+      setIsJoining(true);
+
+      if (knownGameId) {
+        router.push(`/game/${knownGameId}`);
+        return;
+      }
+
+      let tries = 0;
+      const search = async () => {
+        tries += 1;
+        const gameId = await api.findGameForRoom(roomId).catch(() => null);
+        if (gameId) {
+          if (joinTimer.current) clearInterval(joinTimer.current);
+          router.push(`/game/${gameId}`);
+          return;
+        }
+        if (tries >= 40) {
+          if (joinTimer.current) clearInterval(joinTimer.current);
+          isGone.current = false;
+          setIsJoining(false);
+          showToast("Не нашли начатую игру. Попробуйте ещё раз.", "error");
+        }
+      };
+      search();
+      joinTimer.current = setInterval(search, 1000);
+    },
+    [roomId, router],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (joinTimer.current) clearInterval(joinTimer.current);
+    };
+  }, []);
 
   const loadRoom = useCallback(async () => {
     if (isGone.current) return;
@@ -75,9 +117,9 @@ export default function RoomPage() {
 
     if (freshRoom.status === "playing") {
       const gameId = await api.findGameForRoom(roomId);
-      if (gameId) router.push(`/game/${gameId}`);
+      if (gameId) goToGame(gameId);
     }
-  }, [roomId, router, leaveClosedRoom]);
+  }, [roomId, leaveClosedRoom, goToGame]);
 
   useEffect(() => {
     if (!me) return;
@@ -112,12 +154,8 @@ export default function RoomPage() {
       return;
     }
     if (type === "game-started") {
-      api
-        .findGameForRoom(roomId)
-        .then((gameId) => {
-          if (gameId) router.push(`/game/${gameId}`);
-        })
-        .catch(() => {});
+      const gameId = (data as { gameId?: string | number } | null)?.gameId;
+      goToGame(gameId !== undefined && gameId !== null ? String(gameId) : null);
       return;
     }
     loadRoom().catch(() => {});
@@ -155,6 +193,16 @@ export default function RoomPage() {
     const timer = setInterval(sendAlive, OWNER_ALIVE_EVERY_MS);
     return () => clearInterval(timer);
   }, [isLive, isOwner, isWaiting, isDemo, notify]);
+
+  if (isJoining) {
+    return (
+      <div className="room-page-joining" role="status">
+        <span className="room-page-spinner" />
+        <p className="room-page-joining-title">Игра начинается</p>
+        <p className="room-page-joining-text">Подключаемся к игре…</p>
+      </div>
+    );
+  }
 
   if (!room) {
     return <p className="room-page-loading">Заходим в комнату…</p>;
@@ -200,12 +248,15 @@ export default function RoomPage() {
       return;
     }
 
+    if (isStarting) return;
+    setIsStarting(true);
     try {
       const { gameId } = await api.startGame(room.id);
-      notify("game-started");
-      router.push(`/game/${gameId}`);
+      notify("game-started", { gameId });
+      goToGame(gameId);
     } catch (error) {
-      showToast((error as Error).message, "error");
+      setIsStarting(false);
+      showToast(`Не удалось начать игру: ${(error as Error).message}`, "error");
     }
   }
 

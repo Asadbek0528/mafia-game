@@ -110,7 +110,11 @@ async function cleanAbandonedGames() {
       gameSeenAt.set(id, now);
       continue;
     }
-    if (now - (gameSeenAt.get(id) ?? startedAt) < GAME_ABANDONED_MS) continue;
+    if (!gameSeenAt.has(id)) {
+      gameSeenAt.set(id, now);
+      continue;
+    }
+    if (now - gameSeenAt.get(id) < GAME_ABANDONED_MS) continue;
 
     const token = channelTokens.get(channel) ?? null;
     const lastActivity = await lastGameActivity(id, token).catch(() => now);
