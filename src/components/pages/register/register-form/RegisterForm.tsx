@@ -3,7 +3,7 @@
 /*
   RegisterForm — форма регистрации и входа.
 
-  Режим «Регистрация»: имя, email, пароль.
+  Режим «Регистрация»: имя, email, возраст, пароль.
   Режим «Вход»:        имя и пароль.
 
   Порядок работы:
@@ -27,21 +27,23 @@ type Mode = "register" | "login";
 type FormErrors = {
   username: string;
   email: string;
+  age: string;
   password: string;
 };
 
-const NO_ERRORS: FormErrors = { username: "", email: "", password: "" };
+const NO_ERRORS: FormErrors = { username: "", email: "", age: "", password: "" };
 
 type FormValues = {
   username: string;
   email: string;
+  age: string;
   password: string;
 };
 
 // проверка полей
 function validate(mode: Mode, values: FormValues): FormErrors {
   const errors = { ...NO_ERRORS };
-  const { username, email, password } = values;
+  const { username, email, age, password } = values;
 
   if (!username) errors.username = "Введите имя игрока.";
   else if (username.length < 3) errors.username = "Имя — минимум 3 символа.";
@@ -57,6 +59,11 @@ function validate(mode: Mode, values: FormValues): FormErrors {
     if (!email) errors.email = "Введите email.";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       errors.email = "Email выглядит неправильно.";
+
+    const ageNumber = Number(age);
+    if (!age) errors.age = "Введите возраст.";
+    else if (!Number.isInteger(ageNumber) || ageNumber < 6 || ageNumber > 100)
+      errors.age = "Возраст — число от 6 до 100.";
   }
 
   return errors;
@@ -78,6 +85,7 @@ export default function RegisterForm({
   const [values, setValues] = useState<FormValues>({
     username: "",
     email: "",
+    age: "",
     password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -115,6 +123,7 @@ export default function RegisterForm({
         result = await api.register(
           clean.username,
           clean.email,
+          Number(clean.age),
           clean.password,
         );
 
@@ -132,6 +141,7 @@ export default function RegisterForm({
           id: result.userId ?? undefined,
           username: clean.username,
           email: clean.email || undefined,
+          age: clean.age ? Number(clean.age) : undefined,
         },
         result.accessToken,
         result.refreshToken,
@@ -222,6 +232,39 @@ export default function RegisterForm({
               />
             </div>
             {errors.email && <p className="register-error">{errors.email}</p>}
+          </div>
+        )}
+
+        {/* ---- Возраст (только регистрация) ---- */}
+        {mode === "register" && (
+          <div className="register-field">
+            <label htmlFor="age" className="register-label">
+              Возраст
+            </label>
+            <div className="register-input-box">
+              <svg
+                className="register-input-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              >
+                <rect x="3" y="5" width="18" height="16" rx="2" />
+                <path d="M3 10h18M8 3v4M16 3v4" />
+              </svg>
+              <input
+                id="age"
+                className={inputClass("age")}
+                type="number"
+                inputMode="numeric"
+                min={6}
+                max={100}
+                placeholder="например, 18"
+                value={values.age}
+                onChange={(event) => setField("age", event.target.value)}
+              />
+            </div>
+            {errors.age && <p className="register-error">{errors.age}</p>}
           </div>
         )}
 

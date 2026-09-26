@@ -479,15 +479,15 @@ export const api = {
   async register(
     username: string,
     email: string,
+    age: number,
     password: string,
   ): Promise<LoginResult> {
     const data = await request<Record<string, unknown>>(ENDPOINTS.register, {
       method: "POST",
-      // age: backend требует это поле. Поля в форме нет — отправляем 0 («не указан»).
       body: {
         username,
         email,
-        age: 0,
+        age,
         password,
         profile_image: null,
         role: "player",
