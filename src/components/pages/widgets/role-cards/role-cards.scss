@@ -5,8 +5,13 @@
 }
 
 .role-card {
+  position: relative;
+  display: block;
+  width: 100%;
   margin: 0;
+  padding: 0;
   overflow: hidden;
+  cursor: pointer;
   aspect-ratio: 2 / 3;
   background: #0a0a0a;
   border: 1px solid #2d2424;
@@ -29,6 +34,35 @@
 
   &:hover img {
     filter: none;
+  }
+
+  &:hover .role-card-more,
+  &:focus-visible .role-card-more {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.role-card-more {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  left: 8px;
+  padding: 6px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  background: rgba(163, 17, 26, 0.85);
+  border-radius: 8px;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+@media (hover: none) {
+  .role-card-more {
+    opacity: 1;
+    transform: none;
   }
 }
 
