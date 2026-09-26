@@ -111,6 +111,15 @@ export default function RoomPage() {
       leaveClosedRoom("Создатель закрыл комнату.");
       return;
     }
+    if (type === "game-started") {
+      api
+        .findGameForRoom(roomId)
+        .then((gameId) => {
+          if (gameId) router.push(`/game/${gameId}`);
+        })
+        .catch(() => {});
+      return;
+    }
     loadRoom().catch(() => {});
   });
 

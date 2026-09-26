@@ -1,25 +1,50 @@
+import { networkInterfaces } from "node:os";
+
 import { BACKEND_URL as BACKEND, setting } from "./env.mjs";
 
 const WS_URL = `ws://localhost:${setting("NEXT_PUBLIC_WS_PORT", "3001")}`;
+const SITE_PORT = setting("PORT", "3000");
 const PASSWORD = setting("BOT_PASSWORD", "botpass123");
 const PREFIX = setting("BOT_PREFIX", "bot");
 const EMAIL_DOMAIN = setting("BOT_EMAIL_DOMAIN", "example.com");
 const TICK_MS = 2000;
+const PHASE_SECONDS = { NIGHT: 30, DAY: 45, VOTING: 30 };
 
-const [roomId, countArg] = process.argv.slice(2);
+const [roomArg, countArg, humansArg] = process.argv.slice(2);
+const isNewRoom = roomArg === "new";
 const count = Number(countArg ?? 3);
+const humans = Number(humansArg ?? 1);
+let roomId = isNewRoom ? null : roomArg;
 
-if (!roomId || !Number.isInteger(count) || count < 1) {
-  console.log("Как запустить:  npm run bots -- <номер комнаты> [сколько ботов]");
-  console.log("Пример:         npm run bots -- 12 3");
+if (!roomArg || (!isNewRoom && !/^\d+$/.test(roomArg)) || !Number.isInteger(count) || count < 1) {
+  console.log("Новая комната с ботами:   npm run bots -- new 3");
+  console.log("Боты в вашу комнату:      npm run bots -- 12 3");
   process.exit(1);
 }
 
 const NIGHT_ACTION = { mafia: "KILL", doctor: "HEAL", commissar: "CHECK" };
 const ROLE_NAME = { mafia: "мафия", doctor: "доктор", commissar: "комиссар", civilian: "житель" };
+const PHASE_NAME = { NIGHT: "ночь", DAY: "день", VOTING: "голосование" };
+const PHASE_ENDPOINT = { NIGHT: "end-night", DAY: "start-voting", VOTING: "end-voting" };
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const randomItem = (items) => items[Math.floor(Math.random() * items.length)];
+
+function lanHost() {
+  const addresses = Object.values(networkInterfaces())
+    .flat()
+    .filter((item) => item && item.family === "IPv4" && !item.internal)
+    .map((item) => item.address)
+    .sort((a, b) => (a.startsWith("192.168.") ? 0 : 1) - (b.startsWith("192.168.") ? 0 : 1));
+  return addresses[0] ?? "localhost";
+}
+
+function parseServerDate(value) {
+  if (!value) return null;
+  const hasZone = /Z$|[+-]\d{2}:?\d{2}$/.test(value);
+  const ms = Date.parse(hasZone ? value : `${value}Z`);
+  return Number.isFinite(ms) ? ms : null;
+}
 
 async function request(path, { method = "GET", body, token } = {}) {
   const headers = {};
@@ -97,17 +122,47 @@ async function signIn(username) {
   return login(username);
 }
 
-function notify(path) {
+function notify(path, type = "update") {
   try {
     const socket = new WebSocket(WS_URL + path);
     socket.onopen = () => {
-      socket.send(JSON.stringify({ type: "update" }));
+      socket.send(JSON.stringify({ type }));
       setTimeout(() => socket.close(), 200);
     };
     socket.onerror = () => {};
   } catch {
     return;
   }
+}
+
+function countRoles(players) {
+  return {
+    mafia: Math.max(1, Math.floor(players / 3.5)),
+    doctor: players >= 4 ? 1 : 0,
+    commissar: players >= 5 ? 1 : 0,
+  };
+}
+
+async function createRoom(host) {
+  const maxPlayers = Math.max(4, count + humans);
+  const roles = countRoles(maxPlayers);
+  const room = await request("/room/create", {
+    method: "POST",
+    token: host.token,
+    body: {
+      room_name: "Игра с ботами",
+      max_players: maxPlayers,
+      age: 0,
+      owner_id: host.userId,
+      mafia_count: roles.mafia,
+      doctor_count: roles.doctor,
+      commissar_count: roles.commissar,
+      day_time: PHASE_SECONDS.DAY,
+      night_time: PHASE_SECONDS.NIGHT,
+    },
+  });
+  roomId = String(room.id);
+  console.log(`[${host.username}] создал комнату ${roomId} на ${maxPlayers} игроков`);
 }
 
 async function joinRoom(bot) {
@@ -234,14 +289,66 @@ async function runBot(bot) {
   }
 }
 
-console.log(`Backend: ${BACKEND}`);
-console.log(`Комната: ${roomId}, ботов: ${count}\n`);
+async function waitForPlayersAndStart(host) {
+  const needed = Math.max(4, count + humans);
+  let lastCount = -1;
+
+  while (true) {
+    const players = await request(`/room-player/list?room_id=${roomId}`, { token: host.token }).catch(() => []);
+    if (players.length !== lastCount) {
+      lastCount = players.length;
+      console.log(`[хозяин] в комнате ${players.length} из ${needed}`);
+    }
+    if (players.length >= needed) break;
+    await sleep(TICK_MS);
+  }
+
+  console.log("[хозяин] все на месте — игра начнётся через 5 секунд");
+  await sleep(5000);
+  const game = await request("/game/create", { method: "POST", token: host.token, body: { room_id: Number(roomId) } });
+  notify(`/ws/room/${roomId}`, "game-started");
+  console.log(`[хозяин] игра #${game.id} началась`);
+  return game.id;
+}
+
+async function hostPhases(host, gameId) {
+  let key = "";
+  let phaseSeenAt = Date.now();
+
+  while (true) {
+    try {
+      const game = await request(`/game/detail?game_id=${gameId}`, { token: host.token });
+      if (game.winner) return;
+
+      const phase = game.current_phase ?? "NIGHT";
+      const currentKey = `${game.current_round}-${phase}`;
+      if (currentKey !== key) {
+        key = currentKey;
+        phaseSeenAt = Date.now();
+        console.log(`[хозяин] ${PHASE_NAME[phase]} ${game.current_round}`);
+      }
+
+      const endsAt = parseServerDate(game.phase_ends_at) ?? phaseSeenAt + PHASE_SECONDS[phase] * 1000;
+      if (Date.now() > endsAt + 1000) {
+        await request(`/game/${PHASE_ENDPOINT[phase]}/${gameId}`, { method: "POST", token: host.token });
+        notify(`/ws/game/${gameId}`, "phase");
+      }
+    } catch (error) {
+      console.log(`[хозяин] не смог сменить фазу: ${error.message}`);
+      await sleep(3000);
+    }
+    await sleep(1000);
+  }
+}
+
+console.log(`Backend: ${BACKEND}\n`);
 
 const bots = [];
 for (let i = 1; i <= count; i++) {
   const username = `${PREFIX}${i}`;
   try {
     const bot = await signIn(username);
+    if (isNewRoom && !roomId) await createRoom(bot);
     await joinRoom(bot);
     bots.push(bot);
   } catch (error) {
@@ -249,14 +356,28 @@ for (let i = 1; i <= count; i++) {
   }
 }
 
-if (bots.length === 0) {
+if (bots.length === 0 || !roomId) {
   console.log("\nНи один бот не зашёл. Проверьте BACKEND_URL и номер комнаты.");
   process.exit(1);
 }
 
-console.log(`\nВ комнате ${bots.length} бот(а). Нажмите «Начать игру» в браузере — дальше боты играют сами.\n`);
+const phoneLink = `http://${lanHost()}:${SITE_PORT}/room/${roomId}`;
+console.log("\n==============================================");
+console.log(` Ссылка для телефона: ${phoneLink}`);
+console.log("==============================================\n");
 
-const winners = await Promise.all(bots.map(runBot));
+const playing = bots.map(runBot);
+
+if (isNewRoom) {
+  const host = bots[0];
+  console.log(`Ждём вас в комнате. Нужно ещё ${humans} человек(а).`);
+  const gameId = await waitForPlayersAndStart(host);
+  hostPhases(host, gameId);
+} else {
+  console.log("Нажмите «Начать игру» в браузере — дальше боты играют сами.\n");
+}
+
+const winners = await Promise.all(playing);
 const winner = winners.find(Boolean);
 console.log(`\nИгра окончена. Победа: ${winner === "MAFIA" ? "мафии" : "жителей"}`);
 process.exit(0);
