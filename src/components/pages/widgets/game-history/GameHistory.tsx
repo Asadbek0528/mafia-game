@@ -3,9 +3,8 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 
-import { api, loadOrDemo, type GameResult } from "@/lib/api";
+import { api, type GameResult } from "@/lib/api";
 import { useCurrentUser } from "@/lib/auth";
-import { DEMO_HISTORY } from "@/lib/demo";
 import { getRole } from "@/lib/roles";
 import "./game-history.scss";
 
@@ -19,7 +18,10 @@ export default function GameHistory({ limit = 5 }: GameHistoryProps) {
 
   useEffect(() => {
     if (!user || user.guest) return;
-    loadOrDemo(api.getHistory, DEMO_HISTORY).then(setGames);
+    api
+      .getHistory()
+      .then(setGames)
+      .catch(() => setGames([]));
   }, [user]);
 
   return (

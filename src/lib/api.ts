@@ -136,6 +136,29 @@ export type GameResult = {
   ago: string;
 };
 
+export type MyGame = {
+  gameId: number;
+  room: string;
+  role: RoleKey;
+  won: boolean;
+  survived: boolean;
+  finishedAt: number;
+  durationSec: number;
+};
+
+export type RoleStats = { played: number; wins: number };
+
+export type MyStats = {
+  games: number;
+  wins: number;
+  losses: number;
+  winrate: number;
+  survived: number;
+  avgMinutes: number;
+  favoriteRole: RoleKey | null;
+  byRole: Record<RoleKey, RoleStats>;
+};
+
 export type OnlineUser = {
   username: string;
   status: "playing" | "lobby";
@@ -335,6 +358,17 @@ async function refreshAccessToken(): Promise<boolean> {
 }
 
 const usernameCache = new Map<number, string>();
+const myGamesCache = new Map<string, MyGame | null>();
+
+function formatAgo(time: number): string {
+  if (!time) return "";
+  const minutes = Math.max(0, Math.round((Date.now() - time) / 60000));
+  if (minutes < 1) return "только что";
+  if (minutes < 60) return `${minutes} мин назад`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} ч назад`;
+  return `${Math.round(hours / 24)} дн назад`;
+}
 let userListLoading: Promise<void> | null = null;
 
 async function findUserIdByUsername(username: string): Promise<number | null> {
@@ -491,6 +525,93 @@ export const api = {
     return result;
   },
 
+  async getMyGames(): Promise<MyGame[]> {
+    const myId = getMyId();
+    const games = await request<BackendGame[]>(ENDPOINTS.gameList);
+    const finished = games
+      .filter((game) => game.winner !== null)
+      .sort((a, b) => b.id - a.id)
+      .slice(0, 40);
+
+    const results = await Promise.all(
+      finished.map(async (game): Promise<MyGame | null> => {
+        const cacheKey = `${myId}:${game.id}`;
+        if (myGamesCache.has(cacheKey)) return myGamesCache.get(cacheKey) ?? null;
+
+        try {
+          const players = await request<BackendGamePlayer[]>(ENDPOINTS.gamePlayers(String(game.id)));
+          const me = players.find((player) => player.user_id === myId);
+          if (!me || !me.role) {
+            myGamesCache.set(cacheKey, null);
+            return null;
+          }
+
+          const [detail, roomName] = await Promise.all([
+            request<BackendGame & { started_at?: string; finished_at?: string | null }>(
+              ENDPOINTS.gameDetail(String(game.id)),
+            ),
+            request<BackendRoom>(ENDPOINTS.roomDetail(String(game.room_id)))
+              .then((room) => room.room_name)
+              .catch(() => `Комната #${game.room_id}`),
+          ]);
+
+          const startedAt = parseServerDate(detail.started_at) ?? 0;
+          const finishedAt = parseServerDate(detail.finished_at) ?? startedAt;
+          const isMafia = me.role === "mafia";
+          const result: MyGame = {
+            gameId: game.id,
+            room: roomName,
+            role: me.role,
+            won: (game.winner === "MAFIA") === isMafia,
+            survived: me.is_alive,
+            finishedAt,
+            durationSec: startedAt && finishedAt ? Math.max(0, Math.round((finishedAt - startedAt) / 1000)) : 0,
+          };
+          myGamesCache.set(cacheKey, result);
+          return result;
+        } catch {
+          return null;
+        }
+      }),
+    );
+
+    return results.filter((game): game is MyGame => game !== null);
+  },
+
+  async getMyStats(): Promise<MyStats> {
+    const games = await api.getMyGames();
+    const byRole: Record<RoleKey, RoleStats> = {
+      mafia: { played: 0, wins: 0 },
+      doctor: { played: 0, wins: 0 },
+      commissar: { played: 0, wins: 0 },
+      civilian: { played: 0, wins: 0 },
+    };
+
+    for (const game of games) {
+      byRole[game.role].played += 1;
+      if (game.won) byRole[game.role].wins += 1;
+    }
+
+    const wins = games.filter((game) => game.won).length;
+    const timed = games.filter((game) => game.durationSec > 0);
+    const favorite = (Object.entries(byRole) as [RoleKey, RoleStats][])
+      .filter(([, stats]) => stats.played > 0)
+      .sort((a, b) => b[1].played - a[1].played)[0];
+
+    return {
+      games: games.length,
+      wins,
+      losses: games.length - wins,
+      winrate: games.length ? Math.round((wins / games.length) * 100) : 0,
+      survived: games.filter((game) => game.survived).length,
+      avgMinutes: timed.length
+        ? Math.round(timed.reduce((sum, game) => sum + game.durationSec, 0) / timed.length / 60)
+        : 0,
+      favoriteRole: favorite?.[0] ?? null,
+      byRole,
+    };
+  },
+
   async getMe(): Promise<User> {
     const myId = getMyId();
     const user = await request<BackendUser>(ENDPOINTS.userDetail(myId));
@@ -504,6 +625,17 @@ export const api = {
       gamesPlayed = stats.games_played ?? stats.total_games ?? stats.games ?? 0;
       wins = stats.wins ?? stats.win_count ?? stats.total_wins ?? 0;
     } catch {
+      gamesPlayed = 0;
+    }
+
+    try {
+      const mine = await api.getMyStats();
+      if (mine.games > gamesPlayed) {
+        gamesPlayed = mine.games;
+        wins = mine.wins;
+      }
+    } catch {
+      gamesPlayed = Math.max(gamesPlayed, 0);
     }
 
     return {
@@ -546,7 +678,13 @@ export const api = {
   },
 
   async getHistory(): Promise<GameResult[]> {
-    return [];
+    const games = await api.getMyGames();
+    return games.map((game) => ({
+      room: game.room,
+      result: game.won ? "win" : "lose",
+      role: game.role,
+      ago: formatAgo(game.finishedAt),
+    }));
   },
 
   async getRooms(): Promise<RoomShort[]> {
@@ -661,7 +799,7 @@ export const api = {
 
   async endGame(gameId: string, roomId: string) {
     await request(ENDPOINTS.gameDelete(gameId), { method: "DELETE" }).catch(() => null);
-    await this.closeRoom(roomId);
+    await api.closeRoom(roomId);
   },
 
   async closeRoom(roomId: string) {

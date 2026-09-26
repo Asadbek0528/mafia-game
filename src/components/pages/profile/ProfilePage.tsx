@@ -8,6 +8,7 @@ import ProfileCard from "@/components/pages/widgets/profile-card/ProfileCard";
 import { useCurrentUser } from "@/lib/auth";
 
 import ProfileEditForm from "./profile-edit-form/ProfileEditForm";
+import ProfileStats from "./profile-stats/ProfileStats";
 import "./profile-page.scss";
 
 export default function ProfilePage() {
@@ -30,8 +31,9 @@ export default function ProfilePage() {
         <ProfileCard key={version} />
 
         <div className="profile-page-main">
-          <ProfileEditForm onSaved={() => setVersion(version + 1)} />
+          <ProfileStats />
           <GameHistory limit={20} />
+          <ProfileEditForm onSaved={() => setVersion(version + 1)} />
         </div>
       </div>
     </main>
