@@ -21,7 +21,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { getToken } from "./auth";
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://13.211.79.228";
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "";
 const ROOM_PATH = process.env.NEXT_PUBLIC_WS_ROOM_PATH ?? "/ws/room/{id}";
 const GAME_PATH = process.env.NEXT_PUBLIC_WS_GAME_PATH ?? "/ws/game/{id}";
 

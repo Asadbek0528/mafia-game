@@ -4,7 +4,7 @@ import type { NextConfig } from "next";
   Адрес backend. Меняется в .env.local (BACKEND_URL=http://...),
   после изменения перезапустите npm run dev.
 */
-const BACKEND_URL = (process.env.BACKEND_URL ?? "http://13.211.79.228").replace(/\/$/, "");
+const BACKEND_URL = (process.env.BACKEND_URL ?? "http://54.206.85.23").replace(/\/$/, "");
 
 const nextConfig: NextConfig = {
   /*
