@@ -64,6 +64,16 @@ export default function GameOver({ winner, players, rounds, myRole, backLink }: 
                 {player.role ? getRole(player.role).name : "Роль скрыта"} · {player.isAlive ? "выжил" : "погиб"}
               </p>
             </div>
+            {player.role && (
+              <Image
+                className="game-over-player-card"
+                src={getRole(player.role).image}
+                alt={getRole(player.role).name}
+                title={getRole(player.role).name}
+                width={120}
+                height={180}
+              />
+            )}
           </li>
         ))}
       </ul>

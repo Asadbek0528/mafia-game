@@ -20,10 +20,6 @@ export default function GameLog({ events }: GameLogProps) {
           ))}
         </ul>
       )}
-
-      <div className="game-log-chat">
-        <input className="input" placeholder="Чат появится скоро…" disabled />
-      </div>
     </section>
   );
 }

@@ -122,11 +122,22 @@ async function signIn(username) {
   return login(username);
 }
 
-function notify(path, type = "update") {
+const DAY_PHRASES = [
+  "Я мирный, честно!",
+  "Кто-то слишком тихо сидит…",
+  "Ночью слышал шаги у соседа",
+  "Давайте голосовать с умом",
+  "Мафия среди нас, это точно",
+  "Доктор, не забудь про меня",
+  "Мне кажется, я знаю, кто это",
+];
+const MAFIA_PHRASES = ["Кого берём?", "Я за самого разговорчивого", "Только не палимся днём", "Давай доктора найдём"];
+
+function notify(path, type = "update", extra = {}) {
   try {
     const socket = new WebSocket(WS_URL + path);
     socket.onopen = () => {
-      socket.send(JSON.stringify({ type }));
+      socket.send(JSON.stringify({ ...extra, type }));
       setTimeout(() => socket.close(), 200);
     };
     socket.onerror = () => {};
@@ -185,13 +196,37 @@ async function findGameId(token) {
   return active?.id ?? null;
 }
 
+function sayInChat(bot, gameId, text, scope) {
+  const message = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: bot.username,
+    text,
+    time: Date.now(),
+    scope,
+  };
+  notify(`/ws/game/${gameId}`, "chat", { message });
+}
+
+async function maybeChat(bot, gameId, state, key, phase, me) {
+  if (state.chatted.has(key) || !me?.is_alive) return;
+  state.chatted.add(key);
+  if (phase === "DAY" && Math.random() < 0.6) {
+    await sleep(3000 + Math.random() * 12000);
+    sayInChat(bot, gameId, randomItem(DAY_PHRASES), "all");
+  }
+  if (phase === "NIGHT" && me.role === "mafia" && Math.random() < 0.7) {
+    await sleep(2000 + Math.random() * 5000);
+    sayInChat(bot, gameId, randomItem(MAFIA_PHRASES), "mafia");
+  }
+}
+
 async function actIfNeeded(bot, gameId, state) {
   const game = await request(`/game/detail?game_id=${gameId}`, { token: bot.token });
   if (game.winner) return game.winner;
 
   const phase = game.current_phase ?? "NIGHT";
   const key = `${game.current_round}-${phase}`;
-  if (state.done.has(key) || phase === "DAY") return null;
+  if (state.done.has(key) && state.chatted.has(key)) return null;
 
   const [players, rounds] = await Promise.all([
     request(`/game-player/list?game_id=${gameId}`, { token: bot.token }),
@@ -199,6 +234,11 @@ async function actIfNeeded(bot, gameId, state) {
   ]);
 
   const me = players.find((player) => player.user_id === bot.userId);
+  maybeChat(bot, gameId, state, key, phase, me);
+  if (state.done.has(key) || phase === "DAY") {
+    state.done.add(key);
+    return null;
+  }
   const round = rounds.find((item) => item.round_number === game.current_round);
   if (!me || !round) return null;
 
@@ -263,7 +303,7 @@ async function actIfNeeded(bot, gameId, state) {
 }
 
 async function runBot(bot) {
-  const state = { done: new Set(), role: null, dead: false, errors: 0 };
+  const state = { done: new Set(), chatted: new Set(), role: null, dead: false, errors: 0 };
   let gameId = null;
   let isWaitingShown = false;
 

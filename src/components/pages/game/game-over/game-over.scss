@@ -93,6 +93,21 @@
 
 .game-over-player-dead {
   opacity: 0.6;
+
+  .game-over-player-card {
+    filter: grayscale(1);
+  }
+}
+
+.game-over-player-card {
+  flex-shrink: 0;
+  width: 36px;
+  height: 54px;
+  margin-left: auto;
+  object-fit: cover;
+  border: 1px solid var(--color-line-red);
+  border-radius: 5px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
 }
 
 .game-over-player-name {

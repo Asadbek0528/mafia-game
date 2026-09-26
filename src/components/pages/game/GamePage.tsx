@@ -12,6 +12,7 @@ import { useLiveUpdates, WS_PATHS } from "@/lib/socket";
 
 import DeadBanner from "./dead-banner/DeadBanner";
 import GameHeader from "./game-header/GameHeader";
+import GameChat, { type ChatMessage } from "./game-chat/GameChat";
 import GameLog from "./game-log/GameLog";
 import GameOver from "./game-over/GameOver";
 import RoleReveal from "./role-reveal/RoleReveal";
@@ -94,6 +95,7 @@ export default function GamePage() {
   const [isSent, setIsSent] = useState(false);
   const [checkResult, setCheckResult] = useState("");
   const [events, setEvents] = useState<string[]>([]);
+  const [chat, setChat] = useState<ChatMessage[]>([]);
   const [secondsLeft, setSecondsLeft] = useState(0);
 
   const gameRef = useRef<GameState | null>(null);
@@ -138,7 +140,27 @@ export default function GamePage() {
 
   const isRunning = game !== null && game.winner === null;
 
-  const { isLive, notify } = useLiveUpdates(!isDemo && isRunning ? WS_PATHS.game(gameId) : null, () => {
+  const hasGame = game !== null;
+
+  const addChatMessages = useCallback((incoming: ChatMessage[]) => {
+    setChat((old) => {
+      const known = new Set(old.map((message) => message.id));
+      const fresh = incoming.filter((message) => message && message.id && !known.has(message.id));
+      if (fresh.length === 0) return old;
+      return [...old, ...fresh].sort((a, b) => a.time - b.time).slice(-150);
+    });
+  }, []);
+
+  const { isLive, notify } = useLiveUpdates(!isDemo && hasGame ? WS_PATHS.game(gameId) : null, (data) => {
+    const payload = data as { type?: string; message?: ChatMessage; messages?: ChatMessage[] } | null;
+    if (payload?.type === "chat" && payload.message) {
+      addChatMessages([payload.message]);
+      return;
+    }
+    if (payload?.type === "chat-history" && Array.isArray(payload.messages)) {
+      addChatMessages(payload.messages);
+      return;
+    }
     loadGame().catch(() => {});
   });
 
@@ -375,6 +397,44 @@ export default function GamePage() {
 
   const backLink = game.roomId ? `/room/${game.roomId}` : "/";
 
+  const myName = me?.username ?? user?.username ?? "";
+  let chatScope: ChatMessage["scope"] = "all";
+  let canWrite = true;
+  let chatHint = "";
+
+  if (!isGameOver) {
+    if (!me) {
+      canWrite = false;
+      chatHint = "Вы зритель — только читаете";
+    } else if (!me.isAlive) {
+      canWrite = false;
+      chatHint = "Мёртвые не говорят";
+    } else if (game.phase === "NIGHT") {
+      canWrite = me.role === "mafia";
+      chatScope = "mafia";
+      chatHint = "Ночью город спит";
+    }
+  }
+
+  const visibleChat = chat.filter((message) => message.scope === "all" || isGameOver || me?.role === "mafia");
+
+  function sendChat(text: string) {
+    if (!myName) return;
+    const message: ChatMessage = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: myName,
+      text,
+      time: Date.now(),
+      scope: chatScope,
+    };
+    addChatMessages([message]);
+    notify("chat", { message });
+  }
+
+  const chatPanel = (
+    <GameChat messages={visibleChat} myName={myName} canWrite={canWrite} scope={chatScope} hint={chatHint} onSend={sendChat} />
+  );
+
   return (
     <div className={`game-page game-page-${game.phase.toLowerCase()}`}>
       <div className="game-page-content">
@@ -391,11 +451,17 @@ export default function GamePage() {
         {me && !me.isAlive && !isGameOver && <DeadBanner />}
 
         {isGameOver && game.winner ? (
-          <GameOver winner={game.winner} players={game.players} rounds={game.round} myRole={me?.role ?? null} backLink={backLink} />
+          <>
+            <GameOver winner={game.winner} players={game.players} rounds={game.round} myRole={me?.role ?? null} backLink={backLink} />
+            {chatPanel}
+          </>
         ) : (
           <div className="game-page-grid">
             <main className="game-page-main">{renderPhase()}</main>
-            <GameLog events={events} />
+            <aside className="game-page-side">
+              <GameLog events={events} />
+              {chatPanel}
+            </aside>
           </div>
         )}
       </div>
