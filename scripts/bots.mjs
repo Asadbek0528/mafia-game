@@ -131,7 +131,6 @@ const DAY_PHRASES = [
   "Доктор, не забудь про меня",
   "Мне кажется, я знаю, кто это",
 ];
-const MAFIA_PHRASES = ["Кого берём?", "Я за самого разговорчивого", "Только не палимся днём", "Давай доктора найдём"];
 
 function notify(path, type = "update", extra = {}) {
   try {
@@ -214,10 +213,6 @@ async function maybeChat(bot, gameId, state, key, phase, me) {
     await sleep(3000 + Math.random() * 12000);
     sayInChat(bot, gameId, randomItem(DAY_PHRASES), "all");
   }
-  if (phase === "NIGHT" && me.role === "mafia" && Math.random() < 0.7) {
-    await sleep(2000 + Math.random() * 5000);
-    sayInChat(bot, gameId, randomItem(MAFIA_PHRASES), "mafia");
-  }
 }
 
 async function actIfNeeded(bot, gameId, state) {
@@ -264,8 +259,7 @@ async function actIfNeeded(bot, gameId, state) {
         state.done.add(key);
         return null;
       }
-      const targets = me.role === "mafia" ? others.filter((player) => player.role !== "mafia") : others;
-      const target = randomItem(targets.length ? targets : others);
+      const target = randomItem(me.role === "doctor" ? [...others, me] : others);
       if (!target) return null;
 
       await sleep(1000 + Math.random() * 3000);

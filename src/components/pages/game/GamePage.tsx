@@ -37,10 +37,6 @@ function getPhaseDuration(game: GameState): number {
   return DEFAULT_TIMES.voting;
 }
 
-function roleText(role: RoleKey | null): string {
-  return role ? ` Роль: ${getRole(role).name}.` : "";
-}
-
 function getPhaseEnd(game: GameState): number {
   const duration = getPhaseDuration(game) * 1000;
   const serverEnd = game.phaseEndsAt;
@@ -63,7 +59,7 @@ function describePhaseStart(game: GameState): string[] {
 
     const expelled = nameOf(last?.eliminatedPlayerId ?? null);
     const result = expelled
-      ? `Город выгнал ${expelled.username}.${roleText(expelled.role)}`
+      ? `Город выгнал ${expelled.username}.`
       : "Город никого не выгнал.";
     return [result, `Наступает ночь ${game.round}.`];
   }
@@ -71,7 +67,7 @@ function describePhaseStart(game: GameState): string[] {
   if (game.phase === "DAY") {
     const killed = nameOf(last?.killedPlayerId ?? null);
     let night = "Ночь прошла тихо.";
-    if (killed) night = `Ночью убит ${killed.username}.${roleText(killed.role)}`;
+    if (killed) night = `Ночью убит ${killed.username}.`;
     else if (last?.savedByDoctor) night = "Мафия промахнулась: доктор спас жертву.";
 
     return [night, "Город просыпается. Обсуждайте, кто мафия."];
@@ -326,9 +322,7 @@ export default function GamePage() {
 
   function canSeeRole(player: GamePlayer): boolean {
     if (!player.role) return false;
-    if (isGameOver || !player.isAlive) return true;
-    if (player.id === me?.id) return true;
-    return me?.role === "mafia" && player.role === "mafia";
+    return isGameOver || player.id === me?.id;
   }
 
   function renderPhase() {
@@ -354,8 +348,7 @@ export default function GamePage() {
       }
 
       let selectable = alivePlayers;
-      if (role === "mafia") selectable = alivePlayers.filter((player) => player.role !== "mafia");
-      if (role === "commissar") selectable = alivePlayers.filter((player) => player.id !== me?.id);
+      if (role === "mafia" || role === "commissar") selectable = alivePlayers.filter((player) => player.id !== me?.id);
 
       const confirmText = role === "mafia" ? "Подтвердить выбор" : role === "doctor" ? "Вылечить" : "Проверить";
 
@@ -398,7 +391,7 @@ export default function GamePage() {
   const backLink = game.roomId ? `/room/${game.roomId}` : "/";
 
   const myName = me?.username ?? user?.username ?? "";
-  let chatScope: ChatMessage["scope"] = "all";
+  const chatScope: ChatMessage["scope"] = "all";
   let canWrite = true;
   let chatHint = "";
 
@@ -410,13 +403,12 @@ export default function GamePage() {
       canWrite = false;
       chatHint = "Мёртвые не говорят";
     } else if (game.phase === "NIGHT") {
-      canWrite = me.role === "mafia";
-      chatScope = "mafia";
+      canWrite = false;
       chatHint = "Ночью город спит";
     }
   }
 
-  const visibleChat = chat.filter((message) => message.scope === "all" || isGameOver || me?.role === "mafia");
+  const visibleChat = chat.filter((message) => message.scope === "all" || isGameOver);
 
   function sendChat(text: string) {
     if (!myName) return;
