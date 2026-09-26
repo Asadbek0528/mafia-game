@@ -148,6 +148,8 @@ export type MyGame = {
 
 export type RoleStats = { played: number; wins: number };
 
+export type PublicUser = { id: number; username: string; profileImage: string | null };
+
 export type MyStats = {
   games: number;
   wins: number;
@@ -538,7 +540,11 @@ export const api = {
   },
 
   async getMyGames(): Promise<MyGame[]> {
-    const myId = getMyId();
+    return api.getUserGames(getMyId());
+  },
+
+  async getUserGames(userId: number): Promise<MyGame[]> {
+    const myId = userId;
     const games = await request<BackendGame[]>(ENDPOINTS.gameList);
     const finished = games
       .filter((game) => game.winner !== null)
@@ -591,7 +597,11 @@ export const api = {
   },
 
   async getMyStats(): Promise<MyStats> {
-    const games = await api.getMyGames();
+    return api.getUserStats(getMyId());
+  },
+
+  async getUserStats(userId: number): Promise<MyStats> {
+    const games = await api.getUserGames(userId);
     const byRole: Record<RoleKey, RoleStats> = {
       mafia: { played: 0, wins: 0 },
       doctor: { played: 0, wins: 0 },
@@ -685,12 +695,28 @@ export const api = {
     usernameCache.delete(myId);
   },
 
+  async getPublicUser(userId: number): Promise<PublicUser> {
+    const user = await request<BackendUser>(ENDPOINTS.userDetail(userId));
+    usernameCache.set(userId, user.username);
+    return { id: userId, username: user.username, profileImage: user.profile_image ?? null };
+  },
+
+  async searchUsers(query: string): Promise<PublicUser[]> {
+    const text = query.trim().toLowerCase();
+    if (!text) return [];
+    const users = await request<(BackendUserShort & { profile_image?: string | null })[]>(ENDPOINTS.userList);
+    return users
+      .filter((user) => user.username.toLowerCase().includes(text))
+      .slice(0, 10)
+      .map((user) => ({ id: user.id, username: user.username, profileImage: user.profile_image ?? null }));
+  },
+
   async getOnlineUsers(): Promise<OnlineUser[]> {
     return [];
   },
 
-  async getHistory(): Promise<GameResult[]> {
-    const games = await api.getMyGames();
+  async getHistory(userId?: number): Promise<GameResult[]> {
+    const games = userId === undefined ? await api.getMyGames() : await api.getUserGames(userId);
     return games.map((game) => ({
       room: game.room,
       result: game.won ? "win" : "lose",

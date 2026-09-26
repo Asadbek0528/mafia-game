@@ -8,20 +8,42 @@ import { useCurrentUser } from "@/lib/auth";
 import { getRole, ROLES } from "@/lib/roles";
 import "./profile-stats.scss";
 
-export default function ProfileStats() {
+type ProfileStatsProps = {
+  userId?: number;
+};
+
+export default function ProfileStats({ userId }: ProfileStatsProps) {
   const { user } = useCurrentUser();
   const [stats, setStats] = useState<MyStats | null>(null);
   const [isFailed, setIsFailed] = useState(false);
 
+  const targetId = userId ?? user?.id;
+  const isMine = userId === undefined || userId === user?.id;
+
+  const isGuest = user?.guest === true;
+
   useEffect(() => {
-    if (!user?.id) return;
+    if (!targetId || isGuest) return;
+    setStats(null);
+    setIsFailed(false);
     api
-      .getMyStats()
+      .getUserStats(targetId)
       .then(setStats)
       .catch(() => setIsFailed(true));
-  }, [user]);
+  }, [targetId, isGuest]);
 
-  if (!user || user.guest) return null;
+  if (!targetId) return null;
+
+  if (isGuest) {
+    return (
+      <section className="panel profile-stats">
+        <div className="panel-top">
+          <h2 className="panel-title">Статистика</h2>
+        </div>
+        <p className="profile-stats-note">Статистика игроков видна после входа в аккаунт.</p>
+      </section>
+    );
+  }
 
   return (
     <section className="panel profile-stats">
@@ -32,7 +54,7 @@ export default function ProfileStats() {
       {!stats && !isFailed && <p className="profile-stats-note">Считаем ваши игры…</p>}
       {isFailed && <p className="profile-stats-note">Не удалось загрузить статистику.</p>}
 
-      {stats && stats.games === 0 && <p className="profile-stats-note">Сыграйте первую партию — здесь появятся ваши победы.</p>}
+      {stats && stats.games === 0 && <p className="profile-stats-note">{isMine ? "Сыграйте первую партию — здесь появятся ваши победы." : "У игрока пока нет законченных игр."}</p>}
 
       {stats && stats.games > 0 && (
         <>
@@ -65,7 +87,7 @@ export default function ProfileStats() {
 
           {stats.favoriteRole && (
             <p className="profile-stats-favorite">
-              Чаще всего играете за: <b>{getRole(stats.favoriteRole).name}</b>
+              {isMine ? "Чаще всего играете за" : "Чаще всего играет за"}: <b>{getRole(stats.favoriteRole).name}</b>
             </p>
           )}
 

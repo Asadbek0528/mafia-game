@@ -26,6 +26,12 @@
   }
 }
 
+.profile-page-side {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
 .profile-page-main {
   display: grid;
   gap: 18px;

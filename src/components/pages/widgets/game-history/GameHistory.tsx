@@ -10,19 +10,23 @@ import "./game-history.scss";
 
 type GameHistoryProps = {
   limit?: number;
+  userId?: number;
 };
 
-export default function GameHistory({ limit = 5 }: GameHistoryProps) {
+export default function GameHistory({ limit = 5, userId }: GameHistoryProps) {
   const { user } = useCurrentUser();
   const [games, setGames] = useState<GameResult[]>([]);
 
+  const isOther = userId !== undefined && userId !== user?.id;
+
   useEffect(() => {
-    if (!user || user.guest) return;
+    if (!user) return;
+    if (user.guest) return;
     api
-      .getHistory()
+      .getHistory(isOther ? userId : undefined)
       .then(setGames)
       .catch(() => setGames([]));
-  }, [user]);
+  }, [user, userId, isOther]);
 
   return (
     <section className="panel">
@@ -30,10 +34,12 @@ export default function GameHistory({ limit = 5 }: GameHistoryProps) {
         <h2 className="panel-title">Последние игры</h2>
       </div>
 
-      {user?.guest && <p className="game-history-empty">История сохраняется после регистрации.</p>}
+      {user?.guest && (
+        <p className="game-history-empty">{isOther ? "История игр видна после входа в аккаунт." : "История сохраняется после регистрации."}</p>
+      )}
 
       {!user?.guest && games.length === 0 && (
-        <p className="game-history-empty">Сыграйте первую партию — она появится здесь.</p>
+        <p className="game-history-empty">{isOther ? "Законченных игр пока нет." : "Сыграйте первую партию — она появится здесь."}</p>
       )}
 
       <ul className="game-history">

@@ -1,0 +1,30 @@
+.profile-edit-page {
+  display: grid;
+  gap: 16px;
+  max-width: 760px;
+  padding: 18px;
+}
+
+.profile-edit-page-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: start;
+  font-size: 14px;
+  color: var(--color-text-muted);
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    color: var(--color-text);
+  }
+}
+
+@media (max-width: 860px) {
+  .profile-edit-page {
+    padding: 12px;
+  }
+}
