@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { showToast } from "@/components/pages/widgets/toast/Toast";
 import { api, type GamePlayer, type GameState, type RoleKey } from "@/lib/api";
-import { useCurrentUser } from "@/lib/auth";
+import { rememberPageAfterLogin, useCurrentUser } from "@/lib/auth";
 import { advanceDemoGame, createDemoGame } from "@/lib/demo-game";
 import { DEFAULT_TIMES, getRole } from "@/lib/roles";
 import { useLiveUpdates, WS_PATHS } from "@/lib/socket";
@@ -21,6 +21,8 @@ import "./game-page.scss";
 const REFRESH_EVERY_MS = 2000;
 const REFRESH_LIVE_MS = 10000;
 const RETRY_PHASE_MS = 3000;
+const BACKUP_DELAY_S = 8;
+const BACKUP_STEP_S = 4;
 
 const NIGHT_ACTION: Partial<Record<RoleKey, "KILL" | "HEAL" | "CHECK">> = {
   mafia: "KILL",
@@ -112,8 +114,11 @@ export default function GamePage() {
   }, [user]);
 
   useEffect(() => {
-    if (isLoaded && !user) router.replace("/register");
-  }, [isLoaded, user, router]);
+    if (isLoaded && !user) {
+      rememberPageAfterLogin(`/game/${gameId}`);
+      router.replace("/register");
+    }
+  }, [isLoaded, user, router, gameId]);
 
   const loadGame = useCallback(async () => {
     const fresh = await api.getGame(gameId);
@@ -147,7 +152,15 @@ export default function GamePage() {
       isLive ? REFRESH_LIVE_MS : REFRESH_EVERY_MS,
     );
 
-    return () => clearInterval(timer);
+    function handleVisible() {
+      if (!document.hidden) loadGame().catch(() => {});
+    }
+    document.addEventListener("visibilitychange", handleVisible);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", handleVisible);
+    };
   }, [isDemo, isRunning, isLive, loadGame]);
 
   const phaseKey = game ? `${game.round}-${game.phase}` : "";
@@ -199,25 +212,34 @@ export default function GamePage() {
 
       const key = `${current.round}-${current.phase}`;
       if (left > 0 || finishedPhase.current === key || Date.now() < retryPhaseAt.current) return;
-      finishedPhase.current = key;
 
       const currentUser = userRef.current;
+      const myPlayer = findMe(current, currentUser?.id, currentUser?.username);
 
       if (isDemo) {
-        const myPlayer = findMe(current, currentUser?.id, currentUser?.username);
+        finishedPhase.current = key;
         setGame(advanceDemoGame(current, myPlayer, sentTarget.current));
         return;
       }
 
       const isOwner = currentUser?.id !== undefined && currentUser.id === current.ownerUserId;
-      if (isOwner) {
-        switchPhase(current).catch((error: Error) => {
-          if (phaseErrorShown.current !== key) showToast(error.message, "error");
-          phaseErrorShown.current = key;
-          retryPhaseAt.current = Date.now() + RETRY_PHASE_MS;
-          finishedPhase.current = "";
-        });
+      if (!isOwner) {
+        if (!myPlayer) return;
+        const helpers = current.players
+          .filter((player) => player.userId !== current.ownerUserId)
+          .sort((a, b) => a.id - b.id);
+        const rank = helpers.findIndex((player) => player.id === myPlayer.id);
+        const overdue = (Date.now() - phaseEndsAt.current) / 1000;
+        if (rank < 0 || overdue < BACKUP_DELAY_S + rank * BACKUP_STEP_S) return;
       }
+
+      finishedPhase.current = key;
+      switchPhase(current).catch((error: Error) => {
+        if (isOwner && phaseErrorShown.current !== key) showToast(error.message, "error");
+        phaseErrorShown.current = key;
+        retryPhaseAt.current = Date.now() + RETRY_PHASE_MS;
+        finishedPhase.current = "";
+      });
     }, 1000);
 
     async function switchPhase(current: GameState) {

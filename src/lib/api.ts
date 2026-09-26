@@ -24,6 +24,7 @@ const ENDPOINTS = {
   roomCreate: "/room/create",
   roomDetail: (roomId: string) => `/room/detail?room_id=${roomId}`,
   roomUpdate: (roomId: string) => `/room/update/${roomId}`,
+  roomDelete: (roomId: string) => `/room/delete/${roomId}`,
 
   roomPlayerList: (roomId?: string) =>
     roomId ? `/room-player/list?room_id=${roomId}` : "/room-player/list",
@@ -553,12 +554,15 @@ export const api = {
     ]);
 
     return rooms
-      .filter((room) => room.status !== "FINISHED")
       .map((room) => ({
+        room,
+        players: roomPlayers.filter((player) => player.room_id === room.id).length,
+      }))
+      .filter(({ room, players }) => room.status !== "FINISHED" && players > 0)
+      .map(({ room, players }) => ({
         id: String(room.id),
         name: room.room_name,
-        players: roomPlayers.filter((player) => player.room_id === room.id)
-          .length,
+        players,
         max_players: room.max_players,
         age: room.age,
         status: room.status === "WAITING" ? "waiting" : "playing",
@@ -650,6 +654,23 @@ export const api = {
 
     if (me) {
       await request(ENDPOINTS.roomPlayerDelete(me.id), { method: "DELETE" });
+    }
+  },
+
+  async closeRoom(roomId: string) {
+    const players = await request<BackendRoomPlayer[]>(ENDPOINTS.roomPlayerList(roomId)).catch(
+      () => [] as BackendRoomPlayer[],
+    );
+    await Promise.all(
+      players.map((player) =>
+        request(ENDPOINTS.roomPlayerDelete(player.id), { method: "DELETE" }).catch(() => null),
+      ),
+    );
+
+    try {
+      await request(ENDPOINTS.roomDelete(roomId), { method: "DELETE" });
+    } catch {
+      await request(ENDPOINTS.roomUpdate(roomId), { method: "PUT", body: { status: "FINISHED" } });
     }
   },
 

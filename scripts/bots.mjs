@@ -1,19 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
+import { BACKEND_URL as BACKEND, setting } from "./env.mjs";
 
-function readEnvFile() {
-  const env = {};
-  if (!existsSync(".env.local")) return env;
-  for (const line of readFileSync(".env.local", "utf8").split(/\r?\n/)) {
-    const match = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
-    if (match) env[match[1]] = match[2];
-  }
-  return env;
-}
-
-const fileEnv = readEnvFile();
-const setting = (name, fallback) => process.env[name] ?? fileEnv[name] ?? fallback;
-
-const BACKEND = setting("BACKEND_URL", "http://54.206.85.23").replace(/\/$/, "");
 const WS_URL = `ws://localhost:${setting("NEXT_PUBLIC_WS_PORT", "3001")}`;
 const PASSWORD = setting("BOT_PASSWORD", "botpass123");
 const PREFIX = setting("BOT_PREFIX", "bot");

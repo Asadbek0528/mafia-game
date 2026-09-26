@@ -1,16 +1,17 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { showToast } from "@/components/pages/widgets/toast/Toast";
-import { api, isServerDown, type RoomFull } from "@/lib/api";
-import { useCurrentUser } from "@/lib/auth";
+import { api, ApiError, isServerDown, type RoomFull } from "@/lib/api";
+import { getToken, rememberPageAfterLogin, useCurrentUser } from "@/lib/auth";
 import { getDemoRoom } from "@/lib/demo";
 import { saveDemoSetup } from "@/lib/demo-game";
 import { countRoles, DEFAULT_TIMES } from "@/lib/roles";
 import { useLiveUpdates, WS_PATHS } from "@/lib/socket";
 
+import CloseRoomDialog from "./close-room-dialog/CloseRoomDialog";
 import InviteBox from "./invite-box/InviteBox";
 import PlayersList from "./players-list/PlayersList";
 import RoomHeader from "./room-header/RoomHeader";
@@ -19,6 +20,7 @@ import "./room-page.scss";
 
 const REFRESH_EVERY_MS = 3000;
 const REFRESH_LIVE_MS = 15000;
+const OWNER_ALIVE_EVERY_MS = 20000;
 
 export default function RoomPage() {
   const router = useRouter();
@@ -30,20 +32,52 @@ export default function RoomPage() {
 
   const [room, setRoom] = useState<RoomFull | null>(null);
   const [isDemo, setIsDemo] = useState(false);
+  const [isCloseOpen, setIsCloseOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const isGone = useRef(false);
 
   useEffect(() => {
-    if (isLoaded && !user) router.replace("/register");
-  }, [isLoaded, user, router]);
+    if (isLoaded && !user) {
+      rememberPageAfterLogin(`/room/${roomId}`);
+      router.replace("/register");
+    }
+  }, [isLoaded, user, router, roomId]);
+
+  const leaveClosedRoom = useCallback(
+    (text: string) => {
+      if (isGone.current) return;
+      isGone.current = true;
+      showToast(text);
+      router.push("/");
+    },
+    [router],
+  );
 
   const loadRoom = useCallback(async () => {
-    const freshRoom = await api.getRoom(roomId);
+    if (isGone.current) return;
+
+    let freshRoom: RoomFull;
+    try {
+      freshRoom = await api.getRoom(roomId);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        leaveClosedRoom("Комната закрыта.");
+        return;
+      }
+      throw error;
+    }
+
+    if (freshRoom.status === "finished") {
+      leaveClosedRoom("Комната закрыта.");
+      return;
+    }
     setRoom(freshRoom);
 
     if (freshRoom.status === "playing") {
       const gameId = await api.findGameForRoom(roomId);
       if (gameId) router.push(`/game/${gameId}`);
     }
-  }, [roomId, router]);
+  }, [roomId, router, leaveClosedRoom]);
 
   useEffect(() => {
     if (!me) return;
@@ -71,7 +105,12 @@ export default function RoomPage() {
   }, [roomId, me, user, loadRoom, router]);
 
   const hasRoom = room !== null;
-  const { isLive, notify } = useLiveUpdates(!isDemo && hasRoom ? WS_PATHS.room(roomId) : null, () => {
+  const { isLive, notify } = useLiveUpdates(!isDemo && hasRoom ? WS_PATHS.room(roomId) : null, (data) => {
+    const type = (data as { type?: string } | null)?.type;
+    if (type === "room-closed") {
+      leaveClosedRoom("Создатель закрыл комнату.");
+      return;
+    }
     loadRoom().catch(() => {});
   });
 
@@ -85,14 +124,33 @@ export default function RoomPage() {
       isLive ? REFRESH_LIVE_MS : REFRESH_EVERY_MS,
     );
 
-    return () => clearInterval(timer);
+    function handleVisible() {
+      if (!document.hidden) loadRoom().catch(() => {});
+    }
+    document.addEventListener("visibilitychange", handleVisible);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", handleVisible);
+    };
   }, [isDemo, hasRoom, isLive, loadRoom]);
+
+  const isOwner = room ? (room.ownerId !== null ? room.ownerId === user?.id : room.owner === me) : false;
+  const isWaiting = room?.status === "waiting";
+
+  useEffect(() => {
+    if (!isLive || !isOwner || !isWaiting || isDemo) return;
+
+    const sendAlive = () => notify("owner-alive", { token: getToken() });
+    sendAlive();
+    const timer = setInterval(sendAlive, OWNER_ALIVE_EVERY_MS);
+    return () => clearInterval(timer);
+  }, [isLive, isOwner, isWaiting, isDemo, notify]);
 
   if (!room) {
     return <p className="room-page-loading">Заходим в комнату…</p>;
   }
 
-  const isOwner = room.ownerId !== null ? room.ownerId === user?.id : room.owner === me;
   const myPlayer = room.players.find((player) => player.username === me);
 
   async function handleSettingsChange(changes: Partial<RoomFull>) {
@@ -143,11 +201,35 @@ export default function RoomPage() {
   }
 
   async function handleLeave() {
+    if (isOwner && !isDemo && isWaiting) {
+      setIsCloseOpen(true);
+      return;
+    }
+
+    isGone.current = true;
     if (!isDemo) {
       await api.leaveRoom(roomId).catch(() => {});
       notify();
     }
     router.push("/");
+  }
+
+  async function handleCloseRoom() {
+    if (isClosing) return;
+    setIsClosing(true);
+    isGone.current = true;
+
+    try {
+      await api.closeRoom(roomId);
+      notify("room-closed");
+      showToast("Комната удалена.", "success");
+      router.push("/");
+    } catch (error) {
+      isGone.current = false;
+      setIsClosing(false);
+      setIsCloseOpen(false);
+      showToast((error as Error).message, "error");
+    }
   }
 
   return (
@@ -168,6 +250,14 @@ export default function RoomPage() {
 
         <InviteBox roomId={room.id} roomName={room.name} />
       </div>
+
+      <CloseRoomDialog
+        isOpen={isCloseOpen}
+        playersCount={room.players.length}
+        isClosing={isClosing}
+        onClose={handleCloseRoom}
+        onStay={() => setIsCloseOpen(false)}
+      />
     </div>
   );
 }

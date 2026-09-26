@@ -63,3 +63,23 @@ export function useCurrentUser() {
 
   return { user, isLoaded };
 }
+
+const AFTER_LOGIN_KEY = "mafia_after_login";
+
+export function rememberPageAfterLogin(path: string) {
+  try {
+    localStorage.setItem(AFTER_LOGIN_KEY, path);
+  } catch {
+    return;
+  }
+}
+
+export function takePageAfterLogin(): string {
+  try {
+    const path = localStorage.getItem(AFTER_LOGIN_KEY);
+    localStorage.removeItem(AFTER_LOGIN_KEY);
+    return path && path.startsWith("/") && !path.startsWith("//") ? path : "/";
+  } catch {
+    return "/";
+  }
+}

@@ -2,7 +2,9 @@ import { spawn } from "node:child_process";
 
 import "./ws-server.mjs";
 
-const next = spawn("npx", ["next", "dev", ...process.argv.slice(2)], {
+const args = process.argv.slice(2).filter((arg) => /^[\w.:=-]+$/.test(arg));
+
+const next = spawn(["npx", "next", "dev", ...args].join(" "), {
   stdio: "inherit",
   shell: true,
 });

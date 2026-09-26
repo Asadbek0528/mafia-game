@@ -4,13 +4,24 @@ import type { NextConfig } from "next";
 
 const BACKEND_URL = (process.env.BACKEND_URL ?? "http://54.206.85.23").replace(/\/$/, "");
 
+function lanRank(address: string): number {
+  if (address.startsWith("192.168.")) return 0;
+  if (address.startsWith("10.")) return 1;
+  return 2;
+}
+
 const lanAddresses = Object.values(networkInterfaces())
   .flat()
   .filter((item) => item && item.family === "IPv4" && !item.internal)
-  .map((item) => item!.address);
+  .map((item) => item!.address)
+  .sort((a, b) => lanRank(a) - lanRank(b));
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: lanAddresses,
+
+  env: {
+    NEXT_PUBLIC_LAN_HOST: process.env.NODE_ENV === "production" ? "" : (lanAddresses[0] ?? ""),
+  },
 
   async rewrites() {
     return [

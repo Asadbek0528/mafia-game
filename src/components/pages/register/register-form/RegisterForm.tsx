@@ -6,7 +6,7 @@ import { useState } from "react";
 
 import { showToast } from "@/components/pages/widgets/toast/Toast";
 import { api, type LoginResult } from "@/lib/api";
-import { loginAsGuest, saveLogin } from "@/lib/auth";
+import { loginAsGuest, saveLogin, takePageAfterLogin } from "@/lib/auth";
 import "./register-form.scss";
 
 type Mode = "register" | "login";
@@ -133,7 +133,7 @@ export default function RegisterForm({
           : "С возвращением.",
         "success",
       );
-      router.push("/");
+      router.push(takePageAfterLogin());
     } catch (error) {
       showToast((error as Error).message, "error");
       onError();
@@ -337,7 +337,11 @@ export default function RegisterForm({
         Не хочешь регистрироваться?{" "}
         <Link
           href="/"
-          onClick={() => loginAsGuest()}
+          onClick={(event) => {
+            event.preventDefault();
+            loginAsGuest();
+            router.push(takePageAfterLogin());
+          }}
           className="register-guest-link"
         >
           Зайти как гость

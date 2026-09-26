@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { showToast } from "@/components/pages/widgets/toast/Toast";
 import { api } from "@/lib/api";
-import { saveLogin } from "@/lib/auth";
+import { saveLogin, takePageAfterLogin } from "@/lib/auth";
 import "./google-callback.scss";
 
 export default function GoogleCallbackPage() {
@@ -37,7 +37,7 @@ export default function GoogleCallbackPage() {
           result.refreshToken,
         );
         showToast("Вы вошли через Google.", "success");
-        router.replace("/");
+        router.replace(takePageAfterLogin());
       })
       .catch((reason: Error) => setError(reason.message));
   }, [code, router]);

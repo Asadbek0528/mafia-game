@@ -15,6 +15,16 @@
   border-radius: var(--radius);
 }
 
+.invite-box-link {
+  cursor: pointer;
+}
+
+.invite-box-apps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
 .invite-box-image {
   height: 300px;
   margin: 8px -18px -18px;
@@ -34,6 +44,10 @@
   }
 
   .invite-box .panel-title {
+    grid-column: 1 / -1;
+  }
+
+  .invite-box-apps {
     grid-column: 1 / -1;
   }
 

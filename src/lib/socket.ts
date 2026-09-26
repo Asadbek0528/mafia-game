@@ -28,7 +28,7 @@ function buildUrl(path: string): string {
 
 export type LiveUpdates = {
   isLive: boolean;
-  notify: (type?: string) => void;
+  notify: (type?: string, extra?: Record<string, unknown>) => void;
 };
 
 export function useLiveUpdates(path: string | null, onMessage: (data: unknown) => void): LiveUpdates {
@@ -99,9 +99,9 @@ export function useLiveUpdates(path: string | null, onMessage: (data: unknown) =
     };
   }, [path]);
 
-  const notify = useCallback((type = "update") => {
+  const notify = useCallback((type = "update", extra: Record<string, unknown> = {}) => {
     const socket = socketRef.current;
-    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type }));
+    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ ...extra, type }));
   }, []);
 
   return { isLive, notify };
