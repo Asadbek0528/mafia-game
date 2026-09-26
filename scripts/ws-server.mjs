@@ -3,7 +3,8 @@ import { WebSocketServer } from "ws";
 import { BACKEND_URL, setting } from "./env.mjs";
 
 const PORT = Number(setting("WS_PORT", 3001));
-const OWNER_AWAY_MS = Number(setting("ROOM_OWNER_AWAY_SECONDS", 180)) * 1000;
+const OWNER_LEFT_MS = Number(setting("ROOM_OWNER_LEFT_SECONDS", 60)) * 1000;
+const OWNER_SILENT_MS = Number(setting("ROOM_OWNER_SILENT_SECONDS", 180)) * 1000;
 const GAME_ABANDONED_MS = Number(setting("GAME_ABANDONED_MINUTES", 5)) * 60 * 1000;
 const GAME_CHECK_MS = Number(setting("GAME_CHECK_SECONDS", 60)) * 1000;
 const startedAt = Date.now();
@@ -158,12 +159,12 @@ function rememberSuspect(channel, data) {
   suspectHistory.set(channel, history);
 }
 
-function handleControlMessage(channel, data) {
+function handleControlMessage(channel, data, socket) {
   const roomId = roomIdFromChannel(channel);
   if (!roomId) return false;
 
   if (data.type === "owner-alive") {
-    watchedRooms.set(channel, { roomId, token: data.token ?? null, lastSeen: Date.now() });
+    watchedRooms.set(channel, { roomId, token: data.token ?? null, lastSeen: Date.now(), socket, leftAt: null });
     return true;
   }
   if (data.type === "game-started" || data.type === "room-closed") {
@@ -206,7 +207,7 @@ server.on("connection", (socket, request) => {
       data = null;
     }
 
-    if (data && typeof data === "object" && handleControlMessage(channel, data)) return;
+    if (data && typeof data === "object" && handleControlMessage(channel, data, socket)) return;
     if (data?.type === "chat") rememberChat(channel, data.message);
     if (data?.type === "suspect") rememberSuspect(channel, data);
     broadcast(channel, text, socket);
@@ -214,6 +215,11 @@ server.on("connection", (socket, request) => {
 
   socket.on("close", () => {
     touchGame(channel);
+    const watch = watchedRooms.get(channel);
+    if (watch && watch.socket === socket) {
+      watch.leftAt = Date.now();
+      console.log(`  Создатель ушёл из комнаты ${watch.roomId} — закроем через ${OWNER_LEFT_MS / 1000} сек, если не вернётся`);
+    }
     members.delete(socket);
     if (members.size === 0) channels.delete(channel);
   });
@@ -243,7 +249,9 @@ setInterval(() => {
 setInterval(async () => {
   const now = Date.now();
   for (const [channel, watch] of watchedRooms) {
-    if (now - watch.lastSeen < OWNER_AWAY_MS) continue;
+    const hasLeft = watch.leftAt !== null && now - watch.leftAt >= OWNER_LEFT_MS;
+    const isSilent = now - watch.lastSeen >= OWNER_SILENT_MS;
+    if (!hasLeft && !isSilent) continue;
     watchedRooms.delete(channel);
 
     try {
@@ -256,7 +264,7 @@ setInterval(async () => {
       console.log(`  Не удалось закрыть комнату ${watch.roomId}: ${error.message}`);
     }
   }
-}, 10_000).unref();
+}, 5_000).unref();
 
 setInterval(() => {
   cleanAbandonedGames().catch((error) => console.log(`  Проверка брошенных игр: ${error.message}`));
