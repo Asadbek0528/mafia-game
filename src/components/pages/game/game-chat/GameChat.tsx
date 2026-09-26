@@ -9,14 +9,14 @@ export type ChatMessage = {
   name: string;
   text: string;
   time: number;
-  scope: "all" | "mafia";
+  scope: "all" | "mafia" | "dead";
 };
 
 type GameChatProps = {
   messages: ChatMessage[];
   myName: string;
   canWrite: boolean;
-  scope: "all" | "mafia";
+  scope: ChatMessage["scope"];
   hint: string;
   onSend: (text: string) => void;
 };
@@ -48,7 +48,7 @@ export default function GameChat({ messages, myName, canWrite, scope, hint, onSe
     <section className="game-chat">
       <h2 className="game-chat-title">
         Чат
-        {scope === "mafia" && canWrite && <span className="game-chat-badge">только мафия</span>}
+        {scope === "dead" && canWrite && <span className="game-chat-badge">чат погибших</span>}
       </h2>
 
       <ul ref={listRef} className="game-chat-list">
@@ -56,13 +56,13 @@ export default function GameChat({ messages, myName, canWrite, scope, hint, onSe
         {messages.map((message) => {
           let className = "game-chat-message";
           if (message.name === myName) className += " game-chat-message-mine";
-          if (message.scope === "mafia") className += " game-chat-message-mafia";
+          if (message.scope !== "all") className += " game-chat-message-private";
 
           return (
             <li key={message.id} className={className}>
               <p className="game-chat-meta">
                 <b>{message.name}</b>
-                {message.scope === "mafia" && " · мафия"}
+                {message.scope === "dead" && " · погибший"}
                 <time>{formatTime(message.time)}</time>
               </p>
               <p className="game-chat-text">{message.text}</p>

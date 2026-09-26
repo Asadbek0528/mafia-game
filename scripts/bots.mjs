@@ -8,7 +8,7 @@ const PASSWORD = setting("BOT_PASSWORD", "botpass123");
 const PREFIX = setting("BOT_PREFIX", "bot");
 const EMAIL_DOMAIN = setting("BOT_EMAIL_DOMAIN", "example.com");
 const TICK_MS = 2000;
-const PHASE_SECONDS = { NIGHT: 30, DAY: 45, VOTING: 30 };
+const PHASE_SECONDS = { NIGHT: 60, DAY: 60, VOTING: 45 };
 
 const [roomArg, countArg, humansArg] = process.argv.slice(2);
 const isNewRoom = roomArg === "new";
@@ -206,9 +206,18 @@ function sayInChat(bot, gameId, text, scope) {
   notify(`/ws/game/${gameId}`, "chat", { message });
 }
 
-async function maybeChat(bot, gameId, state, key, phase, me) {
+function suspect(gameId, round, me, others) {
+  const target = randomItem(others);
+  if (!target) return;
+  notify(`/ws/game/${gameId}`, "suspect", { round, from: me.id, target: target.id });
+}
+
+async function maybeChat(bot, gameId, state, key, phase, me, others, round) {
   if (state.chatted.has(key) || !me?.is_alive) return;
   state.chatted.add(key);
+  if (phase === "DAY" && Math.random() < 0.8) {
+    setTimeout(() => suspect(gameId, round, me, others), 4000 + Math.random() * 20000);
+  }
   if (phase === "DAY" && Math.random() < 0.6) {
     await sleep(3000 + Math.random() * 12000);
     sayInChat(bot, gameId, randomItem(DAY_PHRASES), "all");
@@ -229,7 +238,8 @@ async function actIfNeeded(bot, gameId, state) {
   ]);
 
   const me = players.find((player) => player.user_id === bot.userId);
-  maybeChat(bot, gameId, state, key, phase, me);
+  const alive = players.filter((player) => player.is_alive && player.id !== me?.id);
+  maybeChat(bot, gameId, state, key, phase, me, alive, game.current_round);
   if (state.done.has(key) || phase === "DAY") {
     state.done.add(key);
     return null;
@@ -363,7 +373,7 @@ async function hostPhases(host, gameId) {
       }
 
       const endsAt = parseServerDate(game.phase_ends_at) ?? phaseSeenAt + PHASE_SECONDS[phase] * 1000;
-      if (Date.now() > endsAt + 1000) {
+      if (Date.now() > endsAt + 3000) {
         await request(`/game/${PHASE_ENDPOINT[phase]}/${gameId}`, { method: "POST", token: host.token });
         notify(`/ws/game/${gameId}`, "phase");
       }

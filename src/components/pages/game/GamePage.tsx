@@ -16,13 +16,14 @@ import GameChat, { type ChatMessage } from "./game-chat/GameChat";
 import GameLog from "./game-log/GameLog";
 import GameOver from "./game-over/GameOver";
 import RoleReveal from "./role-reveal/RoleReveal";
-import TargetPicker from "./target-picker/TargetPicker";
+import TargetPicker, { type Suspicion } from "./target-picker/TargetPicker";
 import "./game-page.scss";
 
 const REFRESH_EVERY_MS = 2000;
 const REFRESH_LIVE_MS = 10000;
 const RETRY_PHASE_MS = 3000;
-const BACKUP_DELAY_S = 8;
+const OWNER_GRACE_S = 3;
+const BACKUP_DELAY_S = 10;
 const BACKUP_STEP_S = 4;
 
 const NIGHT_ACTION: Partial<Record<RoleKey, "KILL" | "HEAL" | "CHECK">> = {
@@ -45,6 +46,8 @@ function getPhaseEnd(game: GameState): number {
   }
   return Date.now() + duration;
 }
+
+type SuspectEvent = { type?: string; round: number; from: number; target: number | null };
 
 function findMe(game: GameState, userId: number | undefined, username: string | undefined): GamePlayer | undefined {
   return game.players.find((player) => (userId !== undefined && player.userId === userId) || player.username === username);
@@ -92,6 +95,7 @@ export default function GamePage() {
   const [checkResult, setCheckResult] = useState("");
   const [events, setEvents] = useState<string[]>([]);
   const [chat, setChat] = useState<ChatMessage[]>([]);
+  const [suspects, setSuspects] = useState<Record<string, Record<number, number | null>>>({});
   const [secondsLeft, setSecondsLeft] = useState(0);
 
   const gameRef = useRef<GameState | null>(null);
@@ -147,10 +151,30 @@ export default function GamePage() {
     });
   }, []);
 
+  const addSuspects = useCallback((items: SuspectEvent[]) => {
+    setSuspects((old) => {
+      const next = { ...old };
+      for (const item of items) {
+        if (typeof item?.round !== "number" || typeof item.from !== "number") continue;
+        next[item.round] = { ...next[item.round], [item.from]: item.target ?? null };
+      }
+      return next;
+    });
+  }, []);
+
   const { isLive, notify } = useLiveUpdates(!isDemo && hasGame ? WS_PATHS.game(gameId) : null, (data) => {
     const payload = data as { type?: string; message?: ChatMessage; messages?: ChatMessage[] } | null;
     if (payload?.type === "chat" && payload.message) {
       addChatMessages([payload.message]);
+      return;
+    }
+    const suspect = data as { type?: string; round?: number; from?: number; target?: number | null; items?: unknown[] } | null;
+    if (suspect?.type === "suspect") {
+      addSuspects([suspect as SuspectEvent]);
+      return;
+    }
+    if (suspect?.type === "suspect-history" && Array.isArray(suspect.items)) {
+      addSuspects(suspect.items as SuspectEvent[]);
       return;
     }
     if (payload?.type === "chat-history" && Array.isArray(payload.messages)) {
@@ -241,13 +265,15 @@ export default function GamePage() {
       }
 
       const isOwner = currentUser?.id !== undefined && currentUser.id === current.ownerUserId;
-      if (!isOwner) {
+      const overdue = (Date.now() - phaseEndsAt.current) / 1000;
+      if (isOwner) {
+        if (overdue < OWNER_GRACE_S) return;
+      } else {
         if (!myPlayer) return;
         const helpers = current.players
           .filter((player) => player.userId !== current.ownerUserId)
           .sort((a, b) => a.id - b.id);
         const rank = helpers.findIndex((player) => player.id === myPlayer.id);
-        const overdue = (Date.now() - phaseEndsAt.current) / 1000;
         if (rank < 0 || overdue < BACKUP_DELAY_S + rank * BACKUP_STEP_S) return;
       }
 
@@ -262,6 +288,12 @@ export default function GamePage() {
 
     async function switchPhase(current: GameState) {
       const fresh = await api.getGame(current.id);
+      if (fresh.phaseEndsAt !== null && fresh.phaseEndsAt > Date.now()) {
+        phaseEndsAt.current = fresh.phaseEndsAt;
+        finishedPhase.current = "";
+        setGame(fresh);
+        return;
+      }
       if (fresh.round === current.round && fresh.phase === current.phase && !fresh.winner) {
         await api.nextPhase(current.id, current.phase);
         notify("phase");
@@ -322,11 +354,32 @@ export default function GamePage() {
 
   function canSeeRole(player: GamePlayer): boolean {
     if (!player.role) return false;
-    return isGameOver || player.id === me?.id;
+    return isGameOver || player.id === me?.id || me?.isAlive === false;
   }
 
   function renderPhase() {
     if (!game) return null;
+
+    const roundSuspects = suspects[game.round] ?? {};
+    const counts: Record<number, number> = {};
+    for (const [from, target] of Object.entries(roundSuspects)) {
+      const voter = game.players.find((player) => player.id === Number(from));
+      if (target === null || !voter?.isAlive) continue;
+      counts[target] = (counts[target] ?? 0) + 1;
+    }
+    const ranked = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    const topId = ranked.length > 0 && (ranked.length === 1 || ranked[0][1] > ranked[1][1]) ? Number(ranked[0][0]) : null;
+
+    const suspicion: Suspicion | undefined =
+      game.phase === "NIGHT"
+        ? undefined
+        : {
+            counts,
+            mine: me ? (roundSuspects[me.id] ?? null) : null,
+            canSuspect: iCanAct,
+            topId,
+            onSuspect: toggleSuspect,
+          };
 
     const common = {
       players: game.players,
@@ -336,6 +389,7 @@ export default function GamePage() {
       showRole: canSeeRole,
       onSelect: setSelectedId,
       onConfirm: handleConfirm,
+      suspicion,
     };
 
     if (game.phase === "NIGHT") {
@@ -391,7 +445,7 @@ export default function GamePage() {
   const backLink = game.roomId ? `/room/${game.roomId}` : "/";
 
   const myName = me?.username ?? user?.username ?? "";
-  const chatScope: ChatMessage["scope"] = "all";
+  let chatScope: ChatMessage["scope"] = "all";
   let canWrite = true;
   let chatHint = "";
 
@@ -400,15 +454,25 @@ export default function GamePage() {
       canWrite = false;
       chatHint = "Вы зритель — только читаете";
     } else if (!me.isAlive) {
-      canWrite = false;
-      chatHint = "Мёртвые не говорят";
+      chatScope = "dead";
     } else if (game.phase === "NIGHT") {
       canWrite = false;
       chatHint = "Ночью город спит";
     }
   }
 
-  const visibleChat = chat.filter((message) => message.scope === "all" || isGameOver);
+  const isDeadWatcher = me?.isAlive === false;
+  const visibleChat = chat.filter(
+    (message) => message.scope === "all" || isGameOver || (message.scope === "dead" && isDeadWatcher),
+  );
+
+  function toggleSuspect(targetId: number) {
+    if (!game || !me || !iCanAct) return;
+    const current = suspects[game.round]?.[me.id] ?? null;
+    const item: SuspectEvent = { type: "suspect", round: game.round, from: me.id, target: current === targetId ? null : targetId };
+    addSuspects([item]);
+    notify("suspect", { ...item });
+  }
 
   function sendChat(text: string) {
     if (!myName) return;

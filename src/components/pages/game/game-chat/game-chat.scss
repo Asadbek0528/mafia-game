@@ -59,9 +59,10 @@
   border-radius: 10px 10px 2px 10px;
 }
 
-.game-chat-message-mafia {
-  border-color: var(--color-red);
-  box-shadow: 0 0 12px var(--color-red-glow);
+.game-chat-message-private {
+  border-style: dashed;
+  border-color: #5b5b6b;
+  opacity: 0.85;
 }
 
 .game-chat-meta {

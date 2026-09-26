@@ -44,6 +44,7 @@ const ENDPOINTS = {
   endVoting: (gameId: string) => `/game/end-voting/${gameId}`,
   nightAction: "/night-action/create",
   vote: "/vote/create",
+  nightActionList: (roundId: number) => `/night-action/list?round_id=${roundId}`,
 };
 
 export type User = {
@@ -730,6 +731,17 @@ export const api = {
       lastRound = toRoundResult(
         await request<BackendRoundDetail>(ENDPOINTS.gameRoundDetail(latest.id)),
       );
+
+      const nightIsOver = game.current_round > latest.round_number || game.current_phase !== "NIGHT";
+      if (lastRound.killedPlayerId === null && !lastRound.savedByDoctor && nightIsOver) {
+        const actions = await request<{ target_id: number; action_type: string }[]>(
+          ENDPOINTS.nightActionList(latest.id),
+        ).catch(() => []);
+        const kills = actions.filter((action) => action.action_type === "KILL").map((action) => action.target_id);
+        lastRound.savedByDoctor = actions.some(
+          (action) => action.action_type === "HEAL" && kills.includes(action.target_id),
+        );
+      }
     }
 
     return {

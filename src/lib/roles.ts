@@ -49,9 +49,9 @@ export function getRole(key: RoleKey): Role {
 }
 
 export const DEFAULT_TIMES = {
-  day: 60,
-  night: 40,
-  voting: 30,
+  day: 90,
+  night: 60,
+  voting: 45,
 };
 
 export const MIN_PLAYERS = 4;

@@ -3,6 +3,14 @@ import type { GamePlayer } from "@/lib/api";
 import { getRole } from "@/lib/roles";
 import "./target-picker.scss";
 
+export type Suspicion = {
+  counts: Record<number, number>;
+  mine: number | null;
+  canSuspect: boolean;
+  topId: number | null;
+  onSuspect: (playerId: number) => void;
+};
+
 type TargetPickerProps = {
   title: string;
   subtitle?: string;
@@ -15,10 +23,11 @@ type TargetPickerProps = {
   showRole: (player: GamePlayer) => boolean;
   onSelect: (playerId: number) => void;
   onConfirm?: () => void;
+  suspicion?: Suspicion;
 };
 
 export default function TargetPicker(props: TargetPickerProps) {
-  const { title, subtitle, players, selectableIds, selectedId, meId, isSent, confirmText, showRole, onSelect, onConfirm } = props;
+  const { title, subtitle, players, selectableIds, selectedId, meId, isSent, confirmText, showRole, onSelect, onConfirm, suspicion } = props;
 
   const canChoose = selectableIds.length > 0 && !isSent;
 
@@ -36,9 +45,10 @@ export default function TargetPicker(props: TargetPickerProps) {
           if (!player.isAlive) className += " target-picker-player-dead";
           if (isSelectable) className += " target-picker-player-selectable";
           if (isSelected) className += " target-picker-player-selected";
+          if (suspicion && suspicion.topId === player.id) className += " target-picker-player-suspected";
 
           return (
-            <li key={player.id}>
+            <li key={player.id} className="target-picker-item">
               <button
                 type="button"
                 className={className}
@@ -54,6 +64,15 @@ export default function TargetPicker(props: TargetPickerProps) {
 
                 {showRole(player) && player.role && <span className="target-picker-role">{getRole(player.role).name}</span>}
               </button>
+              {suspicion && player.isAlive && (
+                <SuspectEye
+                  count={suspicion.counts[player.id] ?? 0}
+                  isMine={suspicion.mine === player.id}
+                  isTop={suspicion.topId === player.id}
+                  canClick={suspicion.canSuspect && player.id !== meId}
+                  onClick={() => suspicion.onSuspect(player.id)}
+                />
+              )}
             </li>
           );
         })}
@@ -65,5 +84,39 @@ export default function TargetPicker(props: TargetPickerProps) {
         </button>
       )}
     </section>
+  );
+}
+
+type SuspectEyeProps = {
+  count: number;
+  isMine: boolean;
+  isTop: boolean;
+  canClick: boolean;
+  onClick: () => void;
+};
+
+function SuspectEye({ count, isMine, isTop, canClick, onClick }: SuspectEyeProps) {
+  if (!canClick && count === 0) return null;
+
+  let className = "target-picker-eye";
+  if (isMine) className += " target-picker-eye-mine";
+  if (isTop) className += " target-picker-eye-top";
+
+  return (
+    <button
+      type="button"
+      className={className}
+      onClick={onClick}
+      disabled={!canClick}
+      aria-pressed={isMine}
+      title={isMine ? "Убрать подозрение" : "Подозреваю"}
+      aria-label={isMine ? "Убрать подозрение" : "Подозреваю этого игрока"}
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+        <circle cx="12" cy="12" r="3" fill={isMine ? "currentColor" : "none"} />
+      </svg>
+      {count > 0 && <span>{count}</span>}
+    </button>
   );
 }

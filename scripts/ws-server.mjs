@@ -8,6 +8,7 @@ const OWNER_AWAY_MS = Number(setting("ROOM_OWNER_AWAY_SECONDS", 180)) * 1000;
 const channels = new Map();
 const watchedRooms = new Map();
 const chatHistory = new Map();
+const suspectHistory = new Map();
 const CHAT_LIMIT = 150;
 const CHAT_KEEP_MS = 3 * 60 * 60 * 1000;
 
@@ -79,6 +80,14 @@ function rememberChat(channel, message) {
   chatHistory.set(channel, history);
 }
 
+function rememberSuspect(channel, data) {
+  if (typeof data.round !== "number" || typeof data.from !== "number") return;
+  const history = suspectHistory.get(channel) ?? { items: new Map(), touchedAt: 0 };
+  history.items.set(`${data.round}:${data.from}`, { type: "suspect", round: data.round, from: data.from, target: data.target ?? null });
+  history.touchedAt = Date.now();
+  suspectHistory.set(channel, history);
+}
+
 function handleControlMessage(channel, data) {
   const roomId = roomIdFromChannel(channel);
   if (!roomId) return false;
@@ -104,6 +113,10 @@ server.on("connection", (socket, request) => {
   if (history?.messages.length) {
     socket.send(JSON.stringify({ type: "chat-history", messages: history.messages }));
   }
+  const suspects = suspectHistory.get(channel);
+  if (suspects?.items.size) {
+    socket.send(JSON.stringify({ type: "suspect-history", items: [...suspects.items.values()] }));
+  }
 
   socket.isAlive = true;
   socket.on("pong", () => {
@@ -121,6 +134,7 @@ server.on("connection", (socket, request) => {
 
     if (data && typeof data === "object" && handleControlMessage(channel, data)) return;
     if (data?.type === "chat") rememberChat(channel, data.message);
+    if (data?.type === "suspect") rememberSuspect(channel, data);
     broadcast(channel, text, socket);
   });
 
@@ -145,6 +159,9 @@ setInterval(() => {
   const now = Date.now();
   for (const [channel, history] of chatHistory) {
     if (now - history.touchedAt > CHAT_KEEP_MS) chatHistory.delete(channel);
+  }
+  for (const [channel, history] of suspectHistory) {
+    if (now - history.touchedAt > CHAT_KEEP_MS) suspectHistory.delete(channel);
   }
 }, 10 * 60 * 1000).unref();
 
