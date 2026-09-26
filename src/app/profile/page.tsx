@@ -1,6 +1,3 @@
-/*
-  Адрес "/profile" — профиль игрока.
-*/
 import type { Metadata } from "next";
 
 import ProfilePage from "@/components/pages/profile/ProfilePage";

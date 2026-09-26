@@ -1,7 +1,3 @@
-/*
-  Стили для ProfileCard.tsx
-*/
-
 .profile-card {
   min-height: 190px;
 }
@@ -59,7 +55,6 @@
   }
 }
 
-/* три цифры: игр / побед / процент */
 .profile-card-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

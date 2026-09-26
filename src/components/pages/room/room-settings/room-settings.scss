@@ -1,7 +1,3 @@
-/*
-  Стили для RoomSettings.tsx
-*/
-
 .room-settings-title {
   margin-bottom: 14px;
 }
@@ -12,7 +8,6 @@
   color: var(--color-text-muted);
 }
 
-/* строка настройки */
 .room-settings-row {
   display: flex;
   align-items: center;
@@ -25,7 +20,6 @@
   border-radius: var(--radius);
 }
 
-/* кнопки − и + */
 .room-settings-stepper {
   display: flex;
   align-items: center;
@@ -59,7 +53,6 @@
   text-align: center;
 }
 
-/* роли */
 .room-settings-label {
   margin: 6px 0 8px;
   font-size: 13px;
@@ -95,7 +88,6 @@
   color: var(--color-text-muted);
 }
 
-/* число роли (когда нет кнопок) */
 .room-settings-role-count {
   display: block;
   font-family: var(--font-title);
@@ -103,12 +95,10 @@
   color: var(--color-red);
 }
 
-/* число ушло в минус — ролей больше, чем игроков */
 .room-settings-role-count-bad {
   color: #ff5a62;
 }
 
-/* кнопки − + под карточкой роли — компактнее */
 .room-settings-role .room-settings-stepper {
   justify-content: center;
   margin-top: 4px;
@@ -127,7 +117,6 @@
   }
 }
 
-/* ошибка в раскладке ролей */
 .room-settings-error {
   margin: -2px 0 12px;
   font-size: 13px;
@@ -135,7 +124,6 @@
   text-align: center;
 }
 
-/* большая кнопка внизу */
 .room-settings-main-button {
   min-height: 54px;
   margin-top: 8px;
@@ -150,8 +138,6 @@
   text-align: center;
 }
 
-/* ---------- Адаптив ---------- */
-/* телефон: роли в 2 колонки, чтобы кнопки − + помещались */
 @media (max-width: 760px) {
   .room-settings-roles {
     grid-template-columns: repeat(2, 1fr);

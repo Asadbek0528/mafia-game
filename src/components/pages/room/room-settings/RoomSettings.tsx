@@ -1,14 +1,3 @@
-/*
-  RoomSettings — настройки игры и главная кнопка.
-
-  Создатель видит кнопки − и + :
-  - количество игроков
-  - сколько мафий, докторов, комиссаров (жители = все остальные)
-  - время дня и ночи
-  и кнопку «Начать игру».
-
-  Остальные видят только цифры.
-*/
 import Image from "next/image";
 
 import type { RoleCounts, RoomFull } from "@/lib/api";
@@ -31,15 +20,12 @@ export default function RoomSettings(props: RoomSettingsProps) {
   const limits = getRoleLimits(room.max_players);
   const civilians = countCivilians(room.max_players, room.roles);
 
-  // ошибка в раскладке ролей (для полной комнаты)
   const rolesError = checkRoles(room.max_players, room.roles);
 
-  // можно ли начать СЕЙЧАС (с теми, кто уже в комнате)
   const everyoneReady = !room.readySupported || room.players.every((player) => player.ready || player.username === room.owner);
   const rolesErrorNow = checkRoles(playersCount, room.roles);
   const canStart = playersCount >= MIN_PLAYERS && rolesErrorNow === "" && everyoneReady;
 
-  // подсказка под кнопкой
   let hint = "";
   if (isOwner) {
     if (playersCount < MIN_PLAYERS) hint = `Нужно минимум ${MIN_PLAYERS} игрока — сейчас ${playersCount}.`;
@@ -52,7 +38,6 @@ export default function RoomSettings(props: RoomSettingsProps) {
     hint = "Ждём, когда создатель начнёт игру.";
   }
 
-  // изменить количество игроков: роли подстраиваем, если перестали помещаться
   function changeMaxPlayers(value: number) {
     let roles = room.roles;
     if (checkRoles(value, roles) !== "") {
@@ -61,7 +46,6 @@ export default function RoomSettings(props: RoomSettingsProps) {
     onChange({ max_players: value, roles });
   }
 
-  // изменить одну роль (mafia / doctor / commissar)
   function changeRole(key: keyof RoleCounts, value: number) {
     onChange({ roles: { ...room.roles, [key]: value } });
   }
@@ -71,7 +55,6 @@ export default function RoomSettings(props: RoomSettingsProps) {
       <h2 className="panel-title room-settings-title">Настройки игры</h2>
       {!isOwner && <p className="room-settings-note">Настройки меняет только создатель комнаты.</p>}
 
-      {/* ---- количество игроков ---- */}
       <SettingRow
         label="Количество игроков"
         value={room.max_players}
@@ -82,11 +65,9 @@ export default function RoomSettings(props: RoomSettingsProps) {
         onChange={changeMaxPlayers}
       />
 
-      {/* ---- роли ---- */}
       <p className="room-settings-label">Роли</p>
       <ul className="room-settings-roles">
         {ROLES.map((role) => {
-          // жители считаются сами — у них нет кнопок
           const isCivilian = role.key === "civilian";
           const count = isCivilian ? civilians : room.roles[role.key as keyof RoleCounts];
           const limit = isCivilian ? null : limits[role.key as keyof RoleCounts];
@@ -114,7 +95,6 @@ export default function RoomSettings(props: RoomSettingsProps) {
       </ul>
       {rolesError && <p className="room-settings-error">{rolesError}</p>}
 
-      {/* ---- время ---- */}
       <SettingRow
         label="Время дня"
         value={room.day_time}
@@ -137,7 +117,6 @@ export default function RoomSettings(props: RoomSettingsProps) {
         onChange={(value) => onChange({ night_time: value })}
       />
 
-      {/* ---- главная кнопка ---- */}
       {isOwner && (
         <button className="btn btn-red btn-full room-settings-main-button" disabled={!canStart} onClick={onStart}>
           Начать игру
@@ -157,8 +136,6 @@ export default function RoomSettings(props: RoomSettingsProps) {
     </section>
   );
 }
-
-/* ---------- кнопки [−] 2 [+] ---------- */
 
 type StepperProps = {
   value: number;
@@ -185,8 +162,6 @@ function Stepper({ value, unit = "", min, max, step = 1, onChange }: StepperProp
     </div>
   );
 }
-
-/* ---------- строка: «Время дня   [−] 60 сек [+]» ---------- */
 
 type SettingRowProps = StepperProps & {
   label: string;

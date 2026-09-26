@@ -1,6 +1,3 @@
-/*
-  Footer — строка внизу страницы.
-*/
 import "./footer.scss";
 
 export default function Footer() {

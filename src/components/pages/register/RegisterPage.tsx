@@ -1,9 +1,5 @@
 "use client";
 
-/*
-  RegisterPage — страница регистрации (шаг 1).
-  Состоит из: страшный фон + карточка с логотипом и формой.
-*/
 import Image from "next/image";
 import { useState } from "react";
 
@@ -12,15 +8,12 @@ import RegisterForm from "./register-form/RegisterForm";
 import "./register-page.scss";
 
 export default function RegisterPage() {
-  // когда true — карточка трясётся (ошибка в форме)
   const [isShaking, setIsShaking] = useState(false);
 
-  // "register" — регистрация, "login" — вход в существующий аккаунт
   const [mode, setMode] = useState<"register" | "login">("register");
 
   function shakeCard() {
     setIsShaking(false);
-    // маленькая пауза, чтобы анимация запустилась заново
     setTimeout(() => setIsShaking(true), 10);
   }
 
@@ -32,7 +25,6 @@ export default function RegisterPage() {
         <section
           className={isShaking ? "register-card register-card-shake" : "register-card"}
           onAnimationEnd={(event) => {
-            // реагируем только на анимацию самой карточки
             if (event.target === event.currentTarget) setIsShaking(false);
           }}
         >

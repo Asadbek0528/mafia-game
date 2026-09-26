@@ -1,7 +1,3 @@
-/*
-  Стили для RoleCards.tsx
-*/
-
 .role-cards {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -36,9 +32,6 @@
   }
 }
 
-/* ---------- Адаптив ---------- */
-
-/* телефон: карточки листаются пальцем в сторону */
 @media (max-width: 860px) {
   .role-cards {
     grid-template-columns: repeat(4, 62%);

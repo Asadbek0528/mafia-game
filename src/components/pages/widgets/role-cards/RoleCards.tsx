@@ -1,7 +1,3 @@
-/*
-  RoleCards — 4 карточки ролей (только картинки).
-  Используется на главной странице и на странице /roles.
-*/
 import Image from "next/image";
 
 import { ROLES } from "@/lib/roles";

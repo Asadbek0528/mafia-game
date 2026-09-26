@@ -1,16 +1,12 @@
-/*
-  roles.ts — роли и правила игры.
-  Используется на главной, на странице ролей, в комнате и в игре.
-*/
 import type { RoleCounts, RoleKey } from "./api";
 
 export type Role = {
   key: RoleKey;
-  name: string; // «Мафия»
-  plural: string; // «Мафия», «Жители»
-  image: string; // картинка из папки public
-  about: string; // объяснение для страницы ролей
-  nightTask: string; // что делает ночью (для экрана игры)
+  name: string;
+  plural: string;
+  image: string;
+  about: string;
+  nightTask: string;
 };
 
 export const ROLES: Role[] = [
@@ -52,20 +48,14 @@ export function getRole(key: RoleKey): Role {
   return ROLES.find((role) => role.key === key) ?? ROLES[3];
 }
 
-/* ---------- время фаз по умолчанию (в секундах) ---------- */
 export const DEFAULT_TIMES = {
   day: 60,
   night: 40,
   voting: 30,
 };
 
-/* ---------- минимум игроков для начала ---------- */
 export const MIN_PLAYERS = 4;
 
-/*
-  Раскладка ролей по умолчанию для N игроков.
-  Пример: 8 игроков → 2 мафии, 1 доктор, 1 комиссар (и 4 жителя).
-*/
 export function countRoles(players: number): RoleCounts {
   return {
     mafia: Math.max(1, Math.floor(players / 3.5)),
@@ -74,15 +64,10 @@ export function countRoles(players: number): RoleCounts {
   };
 }
 
-// сколько будет жителей
 export function countCivilians(players: number, roles: RoleCounts): number {
   return players - roles.mafia - roles.doctor - roles.commissar;
 }
 
-/*
-  Максимум для каждой роли (для кнопок + в настройках комнаты).
-  Мафии должно быть МЕНЬШЕ половины, иначе она выигрывает сразу.
-*/
 export function getRoleLimits(players: number) {
   return {
     mafia: { min: 1, max: Math.max(1, Math.ceil(players / 2) - 1) },
@@ -91,9 +76,6 @@ export function getRoleLimits(players: number) {
   };
 }
 
-/*
-  Проверка раскладки. Возвращает текст ошибки или "" (всё хорошо).
-*/
 export function checkRoles(players: number, roles: RoleCounts): string {
   const civilians = countCivilians(players, roles);
 

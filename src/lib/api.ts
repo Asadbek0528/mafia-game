@@ -1,17 +1,3 @@
-/*
-  =============================================================
-  api.ts — все запросы к backend в одном файле.
-
-  Как это работает:
-  1. Фронт ходит на "/backend/...", а Next.js пересылает запрос
-     на http://13.211.79.228/... (смотри next.config.ts).
-  2. Backend отдаёт данные в своём виде (room_name, owner_id ...).
-     Здесь мы переводим их в удобный для страниц вид
-     (name, owner ...). Страницы ничего не знают о формате backend.
-  3. Все адреса лежат в ENDPOINTS. Поменялся путь — меняем только тут.
-  4. Типы BACKEND ниже сделаны по openapi.json от backend-команды.
-  =============================================================
-*/
 import { getRefreshToken, getToken, getUser, saveTokens } from "./auth";
 import { countRoles, DEFAULT_TIMES } from "./roles";
 
@@ -21,7 +7,6 @@ const SERVER_DOWN_TEXT =
   "Backend не отвечает или упал. Проверьте, что сервер запущен (адрес — BACKEND_URL в .env.local).";
 
 const ENDPOINTS = {
-  // авторизация
   register: "/auth/register",
   login: "/auth/login",
   logout: "/auth/logout",
@@ -30,26 +15,22 @@ const ENDPOINTS = {
   googleCallback: (code: string) =>
     `/auth/google/callback?code=${encodeURIComponent(code)}`,
 
-  // пользователь
   userList: "/user/list",
   userDetail: (userId: number) => `/user/detail?user_id=${userId}`,
   userUpdate: (userId: number) => `/user/update?user_id=${userId}`,
   statistic: (userId: number) => `/statistic/${userId}`,
 
-  // комнаты
   roomList: "/room/list",
   roomCreate: "/room/create",
   roomDetail: (roomId: string) => `/room/detail?room_id=${roomId}`,
   roomUpdate: (roomId: string) => `/room/update/${roomId}`,
 
-  // игроки в комнате
   roomPlayerList: (roomId?: string) =>
     roomId ? `/room-player/list?room_id=${roomId}` : "/room-player/list",
   roomPlayerCreate: "/room-player/create",
   roomPlayerDelete: (roomPlayerId: number) =>
     `/room-player/delete/${roomPlayerId}`,
 
-  // игра
   gameCreate: "/game/create",
   gameList: "/game/list",
   gameDetail: (gameId: string) => `/game/detail?game_id=${gameId}`,
@@ -64,16 +45,12 @@ const ENDPOINTS = {
   vote: "/vote/create",
 };
 
-/* =============================================================
-   ТИПЫ ДЛЯ СТРАНИЦ (так данные выглядят во фронте)
-   ============================================================= */
-
 export type User = {
-  id?: number; // id из базы. У гостя нет
+  id?: number;
   username: string;
   email?: string;
   age?: number;
-  profile_image?: string | null; // фото профиля (ссылка или картинка в виде текста)
+  profile_image?: string | null;
   games_played?: number;
   wins?: number;
   guest?: boolean;
@@ -81,7 +58,6 @@ export type User = {
 
 export type RoleKey = "mafia" | "doctor" | "commissar" | "civilian";
 
-// сколько особых ролей в игре (жители = все остальные)
 export type RoleCounts = {
   mafia: number;
   doctor: number;
@@ -93,20 +69,20 @@ export type RoomShort = {
   name: string;
   players: number;
   max_players: number;
-  age: number; // минимальный возраст
+  age: number;
   status: "waiting" | "playing";
 };
 
 export type RoomPlayer = {
   username: string;
-  ready?: boolean; // undefined = backend пока не поддерживает «Готов»
+  ready?: boolean;
 };
 
 export type RoomFull = {
   id: string;
   name: string;
   owner: string;
-  ownerId: number | null; // null — демо-комната
+  ownerId: number | null;
   age: number;
   max_players: number;
   day_time: number;
@@ -114,25 +90,25 @@ export type RoomFull = {
   roles: RoleCounts;
   status: "waiting" | "playing" | "finished";
   players: RoomPlayer[];
-  readySupported: boolean; // есть ли кнопка «Я готов»
+  readySupported: boolean;
 };
 
 export type GamePhase = "NIGHT" | "DAY" | "VOTING";
 export type GameWinner = "MAFIA" | "CITIZENS";
 
 export type GamePlayer = {
-  id: number; // id игрока В ЭТОЙ ИГРЕ (game_player.id)
+  id: number;
   userId: number;
   username: string;
-  role: RoleKey | null; // null — backend скрыл чужую роль
+  role: RoleKey | null;
   isAlive: boolean;
 };
 
 export type RoundResult = {
   roundNumber: number;
-  killedPlayerId: number | null; // кого убила мафия ночью
-  savedByDoctor: boolean; // доктор спас?
-  eliminatedPlayerId: number | null; // кого выгнали голосованием
+  killedPlayerId: number | null;
+  savedByDoctor: boolean;
+  eliminatedPlayerId: number | null;
 };
 
 export type GameState = {
@@ -140,9 +116,9 @@ export type GameState = {
   roomId: string;
   ownerUserId: number;
   round: number;
-  roundId: number | null; // id текущего раунда (нужен для действий)
+  roundId: number | null;
   phase: GamePhase;
-  phaseEndsAt: number | null; // когда кончится фаза по часам сервера (мс)
+  phaseEndsAt: number | null;
   winner: GameWinner | null;
   players: GamePlayer[];
   lastRound: RoundResult | null;
@@ -161,10 +137,6 @@ export type OnlineUser = {
   username: string;
   status: "playing" | "lobby";
 };
-
-/* =============================================================
-   ТИПЫ BACKEND (так данные приходят с сервера, см. openapi.json)
-   ============================================================= */
 
 type BackendRoom = {
   id: number;
@@ -214,10 +186,6 @@ type BackendRoundDetail = BackendRoundShort & {
 };
 type BackendNightAction = { id: number; is_mafia?: boolean | null };
 
-/* =============================================================
-   ОШИБКА И БАЗОВЫЙ ЗАПРОС
-   ============================================================= */
-
 export class ApiError extends Error {
   status: number;
 
@@ -227,7 +195,6 @@ export class ApiError extends Error {
   }
 }
 
-// сервер лежит или не отвечает (а не «вы что-то сделали не так»)
 export function isServerDown(error: unknown): boolean {
   return error instanceof ApiError && (error.status === 0 || error.status >= 500);
 }
@@ -254,13 +221,12 @@ async function request<T>(
       method: options.method ?? "GET",
       headers,
       body: options.body ? JSON.stringify(options.body) : undefined,
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS), // не ждём вечно
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch {
     throw new ApiError(SERVER_DOWN_TEXT, 0);
   }
 
-  // токен устарел → получаем новый и повторяем запрос один раз
   if (response.status === 401 && !isRetry && getRefreshToken()) {
     const refreshed = await refreshAccessToken();
     if (refreshed) return request<T>(path, options, true);
@@ -275,7 +241,6 @@ async function request<T>(
   }
 
   if (!response.ok) {
-    // 500 не в формате FastAPI (просто текст) — прокси Next.js не достучался до backend
     if (response.status === 500 && typeof data === "string") {
       throw new ApiError(SERVER_DOWN_TEXT, 0);
     }
@@ -285,7 +250,6 @@ async function request<T>(
   return data as T;
 }
 
-// FastAPI: { "detail": "текст" } или { "detail": [ { "msg": "..." } ] }
 function getErrorText(data: unknown, status: number): string {
   const detail = (data as { detail?: unknown } | null)?.detail;
 
@@ -298,21 +262,12 @@ function getErrorText(data: unknown, status: number): string {
   return `Ошибка ${status}`;
 }
 
-/*
-  Дата с сервера → миллисекунды.
-  FastAPI часто отдаёт время без часового пояса ("2026-09-26T10:00:00") —
-  считаем, что это UTC.
-*/
 function parseServerDate(value: string | null | undefined): number | null {
   if (!value) return null;
   const hasZone = /Z$|[+-]\d{2}:?\d{2}$/.test(value);
   const ms = Date.parse(hasZone ? value : `${value}Z`);
   return Number.isFinite(ms) ? ms : null;
 }
-
-/* =============================================================
-   ТОКЕНЫ
-   ============================================================= */
 
 export type LoginResult = {
   accessToken: string | null;
@@ -321,7 +276,6 @@ export type LoginResult = {
   username: string | null;
 };
 
-// backend может назвать поля по-разному — пробуем все варианты
 function readLoginResponse(data: Record<string, unknown> | null): LoginResult {
   const obj = data ?? {};
   const user = obj.user as { id?: number; username?: string } | undefined;
@@ -341,10 +295,6 @@ function readLoginResponse(data: Record<string, unknown> | null): LoginResult {
   return { accessToken, refreshToken, userId, username };
 }
 
-/*
-  Токен (JWT) состоит из 3 частей через точку. Вторая часть — это JSON,
-  там обычно лежит id пользователя в поле "sub" или "user_id".
-*/
 function getUserIdFromToken(token: string | null): number | null {
   if (!token) return null;
 
@@ -381,20 +331,9 @@ async function refreshAccessToken(): Promise<boolean> {
   }
 }
 
-/* =============================================================
-   ИМЕНА ИГРОКОВ
-   Backend в комнатах и играх отдаёт только user_id.
-   Сначала один раз грузим весь /user/list, потом (для новых игроков)
-   спрашиваем /user/detail. Всё запоминаем (кэш).
-   ============================================================= */
-
 const usernameCache = new Map<number, string>();
 let userListLoading: Promise<void> | null = null;
 
-/*
-  Найти свой id по имени (если /auth/login его не вернул).
-  /user/list отдаёт id — ищем там себя.
-*/
 async function findUserIdByUsername(username: string): Promise<number | null> {
   try {
     const users = await request<BackendUserShort[]>(ENDPOINTS.userList);
@@ -415,7 +354,7 @@ function loadAllUsernames(): Promise<void> {
         users.forEach((user) => usernameCache.set(user.id, user.username));
       })
       .catch(() => {
-        userListLoading = null; // попробуем в другой раз
+        userListLoading = null;
       });
   }
   return userListLoading;
@@ -438,7 +377,6 @@ async function getUsername(userId: number): Promise<string> {
   }
 }
 
-// id текущего игрока. Гостю нельзя в комнаты — у него нет id в базе
 function getMyId(): number {
   const me = getUser();
   if (!me?.id) {
@@ -450,14 +388,10 @@ function getMyId(): number {
   return me.id;
 }
 
-/* =============================================================
-   ПЕРЕВОД ИЗ ФОРМАТА BACKEND В ФОРМАТ СТРАНИЦ
-   ============================================================= */
-
 function toRoomStatus(status: BackendRoom["status"]): RoomFull["status"] {
   if (status === "WAITING") return "waiting";
   if (status === "FINISHED") return "finished";
-  return "playing"; // STARTING и IN_PROGRESS
+  return "playing";
 }
 
 function toRoundResult(round: BackendRoundDetail): RoundResult {
@@ -469,12 +403,7 @@ function toRoundResult(round: BackendRoundDetail): RoundResult {
   };
 }
 
-/* =============================================================
-   МЕТОДЫ API
-   ============================================================= */
-
 export const api = {
-  /* ---------- авторизация ---------- */
 
   async register(
     username: string,
@@ -503,9 +432,8 @@ export const api = {
     });
     const result = readLoginResponse(data);
 
-    // backend не вернул id — ищем себя в списке пользователей по имени
     if (result.userId === null && result.accessToken) {
-      saveTokens(result.accessToken, result.refreshToken); // чтобы запрос ушёл с токеном
+      saveTokens(result.accessToken, result.refreshToken);
       result.userId = await findUserIdByUsername(username);
     }
 
@@ -521,11 +449,6 @@ export const api = {
     }).catch(() => {});
   },
 
-  /*
-    Вход через Google, шаг 1: уходим на страницу Google.
-    Backend либо сразу делает redirect, либо отдаёт JSON с адресом —
-    поддерживаем оба варианта.
-  */
   async startGoogleLogin() {
     const url = API_URL + ENDPOINTS.googleLogin;
     try {
@@ -546,17 +469,12 @@ export const api = {
     }
   },
 
-  /*
-    Вход через Google, шаг 2: Google вернул нас на /auth/google/callback?code=...
-    Отдаём code backend-у, получаем токены.
-  */
   async finishGoogleLogin(code: string): Promise<LoginResult> {
     const data = await request<Record<string, unknown>>(
       ENDPOINTS.googleCallback(code),
     );
     const result = readLoginResponse(data);
 
-    // имени в ответе нет — спрашиваем у сервера (уже с новым токеном)
     if (!result.username && result.userId !== null && result.accessToken) {
       saveTokens(result.accessToken, result.refreshToken);
       try {
@@ -565,19 +483,15 @@ export const api = {
         );
         result.username = user.username;
       } catch {
-        // оставим имя пустым — страница подставит «Игрок»
       }
     }
     return result;
   },
 
-  /* ---------- профиль ---------- */
-
   async getMe(): Promise<User> {
     const myId = getMyId();
     const user = await request<BackendUser>(ENDPOINTS.userDetail(myId));
 
-    // статистика: формат ответа backend не описал — пробуем разные имена полей
     let gamesPlayed = 0;
     let wins = 0;
     try {
@@ -587,7 +501,6 @@ export const api = {
       gamesPlayed = stats.games_played ?? stats.total_games ?? stats.games ?? 0;
       wins = stats.wins ?? stats.win_count ?? stats.total_wins ?? 0;
     } catch {
-      // статистики нет — оставляем 0
     }
 
     return {
@@ -601,7 +514,6 @@ export const api = {
     };
   },
 
-  // изменить профиль (имя, email, пароль, фото)
   async updateProfile(changes: {
     username: string;
     email: string;
@@ -623,21 +535,16 @@ export const api = {
       },
     });
 
-    // имя могло поменяться — сбрасываем кэш имён
     usernameCache.delete(myId);
   },
 
-  // TODO backend: нет endpoint «кто онлайн»
   async getOnlineUsers(): Promise<OnlineUser[]> {
     return [];
   },
 
-  // TODO backend: нет endpoint «история игр пользователя»
   async getHistory(): Promise<GameResult[]> {
     return [];
   },
-
-  /* ---------- комнаты ---------- */
 
   async getRooms(): Promise<RoomShort[]> {
     const [rooms, roomPlayers] = await Promise.all([
@@ -681,7 +588,6 @@ export const api = {
       },
     });
 
-    // создатель сразу заходит в свою комнату
     await request(ENDPOINTS.roomPlayerCreate, {
       method: "POST",
       body: { room_id: room.id, user_id: myId },
@@ -717,7 +623,7 @@ export const api = {
       },
       status: toRoomStatus(room.status),
       players: names.map((username) => ({ username })),
-      readySupported: false, // TODO backend: нет статуса «Готов»
+      readySupported: false,
     };
   },
 
@@ -727,7 +633,6 @@ export const api = {
       ENDPOINTS.roomPlayerList(roomId),
     );
 
-    // уже в комнате — ничего не делаем
     if (players.some((player) => player.user_id === myId)) return;
 
     await request(ENDPOINTS.roomPlayerCreate, {
@@ -748,7 +653,6 @@ export const api = {
     }
   },
 
-  // сохранить настройки (только создатель)
   async saveRoomSettings(room: RoomFull) {
     await request(ENDPOINTS.roomUpdate(room.id), {
       method: "PUT",
@@ -764,8 +668,6 @@ export const api = {
     });
   },
 
-  /* ---------- игра ---------- */
-
   async startGame(roomId: string): Promise<{ gameId: string }> {
     const game = await request<BackendGame>(ENDPOINTS.gameCreate, {
       method: "POST",
@@ -774,7 +676,6 @@ export const api = {
     return { gameId: String(game.id) };
   },
 
-  // найти идущую игру в комнате (для тех, кто ждёт в лобби)
   async findGameForRoom(roomId: string): Promise<string | null> {
     const games = await request<BackendGame[]>(ENDPOINTS.gameList);
     const active = games
@@ -797,11 +698,9 @@ export const api = {
       players.map((player) => getUsername(player.user_id)),
     );
 
-    // текущий раунд — нужен его id, чтобы отправлять действия
     const currentRound =
       rounds.find((round) => round.round_number === game.current_round) ?? null;
 
-    // последний раунд — чтобы показать «кого убили»
     const latest = [...rounds].sort(
       (a, b) => b.round_number - a.round_number,
     )[0];
@@ -834,11 +733,6 @@ export const api = {
     };
   },
 
-  /*
-    Ночное действие: мафия убивает (KILL), доктор лечит (HEAL), комиссар проверяет (CHECK).
-    actor_id и target_id — id игрока в игре (game_player.id).
-    Для CHECK backend возвращает is_mafia — результат проверки.
-  */
   async nightAction(
     roundId: number,
     actorId: number,
@@ -864,10 +758,6 @@ export const api = {
     });
   },
 
-  /*
-    Смена фаз. Фазы переключает браузер СОЗДАТЕЛЯ комнаты,
-    когда кончается время (phase_ends_at).
-  */
   nextPhase(gameId: string, phase: GamePhase) {
     const path =
       phase === "NIGHT"
@@ -879,10 +769,6 @@ export const api = {
   },
 };
 
-/*
-  Пробуем получить данные с сервера.
-  Если сервер не ответил — возвращаем демо-данные.
-*/
 export async function loadOrDemo<T>(
   load: () => Promise<T>,
   demo: T,

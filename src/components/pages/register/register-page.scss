@@ -1,15 +1,10 @@
-/*
-  Стили для RegisterPage.tsx
-*/
-
 .register-page {
   overflow-x: hidden;
 }
 
-/* центрируем карточку на экране */
 .register-page-center {
   position: relative;
-  z-index: 1; /* выше фона */
+  z-index: 1;
   display: grid;
   place-items: center;
   min-height: 100vh;
@@ -17,7 +12,6 @@
   padding: 90px 16px 32px;
 }
 
-/* тёмная карточка с формой */
 .register-card {
   width: min(100%, 420px);
   padding: 28px 28px 24px;
@@ -29,7 +23,6 @@
   backdrop-filter: blur(6px);
 }
 
-/* тряска при ошибке */
 .register-card-shake {
   animation: register-shake 0.35s;
 }
@@ -45,7 +38,6 @@
   }
 }
 
-/* круглый логотип, наполовину выходит за карточку */
 .register-logo {
   width: 96px;
   height: 96px;
@@ -67,7 +59,6 @@
   color: var(--color-text-muted);
 }
 
-/* ---------- Адаптив ---------- */
 @media (max-width: 480px) {
   .register-card {
     padding: 24px 18px 20px;

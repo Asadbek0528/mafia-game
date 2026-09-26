@@ -3,14 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/dev.mjs",
+    "dev:next": "next dev",
+    "ws": "node scripts/ws-server.mjs",
+    "bots": "node scripts/bots.mjs",
     "build": "next build",
     "start": "next start"
   },
   "dependencies": {
     "next": "^16.0.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "ws": "^8.21.3"
   },
   "devDependencies": {
     "@types/node": "^20",

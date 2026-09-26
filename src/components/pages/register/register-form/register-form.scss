@@ -1,14 +1,9 @@
-/*
-  Стили для RegisterForm.tsx
-*/
-
 .register-form {
   display: grid;
   gap: 14px;
   text-align: left;
 }
 
-/* одно поле: подпись + инпут + ошибка */
 .register-field {
   display: grid;
   gap: 6px;
@@ -19,12 +14,10 @@
   color: var(--color-text-muted);
 }
 
-/* обёртка, чтобы поставить иконку внутрь инпута */
 .register-input-box {
   position: relative;
 }
 
-/* место слева для иконки и справа для кнопки-глаза */
 .register-input-box .register-input {
   padding-left: 44px;
   padding-right: 44px;
@@ -41,7 +34,6 @@
   pointer-events: none;
 }
 
-/* кнопка-глаз справа в поле пароля */
 .register-eye {
   position: absolute;
   top: 50%;
@@ -78,7 +70,6 @@
   font-size: 16px;
 }
 
-/* крутилка загрузки внутри кнопки */
 .register-spinner {
   width: 20px;
   height: 20px;
@@ -94,7 +85,6 @@
   }
 }
 
-/* разделитель «—— или ——» */
 .register-or {
   display: flex;
   align-items: center;
@@ -111,7 +101,6 @@
   }
 }
 
-/* «Зайти как гость» */
 .register-guest {
   margin-top: 8px;
   font-size: 14px;
@@ -130,7 +119,6 @@
   }
 }
 
-/* «Уже есть аккаунт? Войти» */
 .register-switch {
   margin-top: 18px;
   font-size: 14px;

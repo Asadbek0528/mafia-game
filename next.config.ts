@@ -1,18 +1,17 @@
+import { networkInterfaces } from "node:os";
+
 import type { NextConfig } from "next";
 
-/*
-  Адрес backend. Меняется в .env.local (BACKEND_URL=http://...),
-  после изменения перезапустите npm run dev.
-*/
 const BACKEND_URL = (process.env.BACKEND_URL ?? "http://54.206.85.23").replace(/\/$/, "");
 
+const lanAddresses = Object.values(networkInterfaces())
+  .flat()
+  .filter((item) => item && item.family === "IPv4" && !item.internal)
+  .map((item) => item!.address);
+
 const nextConfig: NextConfig = {
-  /*
-    Прокси до backend.
-    Фронт делает запрос на /backend/rooms,
-    а Next.js пересылает его на BACKEND_URL/rooms.
-    Поэтому в браузере нет ошибок CORS.
-  */
+  allowedDevOrigins: lanAddresses,
+
   async rewrites() {
     return [
       {

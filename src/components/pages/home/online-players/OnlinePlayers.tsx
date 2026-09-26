@@ -1,8 +1,5 @@
 "use client";
 
-/*
-  OnlinePlayers — кто сейчас на сайте.
-*/
 import { useEffect, useState } from "react";
 
 import Avatar from "@/components/pages/widgets/avatar/Avatar";

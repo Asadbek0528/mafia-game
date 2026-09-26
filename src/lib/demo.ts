@@ -1,8 +1,3 @@
-/*
-  demo.ts — демо-данные.
-  Показываются ТОЛЬКО когда backend не ответил.
-  Когда API работает стабильно — этот файл можно удалить.
-*/
 import type { GameResult, OnlineUser, RoomFull, RoomShort } from "./api";
 import { countRoles, DEFAULT_TIMES } from "./roles";
 
@@ -42,7 +37,6 @@ export function getDemoRoom(id: string, me: string): RoomFull {
     { username: "xx", ready: true },
   ];
 
-  // добавляем себя, если нас ещё нет в списке
   if (!players.some((player) => player.username === me)) {
     players.push({ username: me, ready: false });
   }

@@ -1,7 +1,3 @@
-/*
-  DeadBanner — «Вы погибли». Показывается сверху, когда меня убили.
-  Дальше я только смотрю.
-*/
 import "./dead-banner.scss";
 
 export default function DeadBanner() {

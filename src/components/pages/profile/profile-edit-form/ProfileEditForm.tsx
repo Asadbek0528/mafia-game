@@ -1,18 +1,5 @@
 "use client";
 
-/*
-  ProfileEditForm — «Редактировать профиль».
-  Что можно поменять: фото, имя, email, пароль.
-
-  Порядок работы:
-  1. Загружаем текущие данные (api.getMe) и ставим их в поля.
-  2. Игрок меняет что хочет.
-  3. Проверяем поля (validate).
-  4. Отправляем api.updateProfile(...) и сохраняем новые данные в браузере.
-
-  ⚠️ Backend требует пароль при каждом сохранении —
-  поэтому поле «Текущий пароль» обязательное.
-*/
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
@@ -38,7 +25,6 @@ type FormErrors = Record<keyof FormValues, string>;
 const EMPTY: FormValues = { username: "", email: "", newPassword: "", repeatPassword: "", currentPassword: "" };
 const NO_ERRORS: FormErrors = { username: "", email: "", newPassword: "", repeatPassword: "", currentPassword: "" };
 
-// проверка полей
 function validate(values: FormValues): FormErrors {
   const errors = { ...NO_ERRORS };
 
@@ -49,7 +35,6 @@ function validate(values: FormValues): FormErrors {
   if (!values.email) errors.email = "Введите email.";
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) errors.email = "Email выглядит неправильно.";
 
-  // новый пароль — необязательный
   if (values.newPassword && values.newPassword.length < 6) errors.newPassword = "Пароль — минимум 6 символов.";
   if (values.newPassword && values.repeatPassword !== values.newPassword) errors.repeatPassword = "Пароли не совпадают.";
 
@@ -59,7 +44,7 @@ function validate(values: FormValues): FormErrors {
 }
 
 type ProfileEditFormProps = {
-  onSaved: () => void; // сообщить странице, что профиль обновился
+  onSaved: () => void;
 };
 
 export default function ProfileEditForm({ onSaved }: ProfileEditFormProps) {
@@ -71,14 +56,12 @@ export default function ProfileEditForm({ onSaved }: ProfileEditFormProps) {
   const [errors, setErrors] = useState<FormErrors>(NO_ERRORS);
   const [isSaving, setIsSaving] = useState(false);
 
-  // 1. ставим текущие данные в поля
   useEffect(() => {
     if (!user || user.guest) return;
 
     setValues((old) => ({ ...old, username: user.username, email: user.email ?? "" }));
     setPhoto(user.profile_image ?? null);
 
-    // свежие данные с сервера
     api
       .getMe()
       .then((fresh) => {
@@ -86,11 +69,9 @@ export default function ProfileEditForm({ onSaved }: ProfileEditFormProps) {
         setPhoto(fresh.profile_image ?? null);
       })
       .catch(() => {
-        // сервер не ответил — оставляем то, что было
       });
   }, [user]);
 
-  // гостю редактировать нечего
   if (user?.guest) {
     return (
       <section className="panel profile-edit">
@@ -102,15 +83,13 @@ export default function ProfileEditForm({ onSaved }: ProfileEditFormProps) {
     );
   }
 
-  // изменить одно поле
   function setField(name: keyof FormValues, value: string) {
     setValues({ ...values, [name]: value });
   }
 
-  // выбрали файл с фото
   async function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
-    event.target.value = ""; // чтобы можно было выбрать тот же файл ещё раз
+    event.target.value = "";
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
@@ -134,14 +113,12 @@ export default function ProfileEditForm({ onSaved }: ProfileEditFormProps) {
 
     const clean = { ...values, username: values.username.trim(), email: values.email.trim() };
 
-    // проверка
     const newErrors = validate(clean);
     setErrors(newErrors);
     if (Object.values(newErrors).some((error) => error !== "")) return;
 
     setIsSaving(true);
     try {
-      // если ввели новый пароль — отправляем его, иначе текущий
       const password = clean.newPassword || clean.currentPassword;
 
       await api.updateProfile({
@@ -151,10 +128,8 @@ export default function ProfileEditForm({ onSaved }: ProfileEditFormProps) {
         profileImage: photo,
       });
 
-      // сохраняем новые данные в браузере
       saveLogin({ ...user, username: clean.username, email: clean.email, profile_image: photo }, getToken(), getRefreshToken());
 
-      // очищаем поля паролей
       setValues({ ...clean, newPassword: "", repeatPassword: "", currentPassword: "" });
       showToast("Профиль сохранён.", "success");
       onSaved();
@@ -165,7 +140,6 @@ export default function ProfileEditForm({ onSaved }: ProfileEditFormProps) {
     }
   }
 
-  // класс для поля: красная рамка, если ошибка
   function inputClass(name: keyof FormValues) {
     return errors[name] ? "input input-error" : "input";
   }
@@ -175,7 +149,6 @@ export default function ProfileEditForm({ onSaved }: ProfileEditFormProps) {
       <h2 className="panel-title">Редактировать профиль</h2>
 
       <form className="profile-edit-form" onSubmit={handleSubmit} noValidate>
-        {/* ---- фото ---- */}
         <div className="profile-edit-photo">
           <Avatar name={values.username || "?"} image={photo} size={96} />
 
@@ -191,11 +164,9 @@ export default function ProfileEditForm({ onSaved }: ProfileEditFormProps) {
             <p className="profile-edit-hint">JPG, PNG или WEBP, до {MAX_FILE_MB} МБ</p>
           </div>
 
-          {/* настоящее поле выбора файла спрятано, открываем его кнопкой выше */}
           <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handlePhotoChange} />
         </div>
 
-        {/* ---- имя и email ---- */}
         <div className="profile-edit-row">
           <label className="profile-edit-field">
             <span className="profile-edit-label">Имя игрока</span>
@@ -222,7 +193,6 @@ export default function ProfileEditForm({ onSaved }: ProfileEditFormProps) {
           </label>
         </div>
 
-        {/* ---- новый пароль (необязательно) ---- */}
         <p className="profile-edit-section">Сменить пароль (необязательно)</p>
         <div className="profile-edit-row">
           <label className="profile-edit-field">
@@ -251,7 +221,6 @@ export default function ProfileEditForm({ onSaved }: ProfileEditFormProps) {
           </label>
         </div>
 
-        {/* ---- текущий пароль (обязательно) ---- */}
         <div className="profile-edit-confirm">
           <label className="profile-edit-field">
             <span className="profile-edit-label">Текущий пароль — чтобы сохранить изменения</span>

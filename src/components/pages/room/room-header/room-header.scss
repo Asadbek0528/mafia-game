@@ -1,7 +1,3 @@
-/*
-  Стили для RoomHeader.tsx
-*/
-
 .room-header {
   display: flex;
   flex-wrap: wrap;
@@ -78,7 +74,6 @@
   }
 }
 
-/* ---------- Адаптив ---------- */
 @media (max-width: 760px) {
   .room-header {
     gap: 10px;
@@ -94,7 +89,7 @@
   }
 
   .room-header-copy {
-    order: 5; /* кнопка переносится на новую строку */
+    order: 5;
     width: 100%;
   }
 }

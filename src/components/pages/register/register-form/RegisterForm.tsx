@@ -1,17 +1,5 @@
 "use client";
 
-/*
-  RegisterForm — форма регистрации и входа.
-
-  Режим «Регистрация»: имя, email, возраст, пароль.
-  Режим «Вход»:        имя и пароль.
-
-  Порядок работы:
-  1. Проверяем поля (validate).
-  2. Регистрация → api.register(...), потом api.login(...) чтобы получить токен.
-     Вход        → сразу api.login(...).
-  3. Сохраняем вход и переходим на главную "/".
-*/
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -23,7 +11,6 @@ import "./register-form.scss";
 
 type Mode = "register" | "login";
 
-// ошибки для каждого поля ("" = ошибки нет)
 type FormErrors = {
   username: string;
   email: string;
@@ -40,7 +27,6 @@ type FormValues = {
   password: string;
 };
 
-// проверка полей
 function validate(mode: Mode, values: FormValues): FormErrors {
   const errors = { ...NO_ERRORS };
   const { username, email, age, password } = values;
@@ -54,7 +40,6 @@ function validate(mode: Mode, values: FormValues): FormErrors {
   else if (password.length < 6)
     errors.password = "Пароль — минимум 6 символов.";
 
-  // email нужен только при регистрации
   if (mode === "register") {
     if (!email) errors.email = "Введите email.";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
@@ -72,7 +57,7 @@ function validate(mode: Mode, values: FormValues): FormErrors {
 type RegisterFormProps = {
   mode: Mode;
   onModeChange: (mode: Mode) => void;
-  onError: () => void; // сообщить странице, что была ошибка (карточка трясётся)
+  onError: () => void;
 };
 
 export default function RegisterForm({
@@ -92,13 +77,12 @@ export default function RegisterForm({
   const [errors, setErrors] = useState<FormErrors>(NO_ERRORS);
   const [isLoading, setIsLoading] = useState(false);
 
-  // изменить одно поле
   function setField(name: keyof FormValues, value: string) {
     setValues({ ...values, [name]: value });
   }
 
   async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault(); // чтобы страница не перезагрузилась
+    event.preventDefault();
 
     const clean = {
       ...values,
@@ -106,7 +90,6 @@ export default function RegisterForm({
       email: values.email.trim(),
     };
 
-    // 1. проверка
     const newErrors = validate(mode, clean);
     setErrors(newErrors);
     if (Object.values(newErrors).some((error) => error !== "")) {
@@ -114,7 +97,6 @@ export default function RegisterForm({
       return;
     }
 
-    // 2. отправка на сервер
     setIsLoading(true);
     try {
       let result: LoginResult;
@@ -127,7 +109,6 @@ export default function RegisterForm({
           clean.password,
         );
 
-        // если регистрация не вернула токен — входим
         if (!result.accessToken) {
           result = await api.login(clean.username, clean.password);
         }
@@ -135,7 +116,6 @@ export default function RegisterForm({
         result = await api.login(clean.username, clean.password);
       }
 
-      // 3. сохраняем и идём на главную
       saveLogin(
         {
           id: result.userId ?? undefined,
@@ -162,7 +142,6 @@ export default function RegisterForm({
     }
   }
 
-  // класс для поля: красная рамка, если ошибка
   function inputClass(name: keyof FormErrors) {
     return errors[name]
       ? "input register-input input-error"
@@ -172,7 +151,6 @@ export default function RegisterForm({
   return (
     <>
       <form className="register-form" onSubmit={handleSubmit} noValidate>
-        {/* ---- Имя игрока ---- */}
         <div className="register-field">
           <label htmlFor="username" className="register-label">
             Имя игрока
@@ -204,7 +182,6 @@ export default function RegisterForm({
           )}
         </div>
 
-        {/* ---- Email (только регистрация) ---- */}
         {mode === "register" && (
           <div className="register-field">
             <label htmlFor="email" className="register-label">
@@ -235,7 +212,6 @@ export default function RegisterForm({
           </div>
         )}
 
-        {/* ---- Возраст (только регистрация) ---- */}
         {mode === "register" && (
           <div className="register-field">
             <label htmlFor="age" className="register-label">
@@ -268,7 +244,6 @@ export default function RegisterForm({
           </div>
         )}
 
-        {/* ---- Пароль ---- */}
         <div className="register-field">
           <label htmlFor="password" className="register-label">
             Пароль
@@ -295,7 +270,6 @@ export default function RegisterForm({
               value={values.password}
               onChange={(event) => setField("password", event.target.value)}
             />
-            {/* кнопка-глаз: показать / скрыть пароль */}
             <button
               type="button"
               className="register-eye"
@@ -318,7 +292,6 @@ export default function RegisterForm({
           )}
         </div>
 
-        {/* ---- Кнопки ---- */}
         <button
           type="submit"
           className="btn btn-red btn-full register-submit"
@@ -346,7 +319,6 @@ export default function RegisterForm({
         </button>
       </form>
 
-      {/* переключить регистрация ↔ вход */}
       <p className="register-switch">
         {mode === "register" ? "Уже есть аккаунт? " : "Нет аккаунта? "}
         <button

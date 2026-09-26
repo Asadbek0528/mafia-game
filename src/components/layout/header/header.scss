@@ -1,7 +1,3 @@
-/*
-  Стили для Header.tsx (боковое меню)
-*/
-
 .header {
   position: sticky;
   top: 0;
@@ -15,7 +11,6 @@
   border-right: 1px solid var(--color-line);
 }
 
-/* круглый логотип */
 .header-logo {
   align-self: center;
   padding: 26px 0 22px;
@@ -39,14 +34,12 @@
   }
 }
 
-/* список ссылок */
 .header-menu {
   display: grid;
   gap: 4px;
   padding: 0 12px;
 }
 
-/* одна ссылка */
 .header-link {
   display: flex;
   align-items: center;
@@ -76,7 +69,6 @@
   }
 }
 
-/* активная ссылка (текущая страница) */
 .header-link-active {
   color: #ffffff;
   background: linear-gradient(90deg, rgba(190, 20, 30, 0.55), rgba(120, 10, 16, 0.15));
@@ -87,7 +79,6 @@
   }
 }
 
-/* картинка города внизу */
 .header-city {
   position: relative;
   flex: 1;
@@ -95,7 +86,6 @@
   max-height: 520px;
   margin-top: auto;
   background: url("/img/sidebar-city.webp") center bottom / cover no-repeat;
-  /* плавное появление картинки сверху */
   mask-image: linear-gradient(180deg, transparent, #000000 30%);
   -webkit-mask-image: linear-gradient(180deg, transparent, #000000 30%);
 }
@@ -113,9 +103,6 @@
   transform: rotate(-6deg);
 }
 
-/* ---------- Адаптив ---------- */
-
-/* планшет: меню чуть уже */
 @media (max-width: 1280px) {
   .header {
     width: 210px;
@@ -127,7 +114,6 @@
   }
 }
 
-/* телефон: меню внизу экрана */
 @media (max-width: 860px) {
   .header {
     position: fixed;
@@ -173,7 +159,6 @@
     border-color: transparent;
   }
 
-  /* чтобы нижнее меню не закрывало страницу (только если меню есть) */
   .app:has(.header) .app-content {
     padding-bottom: calc(var(--mobile-menu-height) + env(safe-area-inset-bottom, 0px));
   }

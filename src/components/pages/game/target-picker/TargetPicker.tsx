@@ -1,12 +1,3 @@
-/*
-  TargetPicker — сетка игроков.
-  Используется для всего, где нужно выбрать игрока:
-  - ночью (мафия / доктор / комиссар)
-  - на голосовании
-  и просто чтобы посмотреть, кто жив (без кнопки).
-
-  Мёртвые игроки — серые и зачёркнутые.
-*/
 import Avatar from "@/components/pages/widgets/avatar/Avatar";
 import type { GamePlayer } from "@/lib/api";
 import { getRole } from "@/lib/roles";
@@ -15,13 +6,13 @@ import "./target-picker.scss";
 type TargetPickerProps = {
   title: string;
   subtitle?: string;
-  players: GamePlayer[]; // кого показать
-  selectableIds: number[]; // кого можно выбрать (пусто = просто смотреть)
+  players: GamePlayer[];
+  selectableIds: number[];
   selectedId: number | null;
   meId: number | null;
-  isSent: boolean; // выбор уже отправлен
-  confirmText?: string; // текст кнопки (нет текста — нет кнопки)
-  showRole: (player: GamePlayer) => boolean; // видно ли роль этого игрока
+  isSent: boolean;
+  confirmText?: string;
+  showRole: (player: GamePlayer) => boolean;
   onSelect: (playerId: number) => void;
   onConfirm?: () => void;
 };
@@ -41,7 +32,6 @@ export default function TargetPicker(props: TargetPickerProps) {
           const isSelectable = canChoose && selectableIds.includes(player.id);
           const isSelected = player.id === selectedId;
 
-          // собираем классы
           let className = "target-picker-player";
           if (!player.isAlive) className += " target-picker-player-dead";
           if (isSelectable) className += " target-picker-player-selectable";
@@ -62,7 +52,6 @@ export default function TargetPicker(props: TargetPickerProps) {
                   {player.id === meId && " (вы)"}
                 </span>
 
-                {/* роль видна: моя, союзники-мафия, мёртвые, конец игры */}
                 {showRole(player) && player.role && <span className="target-picker-role">{getRole(player.role).name}</span>}
               </button>
             </li>

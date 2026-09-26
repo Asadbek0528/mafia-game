@@ -1,18 +1,11 @@
 "use client";
 
-/*
-  Header — боковое меню (sidebar).
-  На ноутбуке и планшете: слева.
-  На телефоне: превращается в нижнее меню (как в приложении).
-  На страницах /register, /room и /game меню не показываем.
-*/
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import "./header.scss";
 
-// Пункты меню. icon — это SVG-иконка
 const MENU = [
   {
     href: "/",
@@ -41,7 +34,6 @@ const MENU = [
   },
 ];
 
-// страницы, где меню не нужно
 const PAGES_WITHOUT_MENU = ["/register", "/room", "/game", "/auth"];
 
 export default function Header() {
@@ -78,7 +70,6 @@ export default function Header() {
         })}
       </nav>
 
-      {/* картинка города внизу меню */}
       <div className="header-city" aria-hidden="true">
         <p className="header-city-text">
           Следи за тенью.

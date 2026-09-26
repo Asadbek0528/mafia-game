@@ -1,9 +1,5 @@
 "use client";
 
-/*
-  GameHistory — последние игры игрока.
-  У гостя истории нет — показываем подсказку.
-*/
 import Image from "next/image";
 import { useEffect, useState } from "react";
 
@@ -14,7 +10,7 @@ import { getRole } from "@/lib/roles";
 import "./game-history.scss";
 
 type GameHistoryProps = {
-  limit?: number; // сколько игр показать, по умолчанию 5
+  limit?: number;
 };
 
 export default function GameHistory({ limit = 5 }: GameHistoryProps) {

@@ -1,9 +1,5 @@
 "use client";
 
-/*
-  InviteBox — пригласить друзей: ссылка на комнату,
-  кнопка «Копировать ссылку» и «Поделиться» (на телефоне откроет меню отправки).
-*/
 import { useEffect, useState } from "react";
 
 import { showToast } from "@/components/pages/widgets/toast/Toast";
@@ -17,7 +13,6 @@ type InviteBoxProps = {
 export default function InviteBox({ roomId, roomName }: InviteBoxProps) {
   const [link, setLink] = useState("");
 
-  // адрес сайта знаем только в браузере
   useEffect(() => {
     setLink(`${window.location.origin}/room/${roomId}`);
   }, [roomId]);
@@ -32,12 +27,10 @@ export default function InviteBox({ roomId, roomName }: InviteBoxProps) {
   }
 
   async function shareLink() {
-    // navigator.share есть на телефонах
     if (navigator.share) {
       try {
         await navigator.share({ title: "Mafia", text: `Заходи в комнату «${roomName}»`, url: link });
       } catch {
-        // пользователь закрыл меню — ничего не делаем
       }
     } else {
       copyLink();
@@ -68,7 +61,6 @@ export default function InviteBox({ roomId, roomName }: InviteBoxProps) {
         Поделиться
       </button>
 
-      {/* картинка улицы с фонарём */}
       <div className="invite-box-image" aria-hidden="true" />
     </section>
   );

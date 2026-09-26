@@ -1,17 +1,12 @@
-/*
-  Стили для BloodBackground.tsx
-*/
-
 .blood-background {
   position: fixed;
   inset: 0;
   z-index: 0;
   overflow: hidden;
-  pointer-events: none; /* фон не мешает кликать по форме */
+  pointer-events: none;
   background: radial-gradient(ellipse 70% 55% at 50% 60%, #2a0306 0%, #0b0000 55%, #000000 100%);
 }
 
-/* кровь сверху: при загрузке медленно стекает вниз */
 .blood-drips {
   position: absolute;
   top: 0;
@@ -32,7 +27,6 @@
   }
 }
 
-/* большая надпись «БЕГИ» — иногда мигает, как сломанная лампа */
 .blood-run-text {
   position: absolute;
   top: 52%;
@@ -68,7 +62,6 @@
   }
 }
 
-/* маленькие надписи по бокам */
 .blood-whisper {
   position: absolute;
   font-family: var(--font-horror);
@@ -96,14 +89,12 @@
   transform: rotate(4deg);
 }
 
-/* тёмные края экрана */
 .blood-shadow {
   position: absolute;
   inset: 0;
   background: radial-gradient(ellipse at center, transparent 35%, rgba(0, 0, 0, 0.85) 100%);
 }
 
-/* ---------- Адаптив ---------- */
 @media (max-width: 480px) {
   .blood-whisper-right {
     display: none;

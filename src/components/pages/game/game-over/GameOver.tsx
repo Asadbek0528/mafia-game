@@ -1,6 +1,3 @@
-/*
-  GameOver — конец игры: кто победил и у кого какая была роль.
-*/
 import Image from "next/image";
 import Link from "next/link";
 
@@ -14,13 +11,12 @@ type GameOverProps = {
   players: GamePlayer[];
   rounds: number;
   myRole: GamePlayer["role"] | null;
-  backLink: string; // куда ведёт «Вернуться в лобби»
+  backLink: string;
 };
 
 export default function GameOver({ winner, players, rounds, myRole, backLink }: GameOverProps) {
   const mafiaWon = winner === "MAFIA";
 
-  // я победил? (мафия выиграла и я мафия, или жители выиграли и я не мафия)
   let myResult = "";
   if (myRole) {
     const iAmMafia = myRole === "mafia";
@@ -57,7 +53,6 @@ export default function GameOver({ winner, players, rounds, myRole, backLink }: 
         </div>
       </div>
 
-      {/* кто кем был */}
       <h2 className="game-over-list-title">Кто кем был</h2>
       <ul className="game-over-list">
         {players.map((player) => (

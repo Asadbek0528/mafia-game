@@ -1,7 +1,3 @@
-/*
-  RolesPage — страница «Роли», адрес "/roles".
-  Карточка роли + короткое объяснение, что она делает.
-*/
 import Image from "next/image";
 
 import { ROLES } from "@/lib/roles";

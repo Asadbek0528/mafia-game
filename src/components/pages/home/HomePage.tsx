@@ -1,16 +1,5 @@
 "use client";
 
-/*
-  HomePage — главное меню (шаг 2), адрес "/".
-
-  Раскладка:
-  ┌─────────────────────────────┬──────────────┐
-  │ Hero (большой баннер)        │ ProfileCard  │
-  │ RoleCards (4 карточки ролей) │ OnlinePlayers│
-  │ RoomsTable (комнаты)         │ GameHistory  │
-  └─────────────────────────────┴──────────────┘
-  Слева от всего — Header (он в app/layout.tsx).
-*/
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -32,22 +21,19 @@ export default function HomePage() {
   const router = useRouter();
   const { user, isLoaded } = useCurrentUser();
 
-  const [rooms, setRooms] = useState<RoomShort[] | null>(null); // null = ещё грузится
+  const [rooms, setRooms] = useState<RoomShort[] | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // нет аккаунта и не гость → на регистрацию
   useEffect(() => {
     if (isLoaded && !user) {
       router.replace("/register");
     }
   }, [isLoaded, user, router]);
 
-  // загружаем комнаты
   useEffect(() => {
     loadOrDemo(api.getRooms, DEMO_ROOMS).then(setRooms);
   }, []);
 
-  // «Начать игру»: заходим в первую свободную комнату, если её нет — создаём
   function handleQuickPlay() {
     const freeRoom = rooms?.find((room) => room.status === "waiting" && room.players < room.max_players);
 
@@ -58,14 +44,12 @@ export default function HomePage() {
     }
   }
 
-  // пока не знаем, кто пользователь — ничего не показываем
   if (!isLoaded || !user) {
     return null;
   }
 
   return (
     <div className="home-page">
-      {/* ---- центр ---- */}
       <main className="home-page-main">
         <Hero onPlay={handleQuickPlay} onCreateRoom={() => setIsModalOpen(true)} />
 
@@ -81,7 +65,6 @@ export default function HomePage() {
         <Footer />
       </main>
 
-      {/* ---- правая колонка ---- */}
       <aside className="home-page-side">
         <ProfileCard />
         <OnlinePlayers />

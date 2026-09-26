@@ -1,62 +1,36 @@
-/*
-  =============================================================
-  globals.scss — общие стили для всего сайта.
-
-  Что здесь:
-  1. Цвета и шрифты (CSS-переменные) — меняешь тут, меняется везде
-  2. Сброс стилей браузера
-  3. Общий каркас страницы (.app)
-  4. Общие классы: кнопки .btn, поля .input, панели .panel
-
-  Стили отдельных компонентов лежат рядом с компонентом:
-  например Header.tsx → header.scss
-  =============================================================
-*/
-
-/* ---------- 1. Цвета и шрифты ---------- */
 :root {
-  /* фон и панели */
   --color-black: #000000;
   --color-panel: #0c0707;
   --color-panel-light: #140a0a;
 
-  /* линии и рамки */
   --color-line: #2b1214;
   --color-line-red: #5a1117;
 
-  /* красный (кровь) */
   --color-red-dark: #a3111a;
   --color-red: #e0202b;
   --color-red-glow: rgba(224, 32, 43, 0.35);
 
-  /* текст */
   --color-text: #eee7e7;
   --color-text-muted: #9b8b8b;
 
-  /* статусы */
   --color-green: #2fd36b;
   --color-yellow: #e3a531;
 
-  /* шрифты (подключены в layout.tsx) */
   --font-body: var(--font-onest), system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-title: var(--font-oswald), "Arial Narrow", Impact, sans-serif;
   --font-horror: var(--font-wet-paint), var(--font-oswald), Impact, sans-serif;
 
-  /* скругления */
   --radius-small: 6px;
   --radius: 10px;
   --radius-big: 16px;
 
-  /* высота нижнего меню на телефоне */
   --mobile-menu-height: 72px;
 
-  /* отступы от «чёлки» и полоски на iPhone */
   box-sizing: border-box;
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* ---------- 2. Сброс стилей ---------- */
 *,
 *::before,
 *::after {
@@ -106,7 +80,6 @@ input {
   color: inherit;
 }
 
-/* рамка при навигации с клавиатуры (Tab) */
 :focus-visible {
   outline: 2px solid var(--color-red);
   outline-offset: 2px;
@@ -116,7 +89,6 @@ input {
   display: none !important;
 }
 
-/* текст только для экранных дикторов (незрячих) */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -126,7 +98,6 @@ input {
   white-space: nowrap;
 }
 
-/* ---------- 3. Каркас: слева Header, справа страница ---------- */
 .app {
   display: flex;
   min-height: 100vh;
@@ -137,7 +108,6 @@ input {
   min-width: 0;
 }
 
-/* ---------- 4. Кнопки ---------- */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -165,7 +135,6 @@ input {
   }
 }
 
-/* красная кнопка — главное действие */
 .btn-red {
   color: #ffffff;
   background: linear-gradient(180deg, #c5161f, #85090f);
@@ -176,7 +145,6 @@ input {
   }
 }
 
-/* тёмная кнопка — второстепенное действие */
 .btn-dark {
   background: #120a0a;
   border-color: var(--color-line);
@@ -187,7 +155,6 @@ input {
   }
 }
 
-/* зелёная кнопка — «Готов» */
 .btn-green {
   color: #ffffff;
   background: linear-gradient(180deg, #1f7a43, #0f4a26);
@@ -205,7 +172,6 @@ input {
   width: 100%;
 }
 
-/* кнопка-ссылка (красный текст без фона) */
 .btn-link {
   padding: 6px 4px;
   font-weight: 600;
@@ -219,7 +185,6 @@ input {
   }
 }
 
-/* ---------- 5. Поля ввода ---------- */
 .input {
   width: 100%;
   min-height: 48px;
@@ -240,12 +205,10 @@ input {
   }
 }
 
-/* поле с ошибкой */
 .input-error {
   border-color: var(--color-red);
 }
 
-/* ---------- 6. Панель (тёмный блок с рамкой) ---------- */
 .panel {
   min-width: 0;
   padding: 18px;
@@ -266,7 +229,6 @@ input {
   font-size: 19px;
 }
 
-/* ---------- 7. Точка статуса (зелёная / жёлтая / красная) ---------- */
 .status-dot {
   display: inline-block;
   flex: none;
@@ -288,7 +250,6 @@ input {
   color: var(--color-text-muted);
 }
 
-/* ---------- 8. Кто не любит анимации — выключаем их ---------- */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

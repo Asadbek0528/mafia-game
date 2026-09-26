@@ -1,22 +1,12 @@
-/*
-  Avatar — круглая аватарка.
-  Если у игрока есть фото (image) — показываем фото.
-  Если нет — первую букву имени на цветном фоне.
-  Цвет считается из имени, поэтому у каждого игрока свой цвет.
-
-  Пример: <Avatar name="darkness" size={40} />
-          <Avatar name="darkness" image={user.profile_image} size={64} />
-*/
 import "./avatar.scss";
 
 type AvatarProps = {
   name: string;
-  size?: number; // размер в пикселях, по умолчанию 40
-  image?: string | null; // фото профиля
-  empty?: boolean; // пустое место в комнате (пунктир и "?")
+  size?: number;
+  image?: string | null;
+  empty?: boolean;
 };
 
-// из имени получаем число 0–359 (оттенок цвета)
 function getColorFromName(name: string): number {
   let hue = 0;
   for (const letter of name) {
@@ -34,11 +24,8 @@ export default function Avatar({ name, size = 40, image, empty = false }: Avatar
     );
   }
 
-  // есть фото
   if (image) {
     return (
-      // обычный <img>, потому что фото может быть data URL (текстом), next/image такое не любит
-      // eslint-disable-next-line @next/next/no-img-element
       <img className="avatar avatar-photo" src={image} alt="" width={size} height={size} style={{ width: size, height: size }} />
     );
   }

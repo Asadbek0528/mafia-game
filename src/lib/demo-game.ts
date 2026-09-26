@@ -1,19 +1,10 @@
-/*
-  =============================================================
-  demo-game.ts — игра БЕЗ сервера (для проверки дизайна).
-  Работает, когда адрес игры начинается с "demo", например /game/demo-83491.
-  Боты действуют случайно, ваши действия учитываются.
-  Когда backend будет готов — этот файл не нужен.
-  =============================================================
-*/
 import type { GamePlayer, GameState, GameWinner, RoleCounts, RoleKey } from "./api";
 import { countRoles, DEFAULT_TIMES } from "./roles";
 import { DEMO_NAMES } from "./demo";
 
-// данные, которые комната передаёт в демо-игру
 export type DemoSetup = {
   roomId: string;
-  players: string[]; // имена
+  players: string[];
   roles: RoleCounts;
   dayTime: number;
   nightTime: number;
@@ -28,15 +19,12 @@ function readDemoSetup(myName: string): DemoSetup {
     const saved = JSON.parse(sessionStorage.getItem("mafia_demo_game") ?? "null") as DemoSetup | null;
     if (saved) return saved;
   } catch {
-    // ничего
   }
 
-  // если комнаты не было — 8 игроков по умолчанию
   const players = [myName, ...DEMO_NAMES.filter((name) => name !== myName)].slice(0, 8);
   return { roomId: "", players, roles: countRoles(8), dayTime: DEFAULT_TIMES.day, nightTime: DEFAULT_TIMES.night };
 }
 
-// перемешать массив (случайный порядок)
 function shuffle<T>(items: T[]): T[] {
   const result = [...items];
   for (let i = result.length - 1; i > 0; i--) {
@@ -50,11 +38,9 @@ function randomItem<T>(items: T[]): T | undefined {
   return items[Math.floor(Math.random() * items.length)];
 }
 
-/* ---------- создать демо-игру ---------- */
 export function createDemoGame(gameId: string, myName: string): GameState {
   const setup = readDemoSetup(myName);
 
-  // собираем список ролей и перемешиваем
   const roleList: RoleKey[] = [];
   for (let i = 0; i < setup.roles.mafia; i++) roleList.push("mafia");
   for (let i = 0; i < setup.roles.doctor; i++) roleList.push("doctor");
@@ -65,7 +51,7 @@ export function createDemoGame(gameId: string, myName: string): GameState {
 
   const players: GamePlayer[] = setup.players.map((username, index) => ({
     id: index + 1,
-    userId: -(index + 1), // в демо нет настоящих id
+    userId: -(index + 1),
     username,
     role: roles[index],
     isAlive: true,
@@ -78,7 +64,7 @@ export function createDemoGame(gameId: string, myName: string): GameState {
     round: 1,
     roundId: 1,
     phase: "NIGHT",
-    phaseEndsAt: null, // в демо таймер считаем сами
+    phaseEndsAt: null,
     winner: null,
     players,
     lastRound: null,
@@ -87,7 +73,6 @@ export function createDemoGame(gameId: string, myName: string): GameState {
   };
 }
 
-/* ---------- проверить, кто победил ---------- */
 function findWinner(players: GamePlayer[]): GameWinner | null {
   const alive = players.filter((player) => player.isAlive);
   const mafia = alive.filter((player) => player.role === "mafia").length;
@@ -102,16 +87,10 @@ function kill(players: GamePlayer[], playerId: number | null): GamePlayer[] {
   return players.map((player) => (player.id === playerId ? { ...player, isAlive: false } : player));
 }
 
-/*
-  ---------- перейти к следующей фазе ----------
-  me       — я (чтобы учесть мой выбор)
-  myTarget — кого я выбрал в этой фазе (или null)
-*/
 export function advanceDemoGame(game: GameState, me: GamePlayer | undefined, myTarget: number | null): GameState {
   const alive = game.players.filter((player) => player.isAlive);
   const iCanAct = me?.isAlive && myTarget !== null;
 
-  /* ночь → день */
   if (game.phase === "NIGHT") {
     const victims = alive.filter((player) => player.role !== "mafia");
     const mafiaTarget = iCanAct && me?.role === "mafia" ? myTarget : randomItem(victims)?.id ?? null;
@@ -131,12 +110,10 @@ export function advanceDemoGame(game: GameState, me: GamePlayer | undefined, myT
     };
   }
 
-  /* день → голосование */
   if (game.phase === "DAY") {
     return { ...game, phase: "VOTING" };
   }
 
-  /* голосование → следующая ночь */
   const target = iCanAct ? myTarget : randomItem(alive)?.id ?? null;
   const players = kill(game.players, target);
 
@@ -144,7 +121,7 @@ export function advanceDemoGame(game: GameState, me: GamePlayer | undefined, myT
     ...game,
     players,
     phase: "NIGHT",
-    phaseEndsAt: null, // в демо таймер считаем сами
+    phaseEndsAt: null,
     round: game.round + 1,
     roundId: game.round + 1,
     winner: findWinner(players),

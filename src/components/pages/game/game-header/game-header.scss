@@ -1,7 +1,3 @@
-/*
-  Стили для GameHeader.tsx
-*/
-
 .game-header {
   display: flex;
   flex-wrap: wrap;
@@ -14,7 +10,6 @@
   backdrop-filter: blur(6px);
 }
 
-/* луна / солнце */
 .game-header-icon {
   display: grid;
   place-items: center;
@@ -55,7 +50,6 @@
   color: var(--color-text-muted);
 }
 
-/* таймер */
 .game-header-timer {
   display: grid;
   justify-items: end;
@@ -82,7 +76,6 @@
   }
 }
 
-/* маленькая карточка моей роли */
 .game-header-role {
   display: flex;
   align-items: center;
@@ -106,7 +99,6 @@
   }
 }
 
-/* ---------- Адаптив ---------- */
 @media (max-width: 600px) {
   .game-header {
     gap: 10px;
@@ -126,7 +118,6 @@
     font-size: 22px;
   }
 
-  /* роль уходит на новую строку во всю ширину */
   .game-header-role {
     order: 5;
     width: 100%;

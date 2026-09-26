@@ -1,7 +1,3 @@
-/*
-  Адрес "/auth/google/callback" — сюда Google возвращает после входа.
-  Suspense нужен, потому что страница читает ?code= из адреса.
-*/
 import type { Metadata } from "next";
 import { Suspense } from "react";
 

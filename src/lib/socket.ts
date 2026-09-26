@@ -1,27 +1,9 @@
-/*
-  =============================================================
-  socket.ts — живые обновления через WebSocket.
-
-  Идея простая: сервер присылает сообщение «что-то изменилось»
-  (игрок зашёл, фаза сменилась, кого-то убили) — мы сразу
-  заново загружаем комнату / игру через обычный API.
-  Поэтому формат сообщений почти не важен.
-
-  Если WebSocket не подключился — страница продолжает работать
-  через опрос сервера (polling), только медленнее.
-
-  Адреса настраиваются в .env.local (см. .env.example):
-    NEXT_PUBLIC_WS_URL        — сервер, например ws://13.211.79.228
-                                (пустая строка = WebSocket выключен)
-    NEXT_PUBLIC_WS_ROOM_PATH  — путь комнаты, {id} заменится на номер
-    NEXT_PUBLIC_WS_GAME_PATH  — путь игры
-  =============================================================
-*/
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getToken } from "./auth";
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "";
+const WS_SETTING = process.env.NEXT_PUBLIC_WS_URL ?? "auto";
+const WS_PORT = process.env.NEXT_PUBLIC_WS_PORT ?? "3001";
 const ROOM_PATH = process.env.NEXT_PUBLIC_WS_ROOM_PATH ?? "/ws/room/{id}";
 const GAME_PATH = process.env.NEXT_PUBLIC_WS_GAME_PATH ?? "/ws/game/{id}";
 
@@ -30,40 +12,41 @@ export const WS_PATHS = {
   game: (gameId: string) => GAME_PATH.replace("{id}", gameId),
 };
 
-// адрес с токеном: браузерный WebSocket не умеет слать заголовок Authorization
-function buildUrl(path: string): string {
-  const token = getToken();
-  if (!token) return WS_URL + path;
-  const separator = path.includes("?") ? "&" : "?";
-  return `${WS_URL}${path}${separator}token=${encodeURIComponent(token)}`;
+function getServerUrl(): string {
+  if (WS_SETTING !== "auto") return WS_SETTING;
+  const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+  return `${protocol}://${window.location.hostname}:${WS_PORT}`;
 }
 
-/*
-  Хук: const isLive = useLiveUpdates(WS_PATHS.room(id), () => loadRoom());
-  path = null — не подключаться (например, в демо).
-  Возвращает true, пока соединение открыто.
-*/
-export function useLiveUpdates(
-  path: string | null,
-  onMessage: (data: unknown) => void,
-): boolean {
-  const [isConnected, setIsConnected] = useState(false);
+function buildUrl(path: string): string {
+  const token = getToken();
+  const url = getServerUrl() + path;
+  if (!token) return url;
+  const separator = path.includes("?") ? "&" : "?";
+  return `${url}${separator}token=${encodeURIComponent(token)}`;
+}
 
-  // в ref всегда свежая функция — не нужно переподключаться при каждой отрисовке
+export type LiveUpdates = {
+  isLive: boolean;
+  notify: (type?: string) => void;
+};
+
+export function useLiveUpdates(path: string | null, onMessage: (data: unknown) => void): LiveUpdates {
+  const [isLive, setIsLive] = useState(false);
+  const socketRef = useRef<WebSocket | null>(null);
+
   const handlerRef = useRef(onMessage);
   useEffect(() => {
     handlerRef.current = onMessage;
   });
 
   useEffect(() => {
-    if (!path || !WS_URL) return;
+    if (!path || !WS_SETTING) return;
 
-    let socket: WebSocket | null = null;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     let attempt = 0;
     let isStopped = false;
 
-    // переподключение: 2, 4, 8, 16, 30, 30... секунд
     function scheduleReconnect() {
       attempt += 1;
       const delay = Math.min(30_000, 1000 * 2 ** attempt);
@@ -71,16 +54,19 @@ export function useLiveUpdates(
     }
 
     function connect() {
+      let socket: WebSocket;
       try {
         socket = new WebSocket(buildUrl(path!));
       } catch {
         scheduleReconnect();
         return;
       }
+      socketRef.current = socket;
 
       socket.onopen = () => {
         attempt = 0;
-        setIsConnected(true);
+        setIsLive(true);
+        socket.send(JSON.stringify({ type: "hello" }));
       };
 
       socket.onmessage = (event) => {
@@ -88,17 +74,18 @@ export function useLiveUpdates(
         try {
           data = JSON.parse(event.data);
         } catch {
-          // не JSON — отдаём как есть
+          data = event.data;
         }
         handlerRef.current(data);
       };
 
       socket.onclose = () => {
-        setIsConnected(false);
+        if (socketRef.current === socket) socketRef.current = null;
+        setIsLive(false);
         if (!isStopped) scheduleReconnect();
       };
 
-      socket.onerror = () => socket?.close();
+      socket.onerror = () => socket.close();
     }
 
     connect();
@@ -106,10 +93,16 @@ export function useLiveUpdates(
     return () => {
       isStopped = true;
       clearTimeout(retryTimer);
-      socket?.close();
-      setIsConnected(false);
+      socketRef.current?.close();
+      socketRef.current = null;
+      setIsLive(false);
     };
   }, [path]);
 
-  return isConnected;
+  const notify = useCallback((type = "update") => {
+    const socket = socketRef.current;
+    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type }));
+  }, []);
+
+  return { isLive, notify };
 }

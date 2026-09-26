@@ -1,13 +1,5 @@
 "use client";
 
-/*
-  GoogleCallbackPage — сюда Google возвращает игрока после входа,
-  адрес "/auth/google/callback?code=...".
-
-  1. Берём code из адреса.
-  2. Отдаём его backend-у (/auth/google/callback) → получаем токены.
-  3. Сохраняем вход и идём на главную.
-*/
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -23,7 +15,7 @@ export default function GoogleCallbackPage() {
   const code = searchParams.get("code");
 
   const [error, setError] = useState("");
-  const isStarted = useRef(false); // code одноразовый — не отправляем дважды
+  const isStarted = useRef(false);
 
   useEffect(() => {
     if (isStarted.current) return;

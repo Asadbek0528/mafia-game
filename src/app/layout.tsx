@@ -1,18 +1,11 @@
-/*
-  Главный layout — общий для ВСЕХ страниц.
-  Здесь: шрифты, sidebar (Header), всплывающие уведомления (Toast).
-*/
 import type { Metadata, Viewport } from "next";
 import { Onest, Oswald, Rubik_Wet_Paint } from "next/font/google";
 
-// ВАЖНО: globals.scss импортируем ПЕРВЫМ,
-// чтобы стили компонентов могли его переопределять
 import "./globals.scss";
 
 import Header from "@/components/layout/header/Header";
 import Toast from "@/components/pages/widgets/toast/Toast";
 
-// Шрифты. variable — это имя CSS-переменной, которую используем в scss
 const onest = Onest({
   subsets: ["latin", "cyrillic"],
   variable: "--font-onest",

@@ -1,7 +1,3 @@
-/*
-  Стили для CreateRoomModal.tsx
-*/
-
 .create-room {
   width: min(92vw, 420px);
   padding: 0;
@@ -11,7 +7,6 @@
   border-radius: var(--radius-big);
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8), 0 0 40px rgba(160, 0, 12, 0.2);
 
-  /* затемнение за окном */
   &::backdrop {
     background: rgba(0, 0, 0, 0.75);
     backdrop-filter: blur(3px);
@@ -43,14 +38,12 @@
   accent-color: var(--color-red);
 }
 
-/* кнопки возраста в ряд */
 .create-room-ages {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
 }
 
-/* одна кнопка возраста */
 .create-room-age {
   min-height: 42px;
   font-size: 14px;
@@ -68,7 +61,6 @@
   }
 }
 
-/* выбранная кнопка — красная */
 .create-room-age-active {
   color: #ffffff;
   background: linear-gradient(180deg, #c5161f, #85090f);
@@ -83,9 +75,6 @@
   margin-top: 4px;
 }
 
-/* ---------- Адаптив ---------- */
-
-/* телефон: кнопки возраста по 2 в ряд */
 @media (max-width: 420px) {
   .create-room-ages {
     grid-template-columns: repeat(2, 1fr);

@@ -1,10 +1,5 @@
 "use client";
 
-/*
-  ProfileCard — карточка игрока: аватар, имя, статистика.
-  Если игрок вошёл по аккаунту — берём свежие данные с сервера (/users/me).
-  Если это гость — показываем кнопку «Создать аккаунт».
-*/
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -19,8 +14,6 @@ export default function ProfileCard() {
   const { user: savedUser } = useCurrentUser();
   const [user, setUser] = useState<User | null>(null);
 
-  // 1) сначала показываем то, что сохранено в браузере
-  // 2) потом, если есть токен, обновляем с сервера
   useEffect(() => {
     if (!savedUser) return;
     setUser(savedUser);
@@ -35,13 +28,12 @@ export default function ProfileCard() {
         saveLogin(freshUser, token, getRefreshToken());
       })
       .catch(() => {
-        // сервер не ответил — оставляем сохранённые данные
       });
   }, [savedUser]);
 
   async function handleLogout() {
-    await api.logout(); // сообщаем серверу
-    logout(); // чистим браузер
+    await api.logout();
+    logout();
     router.push("/register");
   }
 

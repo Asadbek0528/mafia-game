@@ -1,7 +1,3 @@
-/*
-  GameHeader — верхняя полоса игры:
-  луна или солнце, «Ночь 1», таймер и маленькая карточка моей роли.
-*/
 import Image from "next/image";
 
 import type { GamePhase, RoleKey } from "@/lib/api";
@@ -12,10 +8,10 @@ type GameHeaderProps = {
   phase: GamePhase;
   round: number;
   secondsLeft: number;
-  myRole: RoleKey | null; // null — я не игрок (зритель)
+  myRole: RoleKey | null;
   aliveCount: number;
   totalCount: number;
-  onShowRole: () => void; // нажали на карточку — показать роль ещё раз
+  onShowRole: () => void;
 };
 
 const PHASE_TITLE: Record<GamePhase, string> = {
@@ -24,7 +20,6 @@ const PHASE_TITLE: Record<GamePhase, string> = {
   VOTING: "Голосование",
 };
 
-// 75 → "01:15"
 function formatTime(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
   const rest = seconds % 60;
@@ -37,7 +32,6 @@ export default function GameHeader(props: GameHeaderProps) {
 
   return (
     <header className="game-header">
-      {/* луна или солнце */}
       <span className={isNight ? "game-header-icon game-header-icon-night" : "game-header-icon game-header-icon-day"} aria-hidden="true">
         {isNight ? (
           <svg viewBox="0 0 24 24" fill="currentColor">
@@ -60,13 +54,11 @@ export default function GameHeader(props: GameHeaderProps) {
         </p>
       </div>
 
-      {/* таймер: последние 10 секунд — красный и мигает */}
       <p className={secondsLeft <= 10 ? "game-header-timer game-header-timer-hurry" : "game-header-timer"}>
         <span className="game-header-timer-label">До конца</span>
         {formatTime(secondsLeft)}
       </p>
 
-      {/* моя роль */}
       {myRole && (
         <button className="game-header-role" onClick={onShowRole} title="Показать мою роль">
           <Image src={getRole(myRole).image} alt="" width={40} height={60} />

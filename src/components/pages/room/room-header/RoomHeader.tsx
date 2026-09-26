@@ -1,7 +1,3 @@
-/*
-  RoomHeader — верхняя полоса комнаты:
-  кнопка «назад», логотип, название, код, счётчик игроков.
-*/
 import Image from "next/image";
 
 import { showToast } from "@/components/pages/widgets/toast/Toast";

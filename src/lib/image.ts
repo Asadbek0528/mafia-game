@@ -1,10 +1,3 @@
-/*
-  image.ts — уменьшить картинку перед отправкой на сервер.
-
-  Фото с телефона весит 3–10 МБ. Мы уменьшаем его до квадрата 160×160
-  и превращаем в текст (data URL, ~10 КБ), чтобы отправить в поле profile_image.
-*/
-
 const AVATAR_SIZE = 160;
 
 export function resizeImage(file: File): Promise<string> {
@@ -13,7 +6,6 @@ export function resizeImage(file: File): Promise<string> {
     const image = new Image();
 
     image.onload = () => {
-      // вырезаем квадрат из середины картинки
       const side = Math.min(image.width, image.height);
       const left = (image.width - side) / 2;
       const top = (image.height - side) / 2;
@@ -31,7 +23,6 @@ export function resizeImage(file: File): Promise<string> {
       context.drawImage(image, left, top, side, side, 0, 0, AVATAR_SIZE, AVATAR_SIZE);
       URL.revokeObjectURL(url);
 
-      // webp — маленький размер при хорошем качестве
       resolve(canvas.toDataURL("image/webp", 0.85));
     };
 

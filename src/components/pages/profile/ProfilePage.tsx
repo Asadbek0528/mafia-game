@@ -1,13 +1,5 @@
 "use client";
 
-/*
-  ProfilePage — страница профиля, адрес "/profile".
-
-  ┌──────────────┬─────────────────────────┐
-  │ ProfileCard  │ ProfileEditForm         │
-  │              │ GameHistory             │
-  └──────────────┴─────────────────────────┘
-*/
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -22,7 +14,6 @@ export default function ProfilePage() {
   const router = useRouter();
   const { user, isLoaded } = useCurrentUser();
 
-  // после сохранения увеличиваем число — ProfileCard перерисуется с новыми данными
   const [version, setVersion] = useState(0);
 
   useEffect(() => {

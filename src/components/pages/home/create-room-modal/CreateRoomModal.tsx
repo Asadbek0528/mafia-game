@@ -1,9 +1,5 @@
 "use client";
 
-/*
-  CreateRoomModal — окно «Новая комната».
-  Используем HTML-тег <dialog>: он сам затемняет фон и закрывается по Esc.
-*/
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -16,7 +12,6 @@ type CreateRoomModalProps = {
   onClose: () => void;
 };
 
-// варианты возраста для кнопок
 const AGE_OPTIONS = [
   { value: 0, label: "Для всех" },
   { value: 12, label: "12+" },
@@ -33,10 +28,9 @@ export default function CreateRoomModal({
 
   const [name, setName] = useState("");
   const [maxPlayers, setMaxPlayers] = useState(10);
-  const [age, setAge] = useState(16); // с какого возраста можно зайти
+  const [age, setAge] = useState(16);
   const [isLoading, setIsLoading] = useState(false);
 
-  // открываем / закрываем окно, когда меняется isOpen
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
@@ -56,7 +50,6 @@ export default function CreateRoomModal({
     } catch (error) {
       const status = error instanceof ApiError ? error.status : 0;
 
-      // сервер не ответил (0) → открываем демо-комнату
       if (status === 0 || status >= 500) {
         const demoId = String(Math.floor(10000 + Math.random() * 89999));
         sessionStorage.setItem(
@@ -110,7 +103,6 @@ export default function CreateRoomModal({
           />
         </label>
 
-        {/* возраст: 4 кнопки, выбранная — красная */}
         <div className="create-room-field">
           <span className="create-room-label">Возраст игроков</span>
           <div className="create-room-ages">

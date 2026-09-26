@@ -1,8 +1,3 @@
-/*
-  PlayersList — список игроков в комнате + пустые места.
-  Корона 👑 — у создателя комнаты.
-  Моя строка подсвечена красным.
-*/
 import Avatar from "@/components/pages/widgets/avatar/Avatar";
 import type { RoomPlayer } from "@/lib/api";
 import "./players-list.scss";
@@ -15,7 +10,6 @@ type PlayersListProps = {
 };
 
 export default function PlayersList({ players, owner, me, maxPlayers }: PlayersListProps) {
-  // сколько пустых мест осталось
   const emptySlots = Math.max(0, maxPlayers - players.length);
 
   return (
@@ -40,7 +34,6 @@ export default function PlayersList({ players, owner, me, maxPlayers }: PlayersL
                 )}
               </p>
 
-              {/* ready = undefined → backend пока не знает про «Готов» */}
               {player.ready === undefined && <p className="players-list-in-room">В комнате</p>}
 
               {player.ready === true && (
@@ -58,7 +51,6 @@ export default function PlayersList({ players, owner, me, maxPlayers }: PlayersL
           </li>
         ))}
 
-        {/* пустые места */}
         {Array.from({ length: emptySlots }).map((_, index) => (
           <li key={`empty-${index}`} className="players-list-item players-list-item-empty">
             <Avatar name="" size={42} empty />

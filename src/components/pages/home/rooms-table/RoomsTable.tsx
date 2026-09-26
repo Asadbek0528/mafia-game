@@ -1,14 +1,10 @@
-/*
-  RoomsTable — список доступных комнат.
-  На ноутбуке — таблица, на телефоне — карточки (это делает CSS).
-*/
 import Link from "next/link";
 
 import type { RoomShort } from "@/lib/api";
 import "./rooms-table.scss";
 
 type RoomsTableProps = {
-  rooms: RoomShort[] | null; // null = ещё загружается
+  rooms: RoomShort[] | null;
   onCreateRoom: () => void;
 };
 
@@ -53,7 +49,6 @@ export default function RoomsTable({ rooms, onCreateRoom }: RoomsTableProps) {
   );
 }
 
-/* одна строка таблицы */
 function RoomRow({ room }: { room: RoomShort }) {
   const isPlaying = room.status === "playing";
   const isFull = room.players >= room.max_players;
