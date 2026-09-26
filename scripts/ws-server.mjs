@@ -117,7 +117,8 @@ async function cleanAbandonedGames() {
     if (now - lastActivity < GAME_ABANDONED_MS) continue;
 
     try {
-      await backend(`/game/delete/${id}`, token, "DELETE").catch(() => null);
+      const isDeleted = await backend(`/game/delete/${id}`, token, "DELETE").then(() => true).catch(() => false);
+      if (!isDeleted) await backend(`/game/update/${id}`, token, "PUT", { winner: "CITIZENS" });
       await removeRoom(String(game.room_id), token);
       gameSeenAt.delete(id);
       console.log(`  Игра ${id} (комната ${game.room_id}) удалена: игроков нет больше ${GAME_ABANDONED_MS / 60000} мин`);

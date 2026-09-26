@@ -360,6 +360,18 @@ async function refreshAccessToken(): Promise<boolean> {
 const usernameCache = new Map<number, string>();
 const myGamesCache = new Map<string, MyGame | null>();
 
+async function hadAnyMoves(gameId: number): Promise<boolean> {
+  const rounds = await request<BackendRoundShort[]>(ENDPOINTS.gameRounds(String(gameId)));
+  for (const round of rounds.slice(0, 5)) {
+    const [actions, votes] = await Promise.all([
+      request<unknown[]>(ENDPOINTS.nightActionList(round.id)).catch(() => []),
+      request<unknown[]>(`/vote/list?round_id=${round.id}`).catch(() => []),
+    ]);
+    if (actions.length > 0 || votes.length > 0) return true;
+  }
+  return false;
+}
+
 function formatAgo(time: number): string {
   if (!time) return "";
   const minutes = Math.max(0, Math.round((Date.now() - time) / 60000));
@@ -541,7 +553,7 @@ export const api = {
         try {
           const players = await request<BackendGamePlayer[]>(ENDPOINTS.gamePlayers(String(game.id)));
           const me = players.find((player) => player.user_id === myId);
-          if (!me || !me.role) {
+          if (!me || !me.role || !(await hadAnyMoves(game.id))) {
             myGamesCache.set(cacheKey, null);
             return null;
           }
