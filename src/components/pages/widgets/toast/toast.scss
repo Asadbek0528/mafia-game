@@ -1,0 +1,40 @@
+/*
+  Стили для Toast.tsx
+*/
+
+.toast-list {
+  position: fixed;
+  z-index: 100;
+  left: 50%;
+  bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+  display: grid;
+  gap: 8px;
+  width: min(92vw, 420px);
+  transform: translateX(-50%);
+}
+
+.toast {
+  padding: 12px 16px;
+  font-size: 14px;
+  white-space: pre-line; /* чтобы работал перенос строки \n */
+  background: #1a0b0c;
+  border: 1px solid var(--color-line-red);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  animation: toast-appear 0.25s ease-out;
+}
+
+.toast-success {
+  border-color: #1f6b3b;
+}
+
+.toast-error {
+  border-color: var(--color-red);
+}
+
+@keyframes toast-appear {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}

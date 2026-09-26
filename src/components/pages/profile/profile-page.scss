@@ -1,0 +1,32 @@
+/*
+  Стили для ProfilePage.tsx
+*/
+
+.profile-page {
+  max-width: 1000px;
+  padding: 18px;
+}
+
+.profile-page-title {
+  margin-bottom: 18px;
+  font-size: 32px;
+}
+
+.profile-page-grid {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+/* ---------- Адаптив ---------- */
+@media (max-width: 860px) {
+  .profile-page {
+    padding: 12px;
+  }
+
+  .profile-page-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}

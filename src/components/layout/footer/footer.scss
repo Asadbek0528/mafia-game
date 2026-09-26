@@ -1,0 +1,23 @@
+/*
+  Стили для Footer.tsx
+*/
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 8px 0 12px;
+}
+
+.footer-line {
+  width: 80px;
+  height: 1px;
+  background: #3a1216;
+}
+
+.footer-text {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: #8a2a30;
+}

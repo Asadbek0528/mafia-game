@@ -1,0 +1,20 @@
+/*
+  Стили для Avatar.tsx
+*/
+
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  font-family: var(--font-title);
+  font-weight: 600;
+  color: #ffffff;
+  border: 1px solid var(--color-line-red);
+}
+
+.avatar-empty {
+  color: #4a3434;
+  background: none;
+  border: 1px dashed #3a2020;
+}

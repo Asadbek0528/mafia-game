@@ -1,0 +1,60 @@
+/*
+  Стили для GameHistory.tsx
+*/
+
+.game-history {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.game-history-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 6px;
+}
+
+.game-history-image {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  object-position: top;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+}
+
+.game-history-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.game-history-room {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.game-history-win {
+  font-size: 13px;
+  color: var(--color-green);
+}
+
+.game-history-lose {
+  font-size: 13px;
+  color: var(--color-red);
+}
+
+.game-history-time {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.game-history-empty {
+  padding: 6px;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}

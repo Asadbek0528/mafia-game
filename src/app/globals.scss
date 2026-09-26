@@ -1,0 +1,300 @@
+/*
+  =============================================================
+  globals.scss — общие стили для всего сайта.
+
+  Что здесь:
+  1. Цвета и шрифты (CSS-переменные) — меняешь тут, меняется везде
+  2. Сброс стилей браузера
+  3. Общий каркас страницы (.app)
+  4. Общие классы: кнопки .btn, поля .input, панели .panel
+
+  Стили отдельных компонентов лежат рядом с компонентом:
+  например Header.tsx → header.scss
+  =============================================================
+*/
+
+/* ---------- 1. Цвета и шрифты ---------- */
+:root {
+  /* фон и панели */
+  --color-black: #000000;
+  --color-panel: #0c0707;
+  --color-panel-light: #140a0a;
+
+  /* линии и рамки */
+  --color-line: #2b1214;
+  --color-line-red: #5a1117;
+
+  /* красный (кровь) */
+  --color-red-dark: #a3111a;
+  --color-red: #e0202b;
+  --color-red-glow: rgba(224, 32, 43, 0.35);
+
+  /* текст */
+  --color-text: #eee7e7;
+  --color-text-muted: #9b8b8b;
+
+  /* статусы */
+  --color-green: #2fd36b;
+  --color-yellow: #e3a531;
+
+  /* шрифты (подключены в layout.tsx) */
+  --font-body: var(--font-onest), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-title: var(--font-oswald), "Arial Narrow", Impact, sans-serif;
+  --font-horror: var(--font-wet-paint), var(--font-oswald), Impact, sans-serif;
+
+  /* скругления */
+  --radius-small: 6px;
+  --radius: 10px;
+  --radius-big: 16px;
+
+  /* высота нижнего меню на телефоне */
+  --mobile-menu-height: 72px;
+
+  /* отступы от «чёлки» и полоски на iPhone */
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ---------- 2. Сброс стилей ---------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--color-text);
+  background: var(--color-black);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-family: var(--font-title);
+  font-weight: 600;
+}
+
+p {
+  margin: 0;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+/* рамка при навигации с клавиатуры (Tab) */
+:focus-visible {
+  outline: 2px solid var(--color-red);
+  outline-offset: 2px;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* текст только для экранных дикторов (незрячих) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- 3. Каркас: слева Header, справа страница ---------- */
+.app {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---------- 4. Кнопки ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 22px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+    flex: none;
+  }
+}
+
+/* красная кнопка — главное действие */
+.btn-red {
+  color: #ffffff;
+  background: linear-gradient(180deg, #c5161f, #85090f);
+  border-color: #d3212a;
+
+  &:hover:not(:disabled) {
+    box-shadow: 0 0 24px 2px var(--color-red-glow);
+  }
+}
+
+/* тёмная кнопка — второстепенное действие */
+.btn-dark {
+  background: #120a0a;
+  border-color: var(--color-line);
+
+  &:hover:not(:disabled) {
+    background: #1a0c0d;
+    border-color: var(--color-line-red);
+  }
+}
+
+/* зелёная кнопка — «Готов» */
+.btn-green {
+  color: #ffffff;
+  background: linear-gradient(180deg, #1f7a43, #0f4a26);
+  border-color: var(--color-green);
+}
+
+.btn-small {
+  min-height: 34px;
+  padding: 0 14px;
+  font-size: 13px;
+  border-radius: var(--radius-small);
+}
+
+.btn-full {
+  width: 100%;
+}
+
+/* кнопка-ссылка (красный текст без фона) */
+.btn-link {
+  padding: 6px 4px;
+  font-weight: 600;
+  color: var(--color-red);
+  background: none;
+  border: 0;
+  cursor: pointer;
+
+  &:hover {
+    color: #ff4a53;
+  }
+}
+
+/* ---------- 5. Поля ввода ---------- */
+.input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  background: rgba(10, 4, 4, 0.85);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius);
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &::placeholder {
+    color: #5f4c4c;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-red);
+    box-shadow: 0 0 0 3px rgba(224, 32, 43, 0.18);
+  }
+}
+
+/* поле с ошибкой */
+.input-error {
+  border-color: var(--color-red);
+}
+
+/* ---------- 6. Панель (тёмный блок с рамкой) ---------- */
+.panel {
+  min-width: 0;
+  padding: 18px;
+  background: linear-gradient(180deg, var(--color-panel-light), var(--color-panel));
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-big);
+}
+
+.panel-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.panel-title {
+  font-size: 19px;
+}
+
+/* ---------- 7. Точка статуса (зелёная / жёлтая / красная) ---------- */
+.status-dot {
+  display: inline-block;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-green);
+}
+
+.status-dot-yellow {
+  background: var(--color-yellow);
+}
+
+.status-dot-red {
+  background: #ff3b45;
+}
+
+.text-muted {
+  color: var(--color-text-muted);
+}
+
+/* ---------- 8. Кто не любит анимации — выключаем их ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

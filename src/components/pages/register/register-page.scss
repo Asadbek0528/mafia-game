@@ -1,0 +1,75 @@
+/*
+  Стили для RegisterPage.tsx
+*/
+
+.register-page {
+  overflow-x: hidden;
+}
+
+/* центрируем карточку на экране */
+.register-page-center {
+  position: relative;
+  z-index: 1; /* выше фона */
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 90px 16px 32px;
+}
+
+/* тёмная карточка с формой */
+.register-card {
+  width: min(100%, 420px);
+  padding: 28px 28px 24px;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(20, 6, 7, 0.88), rgba(6, 2, 2, 0.92));
+  border: 1px solid var(--color-line-red);
+  border-radius: var(--radius-big);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8), 0 0 60px rgba(160, 0, 12, 0.18);
+  backdrop-filter: blur(6px);
+}
+
+/* тряска при ошибке */
+.register-card-shake {
+  animation: register-shake 0.35s;
+}
+
+@keyframes register-shake {
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
+}
+
+/* круглый логотип, наполовину выходит за карточку */
+.register-logo {
+  width: 96px;
+  height: 96px;
+  margin: -76px auto 10px;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 3px #000000,
+    0 0 0 4px var(--color-red-dark),
+    0 0 40px rgba(224, 32, 43, 0.45);
+}
+
+.register-title {
+  font-size: 30px;
+}
+
+.register-subtitle {
+  margin: 4px 0 22px;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+/* ---------- Адаптив ---------- */
+@media (max-width: 480px) {
+  .register-card {
+    padding: 24px 18px 20px;
+  }
+}

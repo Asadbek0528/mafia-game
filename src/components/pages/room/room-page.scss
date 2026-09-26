@@ -1,0 +1,56 @@
+/*
+  Стили для RoomPage.tsx — фон и раскладка колонок.
+*/
+
+.room-page {
+  display: grid;
+  gap: 18px;
+  max-width: 1280px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* красное свечение по углам — на весь экран */
+.app:has(.room-page) {
+  background:
+    radial-gradient(ellipse 60% 50% at 80% 0%, rgba(140, 0, 12, 0.25), transparent 70%),
+    radial-gradient(ellipse 50% 50% at 0% 100%, rgba(90, 0, 8, 0.25), transparent 70%),
+    #000000;
+}
+
+.room-page-loading {
+  padding: 40px;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+/* 3 колонки: игроки | настройки | приглашение */
+.room-page-grid {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr) 300px;
+  gap: 18px;
+  align-items: start;
+}
+
+/* ---------- Адаптив ---------- */
+
+/* планшет: 2 колонки, приглашение вниз */
+@media (max-width: 1100px) {
+  .room-page-grid {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+}
+
+/* телефон: всё в одну колонку */
+@media (max-width: 760px) {
+  .room-page {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .room-page-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}

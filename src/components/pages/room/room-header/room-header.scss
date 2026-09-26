@@ -1,0 +1,100 @@
+/*
+  Стили для RoomHeader.tsx
+*/
+
+.room-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: linear-gradient(90deg, #150809, #070303);
+  border: 1px solid var(--color-line-red);
+  border-radius: var(--radius-big);
+}
+
+.room-header-back {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  color: #bfb0b0;
+  background: none;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius);
+  cursor: pointer;
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  &:hover {
+    color: #ffffff;
+    border-color: var(--color-line-red);
+  }
+}
+
+.room-header-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 2px #000000,
+    0 0 0 3px var(--color-red-dark),
+    0 0 20px rgba(224, 32, 43, 0.35);
+}
+
+.room-header-info {
+  flex: 1;
+  min-width: 160px;
+}
+
+.room-header-title {
+  font-size: 24px;
+}
+
+.room-header-meta {
+  font-size: 13px;
+  color: var(--color-text-muted);
+
+  b {
+    font-weight: 600;
+    color: var(--color-text);
+  }
+}
+
+.room-header-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-title);
+  font-size: 22px;
+  color: var(--color-green);
+
+  svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+/* ---------- Адаптив ---------- */
+@media (max-width: 760px) {
+  .room-header {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .room-header-logo {
+    display: none;
+  }
+
+  .room-header-title {
+    font-size: 20px;
+  }
+
+  .room-header-copy {
+    order: 5; /* кнопка переносится на новую строку */
+    width: 100%;
+  }
+}

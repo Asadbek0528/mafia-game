@@ -1,0 +1,152 @@
+/*
+  Стили для RegisterForm.tsx
+*/
+
+.register-form {
+  display: grid;
+  gap: 14px;
+  text-align: left;
+}
+
+/* одно поле: подпись + инпут + ошибка */
+.register-field {
+  display: grid;
+  gap: 6px;
+}
+
+.register-label {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+/* обёртка, чтобы поставить иконку внутрь инпута */
+.register-input-box {
+  position: relative;
+}
+
+/* место слева для иконки и справа для кнопки-глаза */
+.register-input-box .register-input {
+  padding-left: 44px;
+  padding-right: 44px;
+}
+
+.register-input-icon {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  width: 18px;
+  height: 18px;
+  color: #6d5656;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+/* кнопка-глаз справа в поле пароля */
+.register-eye {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: #7a6262;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-small);
+  transform: translateY(-50%);
+  cursor: pointer;
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    color: var(--color-text);
+  }
+}
+
+.register-error {
+  font-size: 12.5px;
+  color: #ff6b72;
+}
+
+.register-submit {
+  min-height: 50px;
+  margin-top: 6px;
+  font-size: 16px;
+}
+
+/* крутилка загрузки внутри кнопки */
+.register-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: register-spin 0.7s linear infinite;
+}
+
+@keyframes register-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* разделитель «—— или ——» */
+.register-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: #6f5a5a;
+
+  &::before,
+  &::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--color-line);
+  }
+}
+
+/* «Зайти как гость» */
+.register-guest {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.register-guest-link {
+  font-weight: 600;
+  color: var(--color-red);
+  text-decoration: none;
+  white-space: nowrap;
+  border-bottom: 1px dashed currentColor;
+
+  &:hover {
+    color: #ff4a53;
+  }
+}
+
+/* «Уже есть аккаунт? Войти» */
+.register-switch {
+  margin-top: 18px;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.register-switch-button {
+  padding: 0;
+  font-weight: 600;
+  color: var(--color-text);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--color-red);
+  }
+}

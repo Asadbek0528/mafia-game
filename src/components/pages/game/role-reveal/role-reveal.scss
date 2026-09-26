@@ -1,0 +1,145 @@
+/*
+  Стили для RoleReveal.tsx — вращение карточки.
+
+  Как настроить:
+  - скорость вращения:  animation: role-reveal-spin 2.8s ...  (в .role-reveal-card)
+  - сколько оборотов:   в @keyframes role-reveal-spin → rotateY(1260deg)
+      1260 = 3 полных оборота (1080) + пол-оборота (180), чтобы в конце было ЛИЦО карты.
+      Всегда пишите: 360 × N + 180. Например 2 оборота = 900deg, 5 оборотов = 1980deg.
+  - когда появится текст: animation-delay у .role-reveal-text (чуть меньше скорости вращения)
+*/
+
+/* тёмный экран на весь экран */
+.role-reveal {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: 24px;
+  overflow-y: auto;
+  background: radial-gradient(ellipse at center, #3a0006, #000000 70%);
+  animation: role-reveal-fade-in 0.4s ease-out;
+}
+
+.role-reveal-hint {
+  font-size: 15px;
+  color: var(--color-text-muted);
+}
+
+/* perspective — насколько «глубокое» 3D */
+.role-reveal-scene {
+  width: min(62vw, 280px);
+  aspect-ratio: 2 / 3;
+  perspective: 1200px;
+}
+
+/* сама карточка, которая крутится */
+.role-reveal-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d; /* чтобы две стороны были в 3D */
+  animation: role-reveal-spin 2.8s cubic-bezier(0.15, 0.7, 0.25, 1) forwards;
+}
+
+@keyframes role-reveal-spin {
+  from {
+    transform: rotateY(0deg) scale(0.85);
+  }
+  70% {
+    transform: rotateY(1100deg) scale(1.05);
+  }
+  to {
+    transform: rotateY(1260deg) scale(1);
+  }
+}
+
+/* обе стороны карточки */
+.role-reveal-face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 16px;
+  backface-visibility: hidden; /* обратная сторона не просвечивает */
+  -webkit-backface-visibility: hidden;
+}
+
+/* рубашка: красная рамка и логотип в центре */
+.role-reveal-cover {
+  display: grid;
+  place-items: center;
+  background:
+    repeating-linear-gradient(45deg, rgba(160, 0, 12, 0.18) 0 10px, transparent 10px 20px),
+    linear-gradient(180deg, #1a0507, #050000);
+  border: 2px solid var(--color-red-dark);
+  box-shadow: inset 0 0 0 8px #000000, inset 0 0 0 9px var(--color-line-red);
+
+  img {
+    width: 62%;
+    height: auto;
+    border-radius: 50%;
+    box-shadow: 0 0 40px rgba(224, 32, 43, 0.5);
+  }
+}
+
+/* лицо: картинка роли. Повёрнута на 180°, чтобы быть «сзади» */
+.role-reveal-role {
+  border: 1px solid #3a2a2a;
+  transform: rotateY(180deg);
+  box-shadow: 0 0 60px rgba(224, 32, 43, 0.45);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+/* текст появляется, когда карточка остановилась */
+.role-reveal-text {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  max-width: 420px;
+  text-align: center;
+  opacity: 0;
+  animation: role-reveal-fade-in 0.6s ease-out 2.5s forwards;
+}
+
+.role-reveal-title {
+  font-family: var(--font-horror);
+  font-size: clamp(34px, 7vw, 52px);
+  font-weight: 400;
+  line-height: 1;
+  color: var(--color-red);
+  text-shadow: 0 0 24px rgba(224, 32, 43, 0.5);
+}
+
+.role-reveal-about {
+  color: #d8cccc;
+}
+
+.role-reveal-secret {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.role-reveal-button {
+  min-width: 200px;
+  margin-top: 8px;
+}
+
+@keyframes role-reveal-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

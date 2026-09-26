@@ -1,0 +1,111 @@
+/*
+  Стили для BloodBackground.tsx
+*/
+
+.blood-background {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none; /* фон не мешает кликать по форме */
+  background: radial-gradient(ellipse 70% 55% at 50% 60%, #2a0306 0%, #0b0000 55%, #000000 100%);
+}
+
+/* кровь сверху: при загрузке медленно стекает вниз */
+.blood-drips {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: clamp(180px, 30vh, 280px);
+  transform-origin: top;
+  filter: drop-shadow(0 6px 10px rgba(120, 0, 8, 0.5));
+  animation: blood-flow 3.2s cubic-bezier(0.35, 0.1, 0.3, 1) both;
+}
+
+@keyframes blood-flow {
+  from {
+    transform: scaleY(0.15);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/* большая надпись «БЕГИ» — иногда мигает, как сломанная лампа */
+.blood-run-text {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  font-family: var(--font-horror);
+  font-size: clamp(140px, 32vw, 480px);
+  line-height: 0.8;
+  color: #6b0008;
+  white-space: nowrap;
+  text-shadow: 0 0 60px rgba(200, 0, 15, 0.35);
+  opacity: 0.42;
+  transform: translate(-50%, -50%) rotate(-6deg);
+  user-select: none;
+  animation: blood-blink 7s infinite steps(1);
+}
+
+@keyframes blood-blink {
+  0%,
+  100% {
+    opacity: 0.42;
+  }
+  61% {
+    opacity: 0.1;
+  }
+  62% {
+    opacity: 0.5;
+  }
+  64% {
+    opacity: 0.08;
+  }
+  66% {
+    opacity: 0.42;
+  }
+}
+
+/* маленькие надписи по бокам */
+.blood-whisper {
+  position: absolute;
+  font-family: var(--font-horror);
+  font-size: clamp(18px, 2.2vw, 30px);
+  color: #8f0b13;
+  opacity: 0.55;
+}
+
+.blood-whisper-left {
+  top: 36%;
+  left: 5%;
+  transform: rotate(-10deg);
+}
+
+.blood-whisper-right {
+  top: 30%;
+  right: 5%;
+  transform: rotate(7deg);
+}
+
+.blood-whisper-bottom {
+  bottom: 10%;
+  left: 8%;
+  opacity: 0.4;
+  transform: rotate(4deg);
+}
+
+/* тёмные края экрана */
+.blood-shadow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 35%, rgba(0, 0, 0, 0.85) 100%);
+}
+
+/* ---------- Адаптив ---------- */
+@media (max-width: 480px) {
+  .blood-whisper-right {
+    display: none;
+  }
+}

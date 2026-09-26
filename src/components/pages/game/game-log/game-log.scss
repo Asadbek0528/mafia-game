@@ -1,0 +1,62 @@
+/*
+  Стили для GameLog.tsx
+*/
+
+.game-log {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 220px;
+  padding: 16px;
+  background: rgba(10, 3, 4, 0.78);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-big);
+  backdrop-filter: blur(6px);
+}
+
+.game-log-title {
+  font-size: 18px;
+}
+
+.game-log-empty {
+  flex: 1;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.game-log-list {
+  display: grid;
+  flex: 1;
+  align-content: start;
+  gap: 6px;
+  max-height: 320px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.game-log-item {
+  padding: 10px 12px;
+  font-size: 14px;
+  background: #120808;
+  border-left: 3px solid #3a1418;
+  border-radius: 6px;
+}
+
+/* самое новое событие — красная полоска */
+.game-log-item-new {
+  border-left-color: var(--color-red);
+  animation: game-log-appear 0.4s ease-out;
+}
+
+@keyframes game-log-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.game-log-chat .input {
+  opacity: 0.6;
+}

@@ -1,0 +1,93 @@
+/*
+  Стили для CreateRoomModal.tsx
+*/
+
+.create-room {
+  width: min(92vw, 420px);
+  padding: 0;
+  color: var(--color-text);
+  background: linear-gradient(180deg, #150809, #070303);
+  border: 1px solid var(--color-line-red);
+  border-radius: var(--radius-big);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8), 0 0 40px rgba(160, 0, 12, 0.2);
+
+  /* затемнение за окном */
+  &::backdrop {
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(3px);
+  }
+}
+
+.create-room-form {
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+}
+
+.create-room-title {
+  font-size: 24px;
+}
+
+.create-room-field {
+  display: grid;
+  gap: 6px;
+}
+
+.create-room-label {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.create-room-range {
+  width: 100%;
+  accent-color: var(--color-red);
+}
+
+/* кнопки возраста в ряд */
+.create-room-ages {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+/* одна кнопка возраста */
+.create-room-age {
+  min-height: 42px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #cfc4c4;
+  background: #120a0a;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+
+  &:hover {
+    color: #ffffff;
+    border-color: var(--color-line-red);
+  }
+}
+
+/* выбранная кнопка — красная */
+.create-room-age-active {
+  color: #ffffff;
+  background: linear-gradient(180deg, #c5161f, #85090f);
+  border-color: #d3212a;
+  box-shadow: 0 0 16px rgba(224, 32, 43, 0.35);
+}
+
+.create-room-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* ---------- Адаптив ---------- */
+
+/* телефон: кнопки возраста по 2 в ряд */
+@media (max-width: 420px) {
+  .create-room-ages {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

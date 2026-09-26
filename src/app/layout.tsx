@@ -1,0 +1,58 @@
+/*
+  Главный layout — общий для ВСЕХ страниц.
+  Здесь: шрифты, sidebar (Header), всплывающие уведомления (Toast).
+*/
+import type { Metadata, Viewport } from "next";
+import { Onest, Oswald, Rubik_Wet_Paint } from "next/font/google";
+
+// ВАЖНО: globals.scss импортируем ПЕРВЫМ,
+// чтобы стили компонентов могли его переопределять
+import "./globals.scss";
+
+import Header from "@/components/layout/header/Header";
+import Toast from "@/components/pages/widgets/toast/Toast";
+
+// Шрифты. variable — это имя CSS-переменной, которую используем в scss
+const onest = Onest({
+  subsets: ["latin", "cyrillic"],
+  variable: "--font-onest",
+});
+
+const oswald = Oswald({
+  subsets: ["latin", "cyrillic"],
+  weight: ["500", "600", "700"],
+  variable: "--font-oswald",
+});
+
+const wetPaint = Rubik_Wet_Paint({
+  subsets: ["latin", "cyrillic"],
+  weight: "400",
+  variable: "--font-wet-paint",
+});
+
+export const metadata: Metadata = {
+  title: "Mafia — онлайн игра",
+  description: "Обман. Подозрение. Выживание.",
+  icons: { icon: "/img/logo.webp" },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#000000",
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="ru" className={`${onest.variable} ${oswald.variable} ${wetPaint.variable}`}>
+      <body suppressHydrationWarning>
+        <div className="app">
+          <Header />
+          <div className="app-content">{children}</div>
+        </div>
+        <Toast />
+      </body>
+    </html>
+  );
+}

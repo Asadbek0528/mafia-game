@@ -1,0 +1,180 @@
+/*
+  Стили для Header.tsx (боковое меню)
+*/
+
+.header {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: 232px;
+  height: 100vh;
+  overflow: hidden;
+  background: linear-gradient(180deg, #080303, #000000);
+  border-right: 1px solid var(--color-line);
+}
+
+/* круглый логотип */
+.header-logo {
+  align-self: center;
+  padding: 26px 0 22px;
+
+  img {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    box-shadow:
+      0 0 0 3px #000000,
+      0 0 0 4px var(--color-red-dark),
+      0 0 36px rgba(224, 32, 43, 0.4);
+    transition: box-shadow 0.3s;
+  }
+
+  &:hover img {
+    box-shadow:
+      0 0 0 3px #000000,
+      0 0 0 4px var(--color-red),
+      0 0 50px rgba(224, 32, 43, 0.6);
+  }
+}
+
+/* список ссылок */
+.header-menu {
+  display: grid;
+  gap: 4px;
+  padding: 0 12px;
+}
+
+/* одна ссылка */
+.header-link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 16px;
+  font-weight: 500;
+  color: #cfc4c4;
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  transition: background 0.2s, color 0.2s;
+
+  svg {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    color: #7c6a6a;
+  }
+
+  &:hover {
+    color: #ffffff;
+    background: #140909;
+  }
+
+  &:hover svg {
+    color: var(--color-red);
+  }
+}
+
+/* активная ссылка (текущая страница) */
+.header-link-active {
+  color: #ffffff;
+  background: linear-gradient(90deg, rgba(190, 20, 30, 0.55), rgba(120, 10, 16, 0.15));
+  border-color: rgba(224, 32, 43, 0.35);
+
+  svg {
+    color: #ff3b45;
+  }
+}
+
+/* картинка города внизу */
+.header-city {
+  position: relative;
+  flex: 1;
+  min-height: 240px;
+  max-height: 520px;
+  margin-top: auto;
+  background: url("/img/sidebar-city.webp") center bottom / cover no-repeat;
+  /* плавное появление картинки сверху */
+  mask-image: linear-gradient(180deg, transparent, #000000 30%);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000000 30%);
+}
+
+.header-city-text {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 26px;
+  font-family: var(--font-horror);
+  font-size: 19px;
+  line-height: 1.2;
+  color: var(--color-red);
+  text-shadow: 0 2px 10px #000000;
+  transform: rotate(-6deg);
+}
+
+/* ---------- Адаптив ---------- */
+
+/* планшет: меню чуть уже */
+@media (max-width: 1280px) {
+  .header {
+    width: 210px;
+  }
+
+  .header-logo img {
+    width: 100px;
+    height: 100px;
+  }
+}
+
+/* телефон: меню внизу экрана */
+@media (max-width: 860px) {
+  .header {
+    position: fixed;
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    flex-direction: row;
+    width: 100%;
+    height: auto;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: rgba(5, 1, 1, 0.94);
+    border-right: 0;
+    border-top: 1px solid var(--color-line);
+    backdrop-filter: blur(10px);
+  }
+
+  .header-logo,
+  .header-city {
+    display: none;
+  }
+
+  .header-menu {
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    width: 100%;
+    gap: 2px;
+    padding: 6px;
+  }
+
+  .header-link {
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    padding: 8px 4px;
+    font-size: 11.5px;
+  }
+
+  .header-link-active {
+    color: var(--color-red);
+    background: none;
+    border-color: transparent;
+  }
+
+  /* чтобы нижнее меню не закрывало страницу (только если меню есть) */
+  .app:has(.header) .app-content {
+    padding-bottom: calc(var(--mobile-menu-height) + env(safe-area-inset-bottom, 0px));
+  }
+}

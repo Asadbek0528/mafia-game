@@ -1,0 +1,21 @@
+.google-callback {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 16px;
+  text-align: center;
+}
+
+.google-callback-text {
+  font-family: var(--font-title);
+  font-size: 22px;
+  color: var(--color-text-muted);
+}
+
+.google-callback-error {
+  max-width: 420px;
+  color: var(--color-red);
+}

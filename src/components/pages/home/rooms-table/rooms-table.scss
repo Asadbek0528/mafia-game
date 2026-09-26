@@ -1,0 +1,139 @@
+/*
+  Стили для RoomsTable.tsx
+*/
+
+.rooms-message {
+  padding: 6px;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.rooms-table {
+  width: 100%;
+  font-size: 14px;
+  border-collapse: separate;
+  border-spacing: 0 6px; /* расстояние между строками */
+
+  th {
+    padding: 0 12px 4px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 12px;
+    white-space: nowrap;
+    background: #110808;
+  }
+
+  /* скругляем первую и последнюю ячейку строки */
+  td:first-child {
+    border-radius: var(--radius) 0 0 var(--radius);
+  }
+
+  td:last-child {
+    text-align: right;
+    border-radius: 0 var(--radius) var(--radius) 0;
+  }
+
+  tr:hover td {
+    background: #180b0c;
+  }
+}
+
+.rooms-name {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+}
+
+.rooms-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  color: var(--color-red);
+  background: #2a0a0d;
+  border: 1px solid var(--color-line-red);
+  border-radius: 50%;
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.rooms-full {
+  color: var(--color-red);
+}
+
+.rooms-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---------- Адаптив ---------- */
+
+/* телефон: каждая строка становится карточкой */
+@media (max-width: 860px) {
+  .rooms-table thead {
+    display: none;
+  }
+
+  .rooms-table,
+  .rooms-table tbody {
+    display: block;
+  }
+
+  .rooms-table tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 12px;
+    margin-bottom: 8px;
+    padding: 12px;
+    background: #110808;
+    border-radius: var(--radius);
+  }
+
+  .rooms-table td {
+    display: block;
+    padding: 0;
+    background: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* 1 — название на всю ширину */
+  .rooms-table td:nth-child(1) {
+    grid-column: 1 / -1;
+  }
+
+  /* 2 — игроки */
+  .rooms-table td:nth-child(2)::before {
+    content: "Игроки: ";
+    color: var(--color-text-muted);
+  }
+
+  /* 3 — возраст прячем */
+  .rooms-table td:nth-child(3) {
+    display: none;
+  }
+
+  /* 4 — статус */
+  .rooms-table td:nth-child(4) {
+    grid-column: 1;
+    font-size: 13px;
+  }
+
+  /* 5 — кнопка справа */
+  .rooms-table td:nth-child(5) {
+    grid-column: 2;
+    grid-row: 2 / span 2;
+    align-self: center;
+  }
+}

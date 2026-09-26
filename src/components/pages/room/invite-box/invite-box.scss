@@ -1,0 +1,58 @@
+/*
+  Стили для InviteBox.tsx
+*/
+
+.invite-box {
+  display: grid;
+  gap: 10px;
+}
+
+.invite-box-link {
+  overflow: hidden;
+  padding: 12px 14px;
+  font-size: 13.5px;
+  color: #cdbdbd;
+  white-space: nowrap;
+  text-overflow: ellipsis; /* длинная ссылка обрезается «...» */
+  background: #0f0707;
+  border: 1px solid #1e0e0f;
+  border-radius: var(--radius);
+}
+
+.invite-box-image {
+  height: 300px;
+  margin: 8px -18px -18px; /* растягиваем до краёв панели */
+  border-radius: 0 0 var(--radius-big) var(--radius-big);
+  background:
+    linear-gradient(180deg, var(--color-panel) 0%, transparent 30%),
+    linear-gradient(0deg, rgba(120, 0, 10, 0.35), transparent 60%),
+    url("/img/street.webp") center / cover no-repeat;
+  /* делаем картинку красноватой */
+  filter: sepia(0.6) hue-rotate(-30deg) saturate(2.2) brightness(0.8);
+}
+
+/* ---------- Адаптив ---------- */
+
+/* планшет: блок на всю ширину, кнопки в ряд */
+@media (max-width: 1100px) {
+  .invite-box {
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: center;
+  }
+
+  .invite-box .panel-title {
+    grid-column: 1 / -1;
+  }
+
+  .invite-box-image {
+    display: none;
+  }
+}
+
+/* телефон: всё друг под другом */
+@media (max-width: 760px) {
+  .invite-box {
+    grid-template-columns: 1fr;
+  }
+}

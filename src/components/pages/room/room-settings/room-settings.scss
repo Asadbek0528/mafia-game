@@ -1,0 +1,165 @@
+/*
+  Стили для RoomSettings.tsx
+*/
+
+.room-settings-title {
+  margin-bottom: 14px;
+}
+
+.room-settings-note {
+  margin: -6px 0 12px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+/* строка настройки */
+.room-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  background: #0f0707;
+  border: 1px solid #1e0e0f;
+  border-radius: var(--radius);
+}
+
+/* кнопки − и + */
+.room-settings-stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  button {
+    width: 34px;
+    height: 34px;
+    font-size: 18px;
+    line-height: 1;
+    background: #160a0b;
+    border: 1px solid var(--color-line);
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  button:hover:not(:disabled) {
+    color: #ffffff;
+    border-color: var(--color-red);
+  }
+
+  button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+}
+
+.room-settings-value {
+  min-width: 70px;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* роли */
+.room-settings-label {
+  margin: 6px 0 8px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.room-settings-roles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.room-settings-role {
+  text-align: center;
+
+  img {
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    object-fit: cover;
+    border: 1px solid #2d2424;
+    border-radius: 8px;
+    filter: grayscale(0.3);
+  }
+}
+
+.room-settings-role-name {
+  display: block;
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+}
+
+/* число роли (когда нет кнопок) */
+.room-settings-role-count {
+  display: block;
+  font-family: var(--font-title);
+  font-size: 22px;
+  color: var(--color-red);
+}
+
+/* число ушло в минус — ролей больше, чем игроков */
+.room-settings-role-count-bad {
+  color: #ff5a62;
+}
+
+/* кнопки − + под карточкой роли — компактнее */
+.room-settings-role .room-settings-stepper {
+  justify-content: center;
+  margin-top: 4px;
+
+  button {
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+  }
+
+  .room-settings-value {
+    min-width: 26px;
+    font-family: var(--font-title);
+    font-size: 20px;
+    color: var(--color-red);
+  }
+}
+
+/* ошибка в раскладке ролей */
+.room-settings-error {
+  margin: -2px 0 12px;
+  font-size: 13px;
+  color: #ff6b72;
+  text-align: center;
+}
+
+/* большая кнопка внизу */
+.room-settings-main-button {
+  min-height: 54px;
+  margin-top: 8px;
+  font-size: 17px;
+}
+
+.room-settings-hint {
+  min-height: 1em;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+/* ---------- Адаптив ---------- */
+/* телефон: роли в 2 колонки, чтобы кнопки − + помещались */
+@media (max-width: 760px) {
+  .room-settings-roles {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .room-settings-role img {
+    width: 70%;
+    margin: 0 auto;
+  }
+}

@@ -1,0 +1,58 @@
+/*
+  Стили для HomePage.tsx — только раскладка колонок.
+  Стили блоков лежат в их папках (hero/, rooms-table/ ...).
+*/
+
+.home-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 18px;
+  padding: 18px;
+}
+
+.home-page-main {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+  min-width: 0;
+}
+
+.home-page-side {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+
+/* ---------- Адаптив ---------- */
+
+/* очень большой экран: правая колонка шире */
+@media (min-width: 1800px) {
+  .home-page {
+    grid-template-columns: minmax(0, 1fr) 440px;
+  }
+}
+
+/* планшет: правая колонка уходит вниз */
+@media (max-width: 1280px) {
+  .home-page {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .home-page-side {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    align-items: start;
+  }
+}
+
+/* телефон: меньше отступы */
+@media (max-width: 860px) {
+  .home-page {
+    gap: 14px;
+    padding: 12px;
+  }
+
+  .home-page-main,
+  .home-page-side {
+    gap: 14px;
+  }
+}
