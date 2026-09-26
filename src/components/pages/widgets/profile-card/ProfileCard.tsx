@@ -56,7 +56,7 @@ export default function ProfileCard() {
   return (
     <section className="panel profile-card">
       <div className="profile-card-top">
-        <Avatar name={user.username} size={64} />
+        <Avatar name={user.username} image={user.profile_image} size={64} />
 
         <div className="profile-card-info">
           <p className="profile-card-name">{user.username}</p>

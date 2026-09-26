@@ -1,0 +1,109 @@
+/*
+  Стили для ProfileEditForm.tsx
+*/
+
+.profile-edit-form {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.profile-edit-note {
+  margin-top: 10px;
+  color: var(--color-text-muted);
+
+  a {
+    color: var(--color-red);
+  }
+}
+
+/* ---- фото ---- */
+.profile-edit-photo {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+
+  .avatar {
+    border: 2px solid var(--color-red-dark);
+    box-shadow: 0 0 24px rgba(224, 32, 43, 0.3);
+  }
+}
+
+.profile-edit-photo-buttons {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+}
+
+.profile-edit-hint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* ---- поля по 2 в ряд ---- */
+.profile-edit-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.profile-edit-field {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.profile-edit-label {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.profile-edit-error {
+  font-size: 12.5px;
+  color: #ff6b72;
+}
+
+/* заголовок «Сменить пароль» */
+.profile-edit-section {
+  padding-top: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  border-top: 1px solid var(--color-line);
+}
+
+/* текущий пароль + кнопка «Сохранить» */
+.profile-edit-confirm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-line);
+}
+
+.profile-edit-save {
+  min-width: 160px;
+}
+
+/* ---------- Адаптив ---------- */
+
+/* телефон: всё в одну колонку */
+@media (max-width: 640px) {
+  .profile-edit-row,
+  .profile-edit-confirm {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-edit-save {
+    width: 100%;
+  }
+
+  .profile-edit-photo {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .profile-edit-photo-buttons {
+    justify-items: center;
+  }
+}

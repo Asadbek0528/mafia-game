@@ -33,6 +33,7 @@ const ENDPOINTS = {
   // пользователь
   userList: "/user/list",
   userDetail: (userId: number) => `/user/detail?user_id=${userId}`,
+  userUpdate: (userId: number) => `/user/update?user_id=${userId}`,
   statistic: (userId: number) => `/statistic/${userId}`,
 
   // комнаты
@@ -72,6 +73,7 @@ export type User = {
   username: string;
   email?: string;
   age?: number;
+  profile_image?: string | null; // фото профиля (ссылка или картинка в виде текста)
   games_played?: number;
   wins?: number;
   guest?: boolean;
@@ -179,7 +181,13 @@ type BackendRoom = {
 };
 
 type BackendRoomPlayer = { id: number; user_id: number; room_id: number };
-type BackendUser = { id: number; username: string; email: string; age: number };
+type BackendUser = {
+  id: number;
+  username: string;
+  email: string;
+  age: number;
+  profile_image: string | null;
+};
 type BackendUserShort = { id: number; username: string };
 type BackendGame = {
   id: number;
@@ -383,6 +391,23 @@ async function refreshAccessToken(): Promise<boolean> {
 const usernameCache = new Map<number, string>();
 let userListLoading: Promise<void> | null = null;
 
+/*
+  Найти свой id по имени (если /auth/login его не вернул).
+  /user/list отдаёт id — ищем там себя.
+*/
+async function findUserIdByUsername(username: string): Promise<number | null> {
+  try {
+    const users = await request<BackendUserShort[]>(ENDPOINTS.userList);
+    users.forEach((user) => usernameCache.set(user.id, user.username));
+    const found = users.find(
+      (user) => user.username.toLowerCase() === username.toLowerCase(),
+    );
+    return found?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
 function loadAllUsernames(): Promise<void> {
   if (!userListLoading) {
     userListLoading = request<BackendUserShort[]>(ENDPOINTS.userList)
@@ -476,7 +501,15 @@ export const api = {
       method: "POST",
       body: { username, password },
     });
-    return readLoginResponse(data);
+    const result = readLoginResponse(data);
+
+    // backend не вернул id — ищем себя в списке пользователей по имени
+    if (result.userId === null && result.accessToken) {
+      saveTokens(result.accessToken, result.refreshToken); // чтобы запрос ушёл с токеном
+      result.userId = await findUserIdByUsername(username);
+    }
+
+    return result;
   },
 
   async logout() {
@@ -562,9 +595,36 @@ export const api = {
       username: user.username,
       email: user.email,
       age: user.age,
+      profile_image: user.profile_image,
       games_played: gamesPlayed,
       wins,
     };
+  },
+
+  // изменить профиль (имя, email, пароль, фото)
+  async updateProfile(changes: {
+    username: string;
+    email: string;
+    password: string;
+    profileImage: string | null;
+  }) {
+    const myId = getMyId();
+    const me = getUser();
+
+    await request(ENDPOINTS.userUpdate(myId), {
+      method: "PUT",
+      body: {
+        username: changes.username,
+        email: changes.email,
+        password: changes.password,
+        profile_image: changes.profileImage,
+        age: me?.age ?? 0,
+        role: "player",
+      },
+    });
+
+    // имя могло поменяться — сбрасываем кэш имён
+    usernameCache.delete(myId);
   },
 
   // TODO backend: нет endpoint «кто онлайн»

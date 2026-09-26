@@ -1,0 +1,275 @@
+"use client";
+
+/*
+  ProfileEditForm — «Редактировать профиль».
+  Что можно поменять: фото, имя, email, пароль.
+
+  Порядок работы:
+  1. Загружаем текущие данные (api.getMe) и ставим их в поля.
+  2. Игрок меняет что хочет.
+  3. Проверяем поля (validate).
+  4. Отправляем api.updateProfile(...) и сохраняем новые данные в браузере.
+
+  ⚠️ Backend требует пароль при каждом сохранении —
+  поэтому поле «Текущий пароль» обязательное.
+*/
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+
+import Avatar from "@/components/pages/widgets/avatar/Avatar";
+import { showToast } from "@/components/pages/widgets/toast/Toast";
+import { api } from "@/lib/api";
+import { getRefreshToken, getToken, saveLogin, useCurrentUser } from "@/lib/auth";
+import { resizeImage } from "@/lib/image";
+import "./profile-edit-form.scss";
+
+const MAX_FILE_MB = 5;
+
+type FormValues = {
+  username: string;
+  email: string;
+  newPassword: string;
+  repeatPassword: string;
+  currentPassword: string;
+};
+
+type FormErrors = Record<keyof FormValues, string>;
+
+const EMPTY: FormValues = { username: "", email: "", newPassword: "", repeatPassword: "", currentPassword: "" };
+const NO_ERRORS: FormErrors = { username: "", email: "", newPassword: "", repeatPassword: "", currentPassword: "" };
+
+// проверка полей
+function validate(values: FormValues): FormErrors {
+  const errors = { ...NO_ERRORS };
+
+  if (!values.username) errors.username = "Введите имя игрока.";
+  else if (values.username.length < 3) errors.username = "Имя — минимум 3 символа.";
+  else if (!/^[a-zA-Z0-9_а-яА-ЯёЁ]+$/.test(values.username)) errors.username = "Только буквы, цифры и _.";
+
+  if (!values.email) errors.email = "Введите email.";
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) errors.email = "Email выглядит неправильно.";
+
+  // новый пароль — необязательный
+  if (values.newPassword && values.newPassword.length < 6) errors.newPassword = "Пароль — минимум 6 символов.";
+  if (values.newPassword && values.repeatPassword !== values.newPassword) errors.repeatPassword = "Пароли не совпадают.";
+
+  if (!values.currentPassword) errors.currentPassword = "Введите текущий пароль, чтобы сохранить.";
+
+  return errors;
+}
+
+type ProfileEditFormProps = {
+  onSaved: () => void; // сообщить странице, что профиль обновился
+};
+
+export default function ProfileEditForm({ onSaved }: ProfileEditFormProps) {
+  const { user } = useCurrentUser();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [values, setValues] = useState<FormValues>(EMPTY);
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FormErrors>(NO_ERRORS);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // 1. ставим текущие данные в поля
+  useEffect(() => {
+    if (!user || user.guest) return;
+
+    setValues((old) => ({ ...old, username: user.username, email: user.email ?? "" }));
+    setPhoto(user.profile_image ?? null);
+
+    // свежие данные с сервера
+    api
+      .getMe()
+      .then((fresh) => {
+        setValues((old) => ({ ...old, username: fresh.username, email: fresh.email ?? "" }));
+        setPhoto(fresh.profile_image ?? null);
+      })
+      .catch(() => {
+        // сервер не ответил — оставляем то, что было
+      });
+  }, [user]);
+
+  // гостю редактировать нечего
+  if (user?.guest) {
+    return (
+      <section className="panel profile-edit">
+        <h2 className="panel-title">Редактировать профиль</h2>
+        <p className="profile-edit-note">
+          Гости не могут менять профиль. <Link href="/register">Создайте аккаунт</Link> — это займёт минуту.
+        </p>
+      </section>
+    );
+  }
+
+  // изменить одно поле
+  function setField(name: keyof FormValues, value: string) {
+    setValues({ ...values, [name]: value });
+  }
+
+  // выбрали файл с фото
+  async function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = ""; // чтобы можно было выбрать тот же файл ещё раз
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      showToast("Это не картинка. Выберите JPG, PNG или WEBP.", "error");
+      return;
+    }
+    if (file.size > MAX_FILE_MB * 1024 * 1024) {
+      showToast(`Файл больше ${MAX_FILE_MB} МБ. Выберите поменьше.`, "error");
+      return;
+    }
+
+    try {
+      setPhoto(await resizeImage(file));
+    } catch (error) {
+      showToast((error as Error).message, "error");
+    }
+  }
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+
+    const clean = { ...values, username: values.username.trim(), email: values.email.trim() };
+
+    // проверка
+    const newErrors = validate(clean);
+    setErrors(newErrors);
+    if (Object.values(newErrors).some((error) => error !== "")) return;
+
+    setIsSaving(true);
+    try {
+      // если ввели новый пароль — отправляем его, иначе текущий
+      const password = clean.newPassword || clean.currentPassword;
+
+      await api.updateProfile({
+        username: clean.username,
+        email: clean.email,
+        password,
+        profileImage: photo,
+      });
+
+      // сохраняем новые данные в браузере
+      saveLogin({ ...user, username: clean.username, email: clean.email, profile_image: photo }, getToken(), getRefreshToken());
+
+      // очищаем поля паролей
+      setValues({ ...clean, newPassword: "", repeatPassword: "", currentPassword: "" });
+      showToast("Профиль сохранён.", "success");
+      onSaved();
+    } catch (error) {
+      showToast((error as Error).message, "error");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  // класс для поля: красная рамка, если ошибка
+  function inputClass(name: keyof FormValues) {
+    return errors[name] ? "input input-error" : "input";
+  }
+
+  return (
+    <section className="panel profile-edit">
+      <h2 className="panel-title">Редактировать профиль</h2>
+
+      <form className="profile-edit-form" onSubmit={handleSubmit} noValidate>
+        {/* ---- фото ---- */}
+        <div className="profile-edit-photo">
+          <Avatar name={values.username || "?"} image={photo} size={96} />
+
+          <div className="profile-edit-photo-buttons">
+            <button type="button" className="btn btn-dark btn-small" onClick={() => fileInputRef.current?.click()}>
+              Загрузить фото
+            </button>
+            {photo && (
+              <button type="button" className="btn-link" onClick={() => setPhoto(null)}>
+                Убрать фото
+              </button>
+            )}
+            <p className="profile-edit-hint">JPG, PNG или WEBP, до {MAX_FILE_MB} МБ</p>
+          </div>
+
+          {/* настоящее поле выбора файла спрятано, открываем его кнопкой выше */}
+          <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handlePhotoChange} />
+        </div>
+
+        {/* ---- имя и email ---- */}
+        <div className="profile-edit-row">
+          <label className="profile-edit-field">
+            <span className="profile-edit-label">Имя игрока</span>
+            <input
+              className={inputClass("username")}
+              maxLength={20}
+              autoComplete="username"
+              value={values.username}
+              onChange={(event) => setField("username", event.target.value)}
+            />
+            {errors.username && <span className="profile-edit-error">{errors.username}</span>}
+          </label>
+
+          <label className="profile-edit-field">
+            <span className="profile-edit-label">Email</span>
+            <input
+              className={inputClass("email")}
+              type="email"
+              autoComplete="email"
+              value={values.email}
+              onChange={(event) => setField("email", event.target.value)}
+            />
+            {errors.email && <span className="profile-edit-error">{errors.email}</span>}
+          </label>
+        </div>
+
+        {/* ---- новый пароль (необязательно) ---- */}
+        <p className="profile-edit-section">Сменить пароль (необязательно)</p>
+        <div className="profile-edit-row">
+          <label className="profile-edit-field">
+            <span className="profile-edit-label">Новый пароль</span>
+            <input
+              className={inputClass("newPassword")}
+              type="password"
+              autoComplete="new-password"
+              placeholder="минимум 6 символов"
+              value={values.newPassword}
+              onChange={(event) => setField("newPassword", event.target.value)}
+            />
+            {errors.newPassword && <span className="profile-edit-error">{errors.newPassword}</span>}
+          </label>
+
+          <label className="profile-edit-field">
+            <span className="profile-edit-label">Повторите новый пароль</span>
+            <input
+              className={inputClass("repeatPassword")}
+              type="password"
+              autoComplete="new-password"
+              value={values.repeatPassword}
+              onChange={(event) => setField("repeatPassword", event.target.value)}
+            />
+            {errors.repeatPassword && <span className="profile-edit-error">{errors.repeatPassword}</span>}
+          </label>
+        </div>
+
+        {/* ---- текущий пароль (обязательно) ---- */}
+        <div className="profile-edit-confirm">
+          <label className="profile-edit-field">
+            <span className="profile-edit-label">Текущий пароль — чтобы сохранить изменения</span>
+            <input
+              className={inputClass("currentPassword")}
+              type="password"
+              autoComplete="current-password"
+              value={values.currentPassword}
+              onChange={(event) => setField("currentPassword", event.target.value)}
+            />
+            {errors.currentPassword && <span className="profile-edit-error">{errors.currentPassword}</span>}
+          </label>
+
+          <button type="submit" className="btn btn-red profile-edit-save" disabled={isSaving}>
+            {isSaving ? "Сохраняем…" : "Сохранить"}
+          </button>
+        </div>
+      </form>
+    </section>
+  );
+}

@@ -3,7 +3,7 @@
 */
 
 .profile-page {
-  max-width: 1000px;
+  max-width: 1100px;
   padding: 18px;
 }
 
@@ -27,6 +27,19 @@
 
   .profile-page-grid {
     grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+/* правая колонка: форма + история */
+.profile-page-main {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+@media (max-width: 860px) {
+  .profile-page-main {
     gap: 14px;
   }
 }

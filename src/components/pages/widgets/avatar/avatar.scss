@@ -18,3 +18,9 @@
   background: none;
   border: 1px dashed #3a2020;
 }
+
+/* фото профиля: обрезаем в круг */
+.avatar-photo {
+  object-fit: cover;
+  background: #000000;
+}
