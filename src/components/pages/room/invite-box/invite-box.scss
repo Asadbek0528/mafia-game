@@ -19,6 +19,16 @@
   cursor: pointer;
 }
 
+.invite-box-badge {
+  margin-left: 4px;
+  padding: 1px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #c9f5d9;
+  background: rgba(47, 211, 107, 0.15);
+  border-radius: 999px;
+}
+
 .invite-box-apps {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -47,7 +57,8 @@
     grid-column: 1 / -1;
   }
 
-  .invite-box-apps {
+  .invite-box-apps,
+  .invite-box-friends {
     grid-column: 1 / -1;
   }
 

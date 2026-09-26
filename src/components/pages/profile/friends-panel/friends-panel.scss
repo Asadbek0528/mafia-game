@@ -56,11 +56,64 @@
 }
 
 .friends-panel-name {
+  display: grid;
   flex: 1;
+  min-width: 0;
   overflow: hidden;
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  small {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--color-text-muted);
+  }
+
+  .friends-panel-status-online {
+    color: var(--color-green);
+  }
+}
+
+.friends-panel-avatar {
+  position: relative;
+  display: inline-flex;
+}
+
+.friends-panel-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 11px;
+  height: 11px;
+  background: #5a4a4a;
+  border: 2px solid #110707;
+  border-radius: 50%;
+}
+
+.friends-panel-dot-online {
+  background: var(--color-green);
+}
+
+.friends-panel-subtitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.friends-panel-requests {
+  display: grid;
+  gap: 6px;
+}
+
+.friends-panel-request {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: #1a0a0c;
+  border: 1px solid var(--color-line-red);
+  border-radius: var(--radius);
 }
 
 .friends-panel-id {

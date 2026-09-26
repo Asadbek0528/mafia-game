@@ -10,9 +10,9 @@ import GameHistory from "@/components/pages/widgets/game-history/GameHistory";
 import { showToast } from "@/components/pages/widgets/toast/Toast";
 import { api, type PublicUser } from "@/lib/api";
 import { rememberPageAfterLogin, useCurrentUser } from "@/lib/auth";
-import { addFriend, removeFriend, useFriends } from "@/lib/friends";
 import { formatPlayerId, fromPlayerId } from "@/lib/player-id";
 import { copyText } from "@/lib/share";
+import { statusText, useSocial } from "@/lib/social";
 import "./player-page.scss";
 
 export default function PlayerPage() {
@@ -22,7 +22,7 @@ export default function PlayerPage() {
   const userId = fromPlayerId(playerId);
 
   const { user, isLoaded } = useCurrentUser();
-  const friends = useFriends();
+  const social = useSocial();
   const [player, setPlayer] = useState<PublicUser | null>(null);
   const [error, setError] = useState("");
 
@@ -69,23 +69,37 @@ export default function PlayerPage() {
   }
 
   const isMe = user.id === player.id;
-  const isFriend = friends.some((friend) => friend.id === player.id);
+  const friend = social.friends.find((item) => item.id === player.id);
+  const isRequested = social.outgoing.includes(player.id);
+  const hasIncoming = social.incoming.some((item) => item.id === player.id);
 
   async function copyId() {
     if (await copyText(playerId)) showToast("ID скопирован.", "success");
     else showToast(`ID игрока: ${playerId}`);
   }
 
-  function toggleFriend() {
+  function handleFriendButton() {
     if (!player) return;
-    if (isFriend) {
-      removeFriend(player.id);
+    if (friend) {
+      if (!window.confirm(`Удалить ${player.username} из друзей?`)) return;
+      social.remove(player.id);
       showToast(`${player.username} удалён из друзей.`);
+    } else if (hasIncoming) {
+      social.accept(player.id);
+      showToast(`Теперь вы друзья с ${player.username}.`, "success");
+    } else if (isRequested) {
+      social.cancel(player.id);
+      showToast("Заявка отменена.");
     } else {
-      addFriend({ id: player.id, username: player.username });
-      showToast(`${player.username} добавлен в друзья.`, "success");
+      social.sendRequest(player.id, player.username);
+      showToast(`Заявка отправлена ${player.username}.`, "success");
     }
   }
+
+  let friendLabel = "Добавить в друзья";
+  if (friend) friendLabel = "В друзьях ✓";
+  else if (hasIncoming) friendLabel = "Принять заявку";
+  else if (isRequested) friendLabel = "Заявка отправлена";
 
   return (
     <main className="player-page">
@@ -104,6 +118,12 @@ export default function PlayerPage() {
           <button type="button" className="player-page-id" onClick={copyId} title="Скопировать ID">
             ID <b>{formatPlayerId(playerId)}</b>
           </button>
+          {friend && (
+            <p className={friend.online ? "player-page-status player-page-status-online" : "player-page-status"}>
+              <span />
+              {statusText(friend)}
+            </p>
+          )}
         </div>
 
         {isMe ? (
@@ -112,8 +132,14 @@ export default function PlayerPage() {
           </Link>
         ) : (
           !user.guest && (
-            <button type="button" className={isFriend ? "btn btn-dark btn-small" : "btn btn-red btn-small"} onClick={toggleFriend}>
-              {isFriend ? "В друзьях ✓" : "Добавить в друзья"}
+            <button
+              type="button"
+              className={friend || isRequested ? "btn btn-dark btn-small" : "btn btn-red btn-small"}
+              onClick={handleFriendButton}
+              disabled={!social.isReady}
+              title={social.isReady ? undefined : "Нет связи с сервером"}
+            >
+              {social.isReady ? friendLabel : "Подключаемся…"}
             </button>
           )
         )}

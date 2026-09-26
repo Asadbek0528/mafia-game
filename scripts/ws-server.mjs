@@ -1,6 +1,7 @@
 import { WebSocketServer } from "ws";
 
 import { BACKEND_URL, setting } from "./env.mjs";
+import { onUserClose, onUserConnect, onUserMessage } from "./social.mjs";
 
 const PORT = Number(setting("WS_PORT", 3001));
 const OWNER_LEFT_MS = Number(setting("ROOM_OWNER_LEFT_SECONDS", 60)) * 1000;
@@ -178,10 +179,73 @@ function handleControlMessage(channel, data, socket) {
   return false;
 }
 
+const verifiedTokens = new Map();
+
+function userIdFromToken(token) {
+  try {
+    const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8"));
+    const id = Number(payload.user_id ?? payload.id ?? payload.sub);
+    return Number.isFinite(id) ? id : null;
+  } catch {
+    return null;
+  }
+}
+
+async function verifyUser(token, claimedId) {
+  if (!token) return false;
+  if (!verifiedTokens.has(token)) {
+    const response = await fetch(`${BACKEND_URL}/game-player/list?game_id=0`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(10000),
+    }).catch(() => null);
+    const isValid = response !== null && response.status !== 401 && response.status !== 403;
+    verifiedTokens.set(token, isValid ? (userIdFromToken(token) ?? claimedId) : null);
+  }
+  return verifiedTokens.get(token) === claimedId;
+}
+
+function handleUserSocket(socket, userId, token) {
+  const queue = [];
+  let isReady = false;
+
+  socket.on("message", (raw) => {
+    let data = null;
+    try {
+      data = JSON.parse(raw.toString());
+    } catch {
+      return;
+    }
+    if (!data || typeof data !== "object") return;
+    if (isReady) onUserMessage(userId, data);
+    else queue.push(data);
+  });
+
+  socket.on("close", () => {
+    if (isReady) onUserClose(userId, socket);
+  });
+
+  verifyUser(token, userId).then((isValid) => {
+    if (!isValid) {
+      socket.close(4001, "auth");
+      return;
+    }
+    if (socket.readyState !== socket.OPEN) return;
+    isReady = true;
+    onUserConnect(userId, socket);
+    for (const data of queue.splice(0)) onUserMessage(userId, data);
+  });
+}
+
 server.on("connection", (socket, request) => {
   const url = new URL(request.url ?? "/", "http://localhost");
   const channel = url.pathname;
   const token = url.searchParams.get("token");
+
+  const userMatch = channel.match(/^\/ws\/user\/(\d+)$/);
+  if (userMatch) {
+    handleUserSocket(socket, Number(userMatch[1]), token);
+    return;
+  }
   if (token) channelTokens.set(channel, token);
   touchGame(channel);
 

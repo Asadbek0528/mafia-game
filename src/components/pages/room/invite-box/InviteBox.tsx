@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 
 import { showToast } from "@/components/pages/widgets/toast/Toast";
 import { copyText, getRoomLink, shareLink, telegramShareUrl, whatsappShareUrl } from "@/lib/share";
+import { useSocial } from "@/lib/social";
+
+import InviteFriendsDialog from "../invite-friends/InviteFriendsDialog";
 import "./invite-box.scss";
 
 type InviteBoxProps = {
@@ -13,6 +16,9 @@ type InviteBoxProps = {
 
 export default function InviteBox({ roomId, roomName }: InviteBoxProps) {
   const [link, setLink] = useState("");
+  const [isFriendsOpen, setIsFriendsOpen] = useState(false);
+  const social = useSocial();
+  const onlineFriends = social.friends.filter((friend) => friend.online).length;
   const inviteText = `Заходи в комнату «${roomName}» в Mafia`;
 
   useEffect(() => {
@@ -33,6 +39,17 @@ export default function InviteBox({ roomId, roomName }: InviteBoxProps) {
   return (
     <section className="panel invite-box">
       <h2 className="panel-title">Пригласить друзей</h2>
+
+      {social.myId && (
+        <button type="button" className="btn btn-red btn-full invite-box-friends" onClick={() => setIsFriendsOpen(true)}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="9" cy="8" r="3.5" />
+            <path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6M19 8v6M16 11h6" />
+          </svg>
+          Пригласить друга
+          {onlineFriends > 0 && <span className="invite-box-badge">{onlineFriends} в сети</span>}
+        </button>
+      )}
 
       <p className="invite-box-link" onClick={handleCopy} title="Нажмите, чтобы скопировать">
         {link}
@@ -66,6 +83,8 @@ export default function InviteBox({ roomId, roomName }: InviteBoxProps) {
       </div>
 
       <div className="invite-box-image" aria-hidden="true" />
+
+      <InviteFriendsDialog isOpen={isFriendsOpen} roomId={roomId} roomName={roomName} onClose={() => setIsFriendsOpen(false)} />
     </section>
   );
 }

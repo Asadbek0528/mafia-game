@@ -1,0 +1,112 @@
+.invite-friends {
+  width: min(92vw, 420px);
+  padding: 0;
+  color: var(--color-text);
+  background: linear-gradient(180deg, #150809, #070303);
+  border: 1px solid var(--color-line-red);
+  border-radius: var(--radius-big);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8), 0 0 40px rgba(160, 0, 12, 0.2);
+
+  &::backdrop {
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(3px);
+  }
+}
+
+.invite-friends-body {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+}
+
+.invite-friends-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.invite-friends-title {
+  font-size: 22px;
+}
+
+.invite-friends-close {
+  width: 34px;
+  height: 34px;
+  font-size: 22px;
+  color: #8b7878;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-small);
+  cursor: pointer;
+
+  &:hover {
+    color: #ffffff;
+    border-color: var(--color-line);
+  }
+}
+
+.invite-friends-note {
+  font-size: 14px;
+  color: var(--color-text-muted);
+
+  a {
+    color: var(--color-red);
+    text-decoration: underline;
+  }
+}
+
+.invite-friends-list {
+  display: grid;
+  gap: 6px;
+  max-height: 55vh;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.invite-friends-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: #110707;
+  border: 1px solid #241112;
+  border-radius: var(--radius);
+}
+
+.invite-friends-avatar {
+  position: relative;
+  display: inline-flex;
+}
+
+.invite-friends-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 11px;
+  height: 11px;
+  background: #5a4a4a;
+  border: 2px solid #110707;
+  border-radius: 50%;
+}
+
+.invite-friends-dot-online {
+  background: var(--color-green);
+}
+
+.invite-friends-name {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  small {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--color-text-muted);
+  }
+}

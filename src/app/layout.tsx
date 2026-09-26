@@ -4,7 +4,9 @@ import { Onest, Oswald, Rubik_Wet_Paint } from "next/font/google";
 import "./globals.scss";
 
 import Header from "@/components/layout/header/Header";
+import SocialNotices from "@/components/pages/widgets/social-notices/SocialNotices";
 import Toast from "@/components/pages/widgets/toast/Toast";
+import { SocialProvider } from "@/lib/social";
 
 const onest = Onest({
   subsets: ["latin", "cyrillic"],
@@ -40,11 +42,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ru" className={`${onest.variable} ${oswald.variable} ${wetPaint.variable}`}>
       <body suppressHydrationWarning>
-        <div className="app">
-          <Header />
-          <div className="app-content">{children}</div>
-        </div>
-        <Toast />
+        <SocialProvider>
+          <div className="app">
+            <Header />
+            <div className="app-content">{children}</div>
+          </div>
+          <Toast />
+          <SocialNotices />
+        </SocialProvider>
       </body>
     </html>
   );

@@ -66,6 +66,29 @@
   }
 }
 
+.player-page-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+
+  span {
+    width: 8px;
+    height: 8px;
+    background: #5a4a4a;
+    border-radius: 50%;
+  }
+}
+
+.player-page-status-online {
+  color: var(--color-green);
+
+  span {
+    background: var(--color-green);
+  }
+}
+
 .player-page-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -7,16 +7,18 @@ import { useState } from "react";
 import Avatar from "@/components/pages/widgets/avatar/Avatar";
 import { showToast } from "@/components/pages/widgets/toast/Toast";
 import { api, type PublicUser } from "@/lib/api";
-import { removeFriend, useFriends } from "@/lib/friends";
 import { formatPlayerId, fromPlayerId, toPlayerId } from "@/lib/player-id";
+import { statusText, useSocial } from "@/lib/social";
 import "./friends-panel.scss";
 
 export default function FriendsPanel() {
   const router = useRouter();
-  const friends = useFriends();
+  const social = useSocial();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PublicUser[] | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+
+  const onlineCount = social.friends.filter((friend) => friend.online).length;
 
   async function handleSearch(event: React.FormEvent) {
     event.preventDefault();
@@ -48,7 +50,9 @@ export default function FriendsPanel() {
     <section className="panel friends-panel">
       <div className="panel-top">
         <h2 className="panel-title">Друзья</h2>
-        <span className="friends-panel-count">{friends.length}</span>
+        <span className="friends-panel-count">
+          {social.isReady ? `в сети ${onlineCount} из ${social.friends.length}` : "подключаемся…"}
+        </span>
       </div>
 
       <form className="friends-panel-search" onSubmit={handleSearch}>
@@ -82,22 +86,48 @@ export default function FriendsPanel() {
         </ul>
       )}
 
+      {!results && social.incoming.length > 0 && (
+        <div className="friends-panel-requests">
+          <p className="friends-panel-subtitle">Заявки в друзья</p>
+          {social.incoming.map((request) => (
+            <div key={request.id} className="friends-panel-request">
+              <Avatar name={request.username} size={32} />
+              <span className="friends-panel-name">{request.username}</span>
+              <button type="button" className="btn btn-red btn-small" onClick={() => social.accept(request.id)}>
+                Принять
+              </button>
+              <button type="button" className="friends-panel-remove" onClick={() => social.decline(request.id)} aria-label="Отклонить" title="Отклонить">
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {!results && (
         <ul className="friends-panel-list">
-          {friends.length === 0 && (
+          {social.friends.length === 0 && (
             <li className="friends-panel-empty">Найдите друга по ID и нажмите «Добавить в друзья» у него в профиле.</li>
           )}
-          {friends.map((friend) => (
+          {social.friends.map((friend) => (
             <li key={friend.id} className="friends-panel-row">
               <Link href={`/player/${toPlayerId(friend.id)}`} className="friends-panel-item">
-                <Avatar name={friend.username} size={36} />
-                <span className="friends-panel-name">{friend.username}</span>
+                <span className="friends-panel-avatar">
+                  <Avatar name={friend.username} size={36} />
+                  <span className={friend.online ? "friends-panel-dot friends-panel-dot-online" : "friends-panel-dot"} />
+                </span>
+                <span className="friends-panel-name">
+                  {friend.username}
+                  <small className={friend.online ? "friends-panel-status-online" : undefined}>{statusText(friend)}</small>
+                </span>
                 <span className="friends-panel-id">{formatPlayerId(toPlayerId(friend.id))}</span>
               </Link>
               <button
                 type="button"
                 className="friends-panel-remove"
-                onClick={() => removeFriend(friend.id)}
+                onClick={() => {
+                  if (window.confirm(`Удалить ${friend.username} из друзей?`)) social.remove(friend.id);
+                }}
                 aria-label={`Удалить ${friend.username} из друзей`}
                 title="Удалить из друзей"
               >
