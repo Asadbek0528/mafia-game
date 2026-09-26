@@ -54,6 +54,18 @@
   min-width: 0;
 }
 
+.game-page-exit {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.game-page-end {
+  color: #ff9ea4;
+  border-color: var(--color-line-red);
+}
+
 .game-page-check {
   padding: 14px;
   font-size: 18px;

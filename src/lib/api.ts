@@ -42,6 +42,7 @@ const ENDPOINTS = {
   endNight: (gameId: string) => `/game/end-night/${gameId}`,
   startVoting: (gameId: string) => `/game/start-voting/${gameId}`,
   endVoting: (gameId: string) => `/game/end-voting/${gameId}`,
+  gameDelete: (gameId: string) => `/game/delete/${gameId}`,
   nightAction: "/night-action/create",
   vote: "/vote/create",
   nightActionList: (roundId: number) => `/night-action/list?round_id=${roundId}`,
@@ -656,6 +657,11 @@ export const api = {
     if (me) {
       await request(ENDPOINTS.roomPlayerDelete(me.id), { method: "DELETE" });
     }
+  },
+
+  async endGame(gameId: string, roomId: string) {
+    await request(ENDPOINTS.gameDelete(gameId), { method: "DELETE" }).catch(() => null);
+    await this.closeRoom(roomId);
   },
 
   async closeRoom(roomId: string) {

@@ -95,6 +95,7 @@ export default function GamePage() {
   const [checkResult, setCheckResult] = useState("");
   const [events, setEvents] = useState<string[]>([]);
   const [chat, setChat] = useState<ChatMessage[]>([]);
+  const [isEnding, setIsEnding] = useState(false);
   const [suspects, setSuspects] = useState<Record<string, Record<number, number | null>>>({});
   const [secondsLeft, setSecondsLeft] = useState(0);
 
@@ -355,6 +356,22 @@ export default function GamePage() {
 
   const alivePlayers = game.players.filter((player) => player.isAlive);
   const isGameOver = game.winner !== null;
+  const isGameOwner = user?.id !== undefined && user.id === game.ownerUserId;
+
+  async function handleEndGame() {
+    if (!game || isEnding) return;
+    if (!window.confirm("Завершить игру для всех? Комната тоже закроется.")) return;
+    setIsEnding(true);
+    try {
+      await api.endGame(game.id, game.roomId);
+      notify("room-closed");
+      showToast("Игра завершена.", "success");
+      router.push("/");
+    } catch (error) {
+      setIsEnding(false);
+      showToast((error as Error).message, "error");
+    }
+  }
   const iCanAct = me?.isAlive === true && !isGameOver;
 
   function canSeeRole(player: GamePlayer): boolean {
@@ -518,7 +535,19 @@ export default function GamePage() {
           </>
         ) : (
           <div className="game-page-grid">
-            <main className="game-page-main">{renderPhase()}</main>
+            <main className="game-page-main">
+              {renderPhase()}
+              <div className="game-page-exit">
+                <button type="button" className="btn btn-dark btn-small" onClick={() => router.push("/")}>
+                  В меню
+                </button>
+                {isGameOwner && !isDemo && (
+                  <button type="button" className="btn btn-dark btn-small game-page-end" onClick={handleEndGame} disabled={isEnding}>
+                    {isEnding ? "Завершаем…" : "Завершить игру"}
+                  </button>
+                )}
+              </div>
+            </main>
             <aside className="game-page-side">
               <GameLog events={events} />
               {chatPanel}
