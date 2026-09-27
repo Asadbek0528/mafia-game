@@ -7,10 +7,11 @@ import { showToast } from "@/components/pages/widgets/toast/Toast";
 import { api, type GamePlayer, type GameState, type RoleKey } from "@/lib/api";
 import { rememberPageAfterLogin, useCurrentUser } from "@/lib/auth";
 import { advanceDemoGame, createDemoGame } from "@/lib/demo-game";
-import { DEFAULT_TIMES, getRole } from "@/lib/roles";
+import { DEFAULT_TIMES, getRole, NIGHT_TURN_SECONDS, NIGHT_TURNS } from "@/lib/roles";
 import { useLiveUpdates, WS_PATHS } from "@/lib/socket";
 
 import DeadBanner from "./dead-banner/DeadBanner";
+import EffectOverlay, { type GameEffect } from "./effect-overlay/EffectOverlay";
 import GameHeader from "./game-header/GameHeader";
 import GameChat, { type ChatMessage } from "./game-chat/GameChat";
 import GameLog from "./game-log/GameLog";
@@ -49,6 +50,74 @@ function getPhaseEnd(game: GameState): number {
 
 function isGameOver_(game: GameState): boolean {
   return game.winner !== null;
+}
+
+type NightTurnState = {
+  elapsed: number;
+  activeIndex: number | null;
+  secondsInTurn: number;
+  myIndex: number | null;
+};
+
+function getNightTurn(game: GameState, secondsLeft: number, myRole: RoleKey | null): NightTurnState {
+  const elapsed = Math.max(0, game.nightTime - secondsLeft);
+  const index = Math.floor(elapsed / NIGHT_TURN_SECONDS);
+  const activeIndex = game.phase === "NIGHT" && index < NIGHT_TURNS.length ? index : null;
+  const secondsInTurn = activeIndex === null ? 0 : (activeIndex + 1) * NIGHT_TURN_SECONDS - elapsed;
+  const found = myRole ? NIGHT_TURNS.findIndex((turn) => turn.role === myRole) : -1;
+  return { elapsed, activeIndex, secondsInTurn, myIndex: found >= 0 ? found : null };
+}
+
+function phaseStartEffect(game: GameState, me: GamePlayer | undefined): GameEffect | null {
+  const last = game.lastRound;
+  const nameOf = (id: number | null) => game.players.find((player) => player.id === id)?.username ?? "";
+  const key = `${game.round}-${game.phase}`;
+
+  if (game.phase === "DAY" && last) {
+    if (last.savedPlayerId !== null && last.savedPlayerId === me?.id) {
+      return { key, kind: "heal", title: "Доктор спас вас!", text: "Этой ночью мафия пришла за вами, но доктор успел." };
+    }
+    if (last.savedPlayerId !== null && me?.role === "doctor") {
+      return { key, kind: "heal", title: "Вы спасли жизнь!", text: `${nameOf(last.savedPlayerId)} выжил благодаря вам.` };
+    }
+    if (last.savedByDoctor) {
+      return { key, kind: "heal", title: "Доктор спас жертву", text: "Этой ночью никто не погиб." };
+    }
+    if (last.killedPlayerId !== null && last.killedPlayerId === me?.id) {
+      return { key, kind: "blood", title: "Вас убили этой ночью", text: "Теперь вы наблюдатель: видите все роли и пишете в чат погибших." };
+    }
+    if (last.killedPlayerId !== null) {
+      return { key, kind: "blood", title: `Ночью убит ${nameOf(last.killedPlayerId)}`, text: "Мафия нанесла удар. Найдите убийцу." };
+    }
+  }
+
+  if (game.phase === "NIGHT" && game.round > 1 && last?.eliminatedPlayerId) {
+    if (last.eliminatedPlayerId === me?.id) {
+      return { key, kind: "blood", title: "Город выгнал вас", text: "Теперь вы наблюдатель." };
+    }
+    return { key, kind: "info", title: `Город выгнал ${nameOf(last.eliminatedPlayerId)}`, text: "Наступает ночь." };
+  }
+
+  return null;
+}
+
+function NightTurns({ activeIndex, secondsInTurn }: { activeIndex: number | null; secondsInTurn: number }) {
+  return (
+    <ol className="game-page-turns" aria-label="Очередь ночных ходов">
+      {NIGHT_TURNS.map((turn, index) => {
+        let className = "game-page-turn";
+        if (activeIndex === index) className += " game-page-turn-active";
+        if (activeIndex === null || index < activeIndex) className += " game-page-turn-done";
+        return (
+          <li key={turn.role} className={className}>
+            {turn.title}
+            {activeIndex === index && <b>{secondsInTurn}</b>}
+          </li>
+        );
+      })}
+      <li className={activeIndex === null ? "game-page-turn game-page-turn-active" : "game-page-turn"}>Сон</li>
+    </ol>
+  );
 }
 
 type SuspectEvent = { type?: string; round: number; from: number; target: number | null };
@@ -99,6 +168,9 @@ export default function GamePage() {
   const [checkResult, setCheckResult] = useState("");
   const [events, setEvents] = useState<string[]>([]);
   const [chat, setChat] = useState<ChatMessage[]>([]);
+  const [effect, setEffect] = useState<GameEffect | null>(null);
+  const handleConfirmRef = useRef<(() => void) | null>(null);
+  const clearEffect = useCallback(() => setEffect(null), []);
   const [isEnding, setIsEnding] = useState(false);
   const [suspects, setSuspects] = useState<Record<string, Record<number, number | null>>>({});
   const [secondsLeft, setSecondsLeft] = useState(0);
@@ -165,6 +237,21 @@ export default function GamePage() {
   const isRunning = game !== null && game.winner === null;
 
   const hasGame = game !== null;
+
+  const autoSendKey = useRef("");
+  useEffect(() => {
+    const current = gameRef.current;
+    if (!current || current.phase !== "NIGHT" || isSent || selectedId === null) return;
+    const currentUser = userRef.current;
+    const mine = findMe(current, currentUser?.id, currentUser?.username);
+    const turn = getNightTurn(current, secondsLeft, mine?.role ?? null);
+    if (turn.myIndex === null || turn.activeIndex === turn.myIndex) return;
+    if (turn.elapsed < (turn.myIndex + 1) * NIGHT_TURN_SECONDS) return;
+    const key = `${current.round}-${selectedId}`;
+    if (autoSendKey.current === key) return;
+    autoSendKey.current = key;
+    handleConfirmRef.current?.();
+  }, [secondsLeft, isSent, selectedId]);
 
   const addChatMessages = useCallback((incoming: ChatMessage[]) => {
     setChat((old) => {
@@ -239,6 +326,7 @@ export default function GamePage() {
   useEffect(() => {
     const current = gameRef.current;
     if (!current || describedPhase.current === phaseKey) return;
+    const isLiveChange = describedPhase.current !== "";
     describedPhase.current = phaseKey;
 
     setSelectedId(null);
@@ -251,6 +339,13 @@ export default function GamePage() {
 
     const texts = describePhaseStart(current);
     setEvents((old) => [...old, ...texts]);
+
+    if (isLiveChange && !current.winner) {
+      const currentUser = userRef.current;
+      const mine = findMe(current, currentUser?.id, currentUser?.username);
+      const next = phaseStartEffect(current, mine);
+      if (next) setEffect(next);
+    }
   }, [phaseKey]);
 
   const serverPhaseEnd = game?.phaseEndsAt ?? null;
@@ -335,12 +430,14 @@ export default function GamePage() {
     return () => clearInterval(timer);
   }, [isDemo, loadGame, notify]);
 
+  handleConfirmRef.current = handleConfirm;
+
   async function handleConfirm() {
     if (!game || !me || selectedId === null) return;
     const target = game.players.find((player) => player.id === selectedId);
 
     try {
-      let isMafia: boolean | null = isDemo && target ? target.role === "mafia" : null;
+      let isMafia: boolean | null = null;
 
       if (!isDemo) {
         if (game.roundId === null) throw new Error("Раунд не найден. Обновите страницу.");
@@ -360,10 +457,24 @@ export default function GamePage() {
       setIsSent(true);
       if (!isDemo) notify("action");
 
+      if (isMafia === null && target?.role) isMafia = target.role === "mafia";
+
       if (game.phase === "NIGHT" && me.role === "commissar" && target) {
-        if (isMafia === null) setCheckResult(`Проверка ${target.username} отправлена.`);
-        else setCheckResult(isMafia ? `${target.username} — мафия!` : `${target.username} — не мафия.`);
+        if (isMafia === null) {
+          setCheckResult(`Проверка ${target.username} отправлена, но сервер не вернул результат.`);
+        } else {
+          setCheckResult(isMafia ? `${target.username} — мафия!` : `${target.username} — не мафия.`);
+          setEffect({
+            key: `check-${Date.now()}`,
+            kind: isMafia ? "mafia" : "clean",
+            title: isMafia ? `${target.username} — мафия!` : `${target.username} — мирный`,
+            text: isMafia ? "Убедите город выгнать его днём." : "Этому игроку можно доверять.",
+          });
+        }
       }
+
+      if (game.phase === "NIGHT" && me.role === "mafia" && target) showToast(`Жертва выбрана: ${target.username}`, "success");
+      if (game.phase === "NIGHT" && me.role === "doctor" && target) showToast(`Этой ночью вы лечите: ${target.username}`, "success");
     } catch (error) {
       showToast((error as Error).message, "error");
     }
@@ -389,6 +500,7 @@ export default function GamePage() {
   const alivePlayers = game.players.filter((player) => player.isAlive);
   const isGameOver = game.winner !== null;
   const isGameOwner = user?.id !== undefined && user.id === game.ownerUserId;
+  const night = getNightTurn(game, secondsLeft, me?.role ?? null);
 
   async function handleEndGame() {
     if (!game || isEnding) return;
@@ -448,26 +560,42 @@ export default function GamePage() {
 
     if (game.phase === "NIGHT") {
       const role = me?.role;
+      const turnStrip = <NightTurns activeIndex={night.activeIndex} secondsInTurn={night.secondsInTurn} />;
+      const activeName = night.activeIndex !== null ? NIGHT_TURNS[night.activeIndex].title : null;
+      const sleepText = activeName ? `Сейчас просыпается: ${activeName} (${night.secondsInTurn} сек)` : "Все сделали ход. Город спит до утра.";
 
       if (!iCanAct || role === "civilian" || !role) {
         return (
-          <TargetPicker {...common} title="Город спит" subtitle="Мафия выбирает жертву. Дождитесь утра." selectableIds={[]} />
+          <>
+            {turnStrip}
+            <TargetPicker {...common} title="Город спит" subtitle={sleepText} selectableIds={[]} />
+          </>
         );
       }
 
       let selectable = alivePlayers;
       if (role === "mafia" || role === "commissar") selectable = alivePlayers.filter((player) => player.id !== me?.id);
 
-      const confirmText = role === "mafia" ? "Подтвердить выбор" : role === "doctor" ? "Вылечить" : "Проверить";
+      const confirmText = role === "mafia" ? "Убить" : role === "doctor" ? "Вылечить" : "Проверить";
+      const myTurn = night.myIndex;
+      const isMyTurn = myTurn !== null && night.activeIndex === myTurn;
+      const isBefore = myTurn !== null && night.elapsed < myTurn * NIGHT_TURN_SECONDS;
+      const isOver = !isMyTurn && !isBefore;
+
+      let subtitle = `${getRole(role).nightTask} Осталось ${night.secondsInTurn} сек.`;
+      if (isBefore) subtitle = `Ваш ход через ${myTurn! * NIGHT_TURN_SECONDS - night.elapsed} сек. ${sleepText}`;
+      if (isOver && !isSent) subtitle = "Ваше время вышло. Город спит до утра.";
+      if (isSent) subtitle = sleepText;
 
       return (
         <>
+          {turnStrip}
           <TargetPicker
             {...common}
-            title={`Вы — ${getRole(role).name}`}
-            subtitle={getRole(role).nightTask}
-            selectableIds={selectable.map((player) => player.id)}
-            confirmText={confirmText}
+            title={isMyTurn && !isSent ? `Ваш ход — ${getRole(role).name}` : `Вы — ${getRole(role).name}`}
+            subtitle={subtitle}
+            selectableIds={isMyTurn ? selectable.map((player) => player.id) : []}
+            confirmText={isMyTurn || isSent ? confirmText : undefined}
           />
           {checkResult && <p className="game-page-check">{checkResult}</p>}
         </>
@@ -595,6 +723,7 @@ export default function GamePage() {
       </div>
 
       {isRoleOpen && me?.role && <RoleReveal role={me.role} onClose={closeRole} />}
+      <EffectOverlay effect={effect} onDone={clearEffect} />
     </div>
   );
 }

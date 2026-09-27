@@ -1,10 +1,12 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
-import type { User } from "./api";
-import { getUser } from "./auth";
+import { showToast } from "@/components/pages/widgets/toast/Toast";
+
+import { SESSION_EXPIRED_EVENT, type User } from "./api";
+import { getUser, logout, rememberPageAfterLogin } from "./auth";
 import { useLiveUpdates } from "./socket";
 
 export type FriendStatus = "online" | "room" | "game" | "offline";
@@ -83,7 +85,25 @@ const nextKey = () => `${Date.now()}-${(noticeCounter += 1)}`;
 
 export function SocialProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [me, setMe] = useState<User | null>(null);
+  const isExpiring = useRef(false);
+
+  useEffect(() => {
+    function handleExpired() {
+      if (isExpiring.current || window.location.pathname.startsWith("/register")) return;
+      isExpiring.current = true;
+      rememberPageAfterLogin(window.location.pathname);
+      logout();
+      showToast("Сессия истекла — войдите снова, и вы вернётесь туда, где были.", "error");
+      router.replace("/register");
+      setTimeout(() => {
+        isExpiring.current = false;
+      }, 3000);
+    }
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleExpired);
+  }, [router]);
   const [friends, setFriends] = useState<FriendInfo[]>([]);
   const [incoming, setIncoming] = useState<FriendRequest[]>([]);
   const [outgoing, setOutgoing] = useState<FriendRequest[]>([]);

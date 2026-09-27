@@ -8,7 +8,9 @@ const PASSWORD = setting("BOT_PASSWORD", "botpass123");
 const PREFIX = setting("BOT_PREFIX", "bot");
 const EMAIL_DOMAIN = setting("BOT_EMAIL_DOMAIN", "example.com");
 const TICK_MS = 2000;
-const PHASE_SECONDS = { NIGHT: 60, DAY: 60, VOTING: 45 };
+const PHASE_SECONDS = { NIGHT: 60, DAY: 60, VOTING: 30 };
+const NIGHT_TURN = { mafia: 0, doctor: 1, commissar: 2 };
+const NIGHT_TURN_MS = 10_000;
 
 const [roomArg, countArg, humansArg] = process.argv.slice(2);
 const isNewRoom = roomArg === "new";
@@ -269,16 +271,20 @@ async function actIfNeeded(bot, gameId, state) {
         state.done.add(key);
         return null;
       }
+      if (!state.seenAt.has(key)) state.seenAt.set(key, Date.now());
+      const turnStart = state.seenAt.get(key) + NIGHT_TURN[me.role] * NIGHT_TURN_MS;
+      if (Date.now() < turnStart + 1000) return null;
       const target = randomItem(me.role === "doctor" ? [...others, me] : others);
       if (!target) return null;
 
-      await sleep(1000 + Math.random() * 3000);
+      await sleep(500 + Math.random() * 3500);
       const result = await request("/night-action/create", {
         method: "POST",
         token: bot.token,
         body: { round_id: round.id, actor_id: me.id, target_id: target.id, action_type: action },
       });
-      const extra = action === "CHECK" && result?.is_mafia != null ? ` → ${result.is_mafia ? "мафия!" : "не мафия"}` : "";
+      const isMafia = result?.is_mafia ?? (target.role ? target.role === "mafia" : null);
+      const extra = action === "CHECK" && isMafia !== null ? ` → ${isMafia ? "мафия!" : "не мафия"}` : "";
       console.log(`[${bot.username}] ночь ${game.current_round}: ${action} ${nameOf(target)}${extra}`);
     }
 
@@ -307,7 +313,7 @@ async function actIfNeeded(bot, gameId, state) {
 }
 
 async function runBot(bot) {
-  const state = { done: new Set(), chatted: new Set(), role: null, dead: false, errors: 0 };
+  const state = { done: new Set(), chatted: new Set(), seenAt: new Map(), role: null, dead: false, errors: 0 };
   let gameId = null;
   let isWaitingShown = false;
 

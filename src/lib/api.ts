@@ -111,6 +111,7 @@ export type RoundResult = {
   roundNumber: number;
   killedPlayerId: number | null;
   savedByDoctor: boolean;
+  savedPlayerId: number | null;
   eliminatedPlayerId: number | null;
 };
 
@@ -232,12 +233,44 @@ type RequestOptions = {
   body?: object;
 };
 
+const AUTH_PATHS = [ENDPOINTS.login, ENDPOINTS.register, ENDPOINTS.refresh, ENDPOINTS.logout];
+export const SESSION_EXPIRED_EVENT = "mafia-session-expired";
+const SESSION_EXPIRED_TEXT = "Сессия истекла. Войдите в аккаунт снова.";
+
+let refreshing: Promise<boolean> | null = null;
+
+function refreshOnce(): Promise<boolean> {
+  if (!refreshing) {
+    refreshing = refreshAccessToken().finally(() => {
+      setTimeout(() => {
+        refreshing = null;
+      }, 0);
+    });
+  }
+  return refreshing;
+}
+
+function tokenExpiresSoon(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))) as { exp?: number };
+    return typeof payload.exp === "number" && payload.exp * 1000 - Date.now() < 30_000;
+  } catch {
+    return false;
+  }
+}
+
 async function request<T>(
   path: string,
   options: RequestOptions = {},
   isRetry = false,
 ): Promise<T> {
   const headers: Record<string, string> = {};
+  const isAuthPath = AUTH_PATHS.some((authPath) => path.startsWith(authPath));
+
+  const oldToken = getToken();
+  if (oldToken && !isAuthPath && !isRetry && getRefreshToken() && tokenExpiresSoon(oldToken)) {
+    await refreshOnce();
+  }
 
   const token = getToken();
   if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -255,9 +288,14 @@ async function request<T>(
     throw new ApiError(SERVER_DOWN_TEXT, 0);
   }
 
-  if (response.status === 401 && !isRetry && getRefreshToken()) {
-    const refreshed = await refreshAccessToken();
+  if (response.status === 401 && !isRetry && !isAuthPath && getRefreshToken()) {
+    const refreshed = await refreshOnce();
     if (refreshed) return request<T>(path, options, true);
+  }
+
+  if (response.status === 401 && token && !isAuthPath) {
+    if (typeof window !== "undefined") window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+    throw new ApiError(SESSION_EXPIRED_TEXT, 401);
   }
 
   const text = await response.text();
@@ -450,6 +488,7 @@ function toRoundResult(round: BackendRoundDetail): RoundResult {
     roundNumber: round.round_number,
     killedPlayerId: round.killed_player_id,
     savedByDoctor: round.saved_by_doctor,
+    savedPlayerId: null,
     eliminatedPlayerId: round.eliminated_player_id,
   };
 }
@@ -915,14 +954,16 @@ export const api = {
       );
 
       const nightIsOver = game.current_round > latest.round_number || game.current_phase !== "NIGHT";
-      if (lastRound.killedPlayerId === null && !lastRound.savedByDoctor && nightIsOver) {
+      if (lastRound.killedPlayerId === null && nightIsOver) {
         const actions = await request<{ target_id: number; action_type: string }[]>(
           ENDPOINTS.nightActionList(latest.id),
         ).catch(() => []);
         const kills = actions.filter((action) => action.action_type === "KILL").map((action) => action.target_id);
-        lastRound.savedByDoctor = actions.some(
-          (action) => action.action_type === "HEAL" && kills.includes(action.target_id),
-        );
+        const saved = actions.find((action) => action.action_type === "HEAL" && kills.includes(action.target_id));
+        if (saved) {
+          lastRound.savedByDoctor = true;
+          lastRound.savedPlayerId = saved.target_id;
+        }
       }
     }
 

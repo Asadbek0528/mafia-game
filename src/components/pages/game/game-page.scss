@@ -66,6 +66,51 @@
   border-color: var(--color-line-red);
 }
 
+.game-page-turns {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.game-page-turn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: rgba(10, 3, 4, 0.78);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius);
+
+  b {
+    min-width: 22px;
+    padding: 0 6px;
+    font-size: 12px;
+    line-height: 20px;
+    color: #ffffff;
+    background: var(--color-red);
+    border-radius: 999px;
+  }
+}
+
+.game-page-turn-done {
+  opacity: 0.45;
+}
+
+.game-page-turn-active {
+  color: #ffffff;
+  border-color: var(--color-red);
+  box-shadow: 0 0 16px var(--color-red-glow);
+  opacity: 1;
+}
+
 .game-page-check {
   padding: 14px;
   font-size: 18px;

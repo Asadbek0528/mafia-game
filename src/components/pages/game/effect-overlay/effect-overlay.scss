@@ -1,0 +1,168 @@
+.effect-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 18px;
+  padding: 24px;
+  overflow: hidden;
+  text-align: center;
+  cursor: pointer;
+  animation: effect-overlay-life 4.2s ease forwards;
+}
+
+.effect-overlay-blood {
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(140, 0, 8, 0.35), transparent 55%),
+    radial-gradient(ellipse at center, rgba(40, 0, 2, 0.55), rgba(0, 0, 0, 0.92));
+  box-shadow: inset 0 0 160px 60px rgba(150, 0, 10, 0.85);
+}
+
+.effect-overlay-heal {
+  background: radial-gradient(ellipse at center, rgba(20, 120, 60, 0.45), rgba(0, 20, 8, 0.9));
+  box-shadow: inset 0 0 160px 50px rgba(47, 211, 107, 0.55);
+}
+
+.effect-overlay-mafia {
+  background: radial-gradient(ellipse at center, rgba(120, 0, 10, 0.5), rgba(0, 0, 0, 0.92));
+}
+
+.effect-overlay-clean {
+  background: radial-gradient(ellipse at center, rgba(20, 90, 50, 0.4), rgba(0, 0, 0, 0.9));
+}
+
+.effect-overlay-info {
+  background: radial-gradient(ellipse at center, rgba(40, 20, 20, 0.6), rgba(0, 0, 0, 0.9));
+}
+
+.effect-overlay-drips {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 100%;
+  pointer-events: none;
+
+  span {
+    position: absolute;
+    top: 0;
+    width: clamp(8px, 1.6vw, 18px);
+    background: linear-gradient(180deg, #8a0006, #d0101c 70%, #ff2a36);
+    border-radius: 0 0 50% 50%;
+    transform-origin: top;
+    animation: effect-overlay-drip 1.4s cubic-bezier(0.3, 0.7, 0.4, 1) both;
+  }
+}
+
+.effect-overlay-cross {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  animation: effect-overlay-pulse 1.2s ease-in-out infinite;
+  filter: drop-shadow(0 0 30px rgba(47, 211, 107, 0.9));
+
+  span {
+    position: absolute;
+    background: #2fd36b;
+    border-radius: 10px;
+  }
+
+  span:first-child {
+    top: 50px;
+    left: 0;
+    width: 140px;
+    height: 40px;
+  }
+
+  span:last-child {
+    top: 0;
+    left: 50px;
+    width: 40px;
+    height: 140px;
+  }
+}
+
+.effect-overlay-stamp {
+  padding: 10px 26px;
+  font-family: var(--font-horror);
+  font-size: clamp(44px, 12vw, 90px);
+  line-height: 1;
+  border: 5px solid currentColor;
+  border-radius: 12px;
+  transform: rotate(-8deg);
+  animation: effect-overlay-stamp 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+.effect-overlay-mafia .effect-overlay-stamp {
+  color: #ff2a36;
+  text-shadow: 0 0 30px rgba(255, 42, 54, 0.7);
+}
+
+.effect-overlay-clean .effect-overlay-stamp {
+  color: #2fd36b;
+  text-shadow: 0 0 30px rgba(47, 211, 107, 0.6);
+}
+
+.effect-overlay-text {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  max-width: 560px;
+}
+
+.effect-overlay-title {
+  font-family: var(--font-horror);
+  font-size: clamp(34px, 8vw, 64px);
+  line-height: 1.05;
+  color: #ffffff;
+  text-shadow: 0 0 24px rgba(0, 0, 0, 0.9);
+}
+
+.effect-overlay-blood .effect-overlay-title {
+  color: #ff2a36;
+  text-shadow: 0 0 30px rgba(255, 0, 20, 0.6);
+}
+
+.effect-overlay-heal .effect-overlay-title {
+  color: #7dffb0;
+  text-shadow: 0 0 30px rgba(47, 211, 107, 0.7);
+}
+
+.effect-overlay-subtitle {
+  font-size: 17px;
+  color: #eadede;
+}
+
+@keyframes effect-overlay-life {
+  0% {
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  82% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes effect-overlay-drip {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes effect-overlay-pulse {
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+@keyframes effect-overlay-stamp {
+  from {
+    opacity: 0;
+    transform: rotate(-8deg) scale(2.4);
+  }
+}

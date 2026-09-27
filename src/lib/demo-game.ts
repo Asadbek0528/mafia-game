@@ -106,7 +106,7 @@ export function advanceDemoGame(game: GameState, me: GamePlayer | undefined, myT
       players,
       phase: "DAY",
       winner: findWinner(players),
-      lastRound: { roundNumber: game.round, killedPlayerId: isSaved ? null : mafiaTarget, savedByDoctor: isSaved, eliminatedPlayerId: null },
+      lastRound: { roundNumber: game.round, killedPlayerId: isSaved ? null : mafiaTarget, savedByDoctor: isSaved, savedPlayerId: isSaved ? mafiaTarget : null, eliminatedPlayerId: null },
     };
   }
 
@@ -129,6 +129,7 @@ export function advanceDemoGame(game: GameState, me: GamePlayer | undefined, myT
       roundNumber: game.round,
       killedPlayerId: game.lastRound?.killedPlayerId ?? null,
       savedByDoctor: game.lastRound?.savedByDoctor ?? false,
+      savedPlayerId: game.lastRound?.savedPlayerId ?? null,
       eliminatedPlayerId: target,
     },
   };
