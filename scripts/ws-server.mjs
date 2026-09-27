@@ -3,7 +3,7 @@ import { WebSocketServer } from "ws";
 import { BACKEND_URL, setting } from "./env.mjs";
 import { onUserClose, onUserConnect, onUserMessage } from "./social.mjs";
 
-const PORT = Number(setting("WS_PORT", 3001));
+const PORT = Number(process.env.WS_PORT ?? process.env.PORT ?? setting("WS_PORT", 3001));
 const OWNER_LEFT_MS = Number(setting("ROOM_OWNER_LEFT_SECONDS", 60)) * 1000;
 const OWNER_SILENT_MS = Number(setting("ROOM_OWNER_SILENT_SECONDS", 180)) * 1000;
 const GAME_ABANDONED_MS = Number(setting("GAME_ABANDONED_MINUTES", 5)) * 60 * 1000;
