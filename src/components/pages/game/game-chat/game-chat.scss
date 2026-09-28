@@ -59,6 +59,18 @@
   border-radius: 10px 10px 2px 10px;
 }
 
+.game-chat-message-system {
+  justify-self: stretch;
+  max-width: none;
+  background: #1c1407;
+  border-color: #6b4d12;
+  border-radius: 10px;
+
+  .game-chat-meta b {
+    color: #ffc24a;
+  }
+}
+
 .game-chat-message-private {
   border-style: dashed;
   border-color: #5b5b6b;

@@ -10,6 +10,7 @@ export type ChatMessage = {
   text: string;
   time: number;
   scope: "all" | "mafia" | "dead";
+  system?: boolean;
 };
 
 type GameChatProps = {
@@ -55,13 +56,14 @@ export default function GameChat({ messages, myName, canWrite, scope, hint, onSe
         {messages.length === 0 && <li className="game-chat-empty">Сообщений пока нет.</li>}
         {messages.map((message) => {
           let className = "game-chat-message";
-          if (message.name === myName) className += " game-chat-message-mine";
+          if (message.system) className += " game-chat-message-system";
+          else if (message.name === myName) className += " game-chat-message-mine";
           if (message.scope !== "all") className += " game-chat-message-private";
 
           return (
             <li key={message.id} className={className}>
               <p className="game-chat-meta">
-                <b>{message.name}</b>
+                <b>{message.system ? "🎙 Ведущий" : message.name}</b>
                 {message.scope === "dead" && " · погибший"}
                 <time>{formatTime(message.time)}</time>
               </p>

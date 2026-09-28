@@ -154,6 +154,48 @@ function NightTurns({ night }: { night: NightTurnState }) {
   );
 }
 
+const NIGHT_ROLE_HINT: Record<RoleKey, string> = {
+  mafia: "Вы мафия: когда настанет ваш ход, нажмите на игрока и «Убить». Своих мафиози вы видите — их выбрать нельзя.",
+  doctor: "Вы доктор: в свой ход нажмите на игрока и «Вылечить». Если мафия выбрала его — он выживет. Одного и того же нельзя лечить две ночи подряд.",
+  commissar: "Вы комиссар: в свой ход нажмите на игрока и «Проверить». Ответ «мафия» или «мирный» увидите только вы.",
+  civilian: "Вы житель: ночью делать ничего не нужно, просто ждите утра.",
+};
+
+function narrate(game: GameState, me: GamePlayer | undefined, isFirst: boolean): string {
+  const nameOf = (id: number | null) => game.players.find((player) => player.id === id)?.username ?? "игрок";
+  const last = game.lastRound;
+  const lines: string[] = [];
+
+  if (game.phase === "NIGHT") {
+    if (game.round > 1 && last?.roundNumber === game.round - 1) {
+      lines.push(last.eliminatedPlayerId ? `Город выгнал ${nameOf(last.eliminatedPlayerId)}.` : "Голоса разделились — никто не выбыл.");
+    }
+    lines.push(`🌙 Ночь ${game.round}. Город засыпает, чат закрыт. По очереди ходят: мафия → доктор → комиссар.`);
+    if (me && !me.isAlive) lines.push("Вы выбыли и только наблюдаете.");
+    else if (me?.role) lines.push(NIGHT_ROLE_HINT[me.role]);
+  }
+
+  if (game.phase === "DAY") {
+    let night = "Этой ночью никто не погиб.";
+    if (last?.savedByDoctor) night = "Мафия напала, но доктор спас жертву — никто не погиб.";
+    else if (last?.killedPlayerId) night = `Этой ночью мафия убила ${nameOf(last.killedPlayerId)}.`;
+    lines.push(`☀️ День ${game.round}. ${night}`);
+    lines.push(
+      `Обсудите в чате, кто похож на мафию. Нажмите 👁 рядом с игроком, если подозреваете его. Через ${game.dayTime} сек — голосование.`,
+    );
+  }
+
+  if (game.phase === "VOTING") {
+    lines.push("🗳 Голосование. Нажмите на игрока, которого хотите выгнать, и «Проголосовать».");
+    lines.push("У кого больше всех голосов — выбывает. Если поровну — никто не выбывает.");
+  }
+
+  if (isFirst && me?.role && game.round === 1 && game.phase === "NIGHT") {
+    lines.unshift("Игра началась! Жители должны найти и выгнать всю мафию. Мафия побеждает, когда её не меньше, чем остальных.");
+  }
+  return lines.join(" ");
+}
+
 type SuspectEvent = { type?: string; round: number; from: number; target: number | null };
 
 type Team = { role: RoleKey; ids: number[] };
@@ -370,6 +412,14 @@ export default function GamePage() {
     phaseEndsAt.current = getPhaseEnd(current);
     setSecondsLeft(Math.max(0, Math.ceil((phaseEndsAt.current - Date.now()) / 1000)));
 
+    if (!current.winner) {
+      const narratorUser = userRef.current;
+      const narratorMe = findMe(current, narratorUser?.id, narratorUser?.username);
+      addChatMessages([
+        { id: `host-${phaseKey}`, name: "Ведущий", text: narrate(current, narratorMe, !isLiveChange), time: Date.now(), scope: "all", system: true },
+      ]);
+    }
+
     if (isLiveChange && !current.winner) {
       setTransition({ key: phaseKey, phase: current.phase, round: current.round });
       const currentUser = userRef.current;
@@ -377,7 +427,7 @@ export default function GamePage() {
       const next = phaseStartEffect(current, mine);
       if (next) setTimeout(() => setEffect(next), PHASE_TRANSITION_MS);
     }
-  }, [phaseKey]);
+  }, [phaseKey, addChatMessages]);
 
   const serverPhaseEnd = game?.phaseEndsAt ?? null;
   useEffect(() => {
@@ -478,6 +528,16 @@ export default function GamePage() {
       text: isMafia ? "Убедите город выгнать его днём." : "Этому игроку можно доверять.",
     });
   }
+
+  const gameWinner = game?.winner ?? null;
+  useEffect(() => {
+    if (!gameWinner) return;
+    const text =
+      gameWinner === "MAFIA"
+        ? "🏁 Игра окончена. Победила мафия — её стало не меньше, чем мирных жителей."
+        : "🏁 Игра окончена. Победили жители — вся мафия выбыла.";
+    addChatMessages([{ id: `host-winner`, name: "Ведущий", text, time: Date.now(), scope: "all", system: true }]);
+  }, [gameWinner, addChatMessages]);
 
   const myVote = game && me && game.phase === "VOTING" ? game.votes.find((vote) => vote.voterId === me.id) : undefined;
   useEffect(() => {
@@ -714,6 +774,36 @@ export default function GamePage() {
     );
   }
 
+  function getTodo(): { text: string; isAction: boolean } {
+    if (!game) return { text: "", isAction: false };
+    if (!me) return { text: "👀 Вы зритель: смотрите за игрой.", isAction: false };
+    if (!me.isAlive) return { text: "👻 Вы выбыли: наблюдайте. Вы видите все роли и пишете только в чат погибших.", isAction: false };
+
+    if (game.phase === "NIGHT") {
+      const role = me.role;
+      if (!role || role === "civilian") return { text: "😴 Ночь: жителю делать ничего не нужно — ждите утра.", isAction: false };
+      if (isSent) return { text: "✓ Выбор сделан. Ждите утра.", isAction: false };
+      const activeName = night.activeIndex !== null ? NIGHT_TURNS[night.activeIndex].title : null;
+      if (night.myIndex !== null && night.activeIndex === night.myIndex) {
+        const button = role === "mafia" ? "Убить" : role === "doctor" ? "Вылечить" : "Проверить";
+        return { text: `👉 Ваш ход! Нажмите на игрока, потом «${button}». Осталось ${night.secondsInTurn} сек.`, isAction: true };
+      }
+      if (night.myIndex !== null && night.activeIndex !== null && night.activeIndex < night.myIndex) {
+        return { text: `⏳ Скоро ваш ход. Сейчас ходит: ${activeName}.`, isAction: false };
+      }
+      return { text: "Ваш ход прошёл. Ждите утра.", isAction: false };
+    }
+
+    if (game.phase === "DAY") {
+      return { text: `💬 Обсуждайте в чате, кто мафия. 👁 — отметить подозреваемого. Голосование через ${secondsLeft} сек.`, isAction: false };
+    }
+
+    if (isSent) return { text: "✓ Голос учтён. Ждём остальных.", isAction: false };
+    return { text: "👉 Нажмите на игрока, которого хотите выгнать, потом «Проголосовать».", isAction: true };
+  }
+
+  const todo = getTodo();
+
   const backLink = game.roomId ? `/room/${game.roomId}` : "/";
 
   let skyHint = "Обсуждайте, кто мафия";
@@ -810,6 +900,11 @@ export default function GamePage() {
                 duration={getPhaseDuration(game)}
                 hint={skyHint}
               />
+              {todo.text && (
+                <p className={todo.isAction ? "game-page-todo game-page-todo-action" : "game-page-todo"} role="status">
+                  {todo.text}
+                </p>
+              )}
               {renderPhase()}
               <div className="game-page-exit">
                 <button type="button" className="btn btn-dark btn-small" onClick={() => router.push("/")}>
