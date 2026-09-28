@@ -16,6 +16,9 @@ const gameSeenAt = new Map();
 const channelTokens = new Map();
 const chatHistory = new Map();
 const suspectHistory = new Map();
+const gameRoles = new Map();
+const TEAM_ROLES = ["mafia", "doctor", "commissar"];
+const SERVER_ONLY_TYPES = ["team", "check-result"];
 const CHAT_LIMIT = 150;
 const CHAT_KEEP_MS = 3 * 60 * 60 * 1000;
 
@@ -103,7 +106,10 @@ async function cleanAbandonedGames() {
   const now = Date.now();
 
   for (const game of games) {
-    if (game.winner !== null) continue;
+    if (game.winner !== null) {
+      gameRoles.delete(String(game.id));
+      continue;
+    }
     const id = String(game.id);
     const channel = `/ws/game/${id}`;
 
@@ -126,6 +132,7 @@ async function cleanAbandonedGames() {
       if (!isDeleted) await backend(`/game/update/${id}`, token, "PUT", { winner: "CITIZENS" });
       await removeRoom(String(game.room_id), token);
       gameSeenAt.delete(id);
+      gameRoles.delete(id);
       console.log(`  Игра ${id} (комната ${game.room_id}) удалена: игроков нет больше ${GAME_ABANDONED_MS / 60000} мин`);
       broadcast(channel, { type: "room-closed", reason: "abandoned" });
       broadcast(`/ws/room/${game.room_id}`, { type: "room-closed", reason: "abandoned" });
@@ -177,6 +184,62 @@ function handleControlMessage(channel, data, socket) {
     watchedRooms.delete(channel);
   }
   return false;
+}
+
+async function learnRole(gameId, token) {
+  const userId = userIdFromToken(token);
+  if (!token || userId === null) return null;
+  const players = await backend(`/game-player/list?game_id=${gameId}`, token);
+  const me = players.find((player) => player.user_id === userId);
+  if (!me?.role) return null;
+  const roles = gameRoles.get(gameId) ?? new Map();
+  roles.set(me.id, me.role);
+  gameRoles.set(gameId, roles);
+  return { playerId: me.id, role: me.role };
+}
+
+function sendTeams(gameId) {
+  const roles = gameRoles.get(gameId);
+  const members = channels.get(`/ws/game/${gameId}`);
+  if (!roles || !members) return;
+  for (const socket of members) {
+    const role = socket.gameRole?.role;
+    if (!TEAM_ROLES.includes(role) || socket.readyState !== socket.OPEN) continue;
+    const ids = [...roles].filter(([, item]) => item === role).map(([id]) => id);
+    socket.send(JSON.stringify({ type: "team", role, ids }));
+  }
+}
+
+async function answerCheck(socket, gameId, token, targetId) {
+  const me = await socket.rolePromise;
+  if (!me || me.role !== "commissar" || typeof targetId !== "number") return;
+  const reply = (isMafia) => {
+    if (socket.readyState === socket.OPEN) socket.send(JSON.stringify({ type: "check-result", target: targetId, isMafia }));
+  };
+
+  const rounds = await backend(`/game-round/list?game_id=${gameId}`, token);
+  const killers = new Set();
+  let checked = false;
+  for (const round of rounds) {
+    const actions = await backend(`/night-action/list?round_id=${round.id}`, token).catch(() => []);
+    for (const action of actions) {
+      if (action.action_type === "KILL") killers.add(action.actor_id);
+      if (action.action_type !== "CHECK" || action.actor_id !== me.playerId || action.target_id !== targetId) continue;
+      if (typeof action.is_mafia === "boolean") return reply(action.is_mafia);
+      checked = true;
+    }
+  }
+  if (!checked) return;
+
+  const roles = gameRoles.get(gameId) ?? new Map();
+  if (roles.has(targetId)) return reply(roles.get(targetId) === "mafia");
+  if (killers.has(targetId)) return reply(true);
+
+  const game = await backend(`/game/detail?game_id=${gameId}`, token);
+  const room = await backend(`/room/detail?room_id=${game.room_id}`, token);
+  const knownMafia = new Set(killers);
+  for (const [id, role] of roles) if (role === "mafia") knownMafia.add(id);
+  reply(knownMafia.size >= room.mafia_count ? false : null);
 }
 
 const verifiedTokens = new Map();
@@ -249,6 +312,17 @@ server.on("connection", (socket, request) => {
   if (token) channelTokens.set(channel, token);
   touchGame(channel);
 
+  const gameId = gameIdFromChannel(channel);
+  if (gameId && token) {
+    socket.rolePromise = learnRole(gameId, token)
+      .then((info) => {
+        socket.gameRole = info;
+        if (info) sendTeams(gameId);
+        return info;
+      })
+      .catch(() => null);
+  }
+
   if (!channels.has(channel)) channels.set(channel, new Set());
   const members = channels.get(channel);
   members.add(socket);
@@ -277,6 +351,11 @@ server.on("connection", (socket, request) => {
     }
 
     if (data && typeof data === "object" && handleControlMessage(channel, data, socket)) return;
+    if (SERVER_ONLY_TYPES.includes(data?.type)) return;
+    if (data?.type === "check") {
+      if (gameId && token) answerCheck(socket, gameId, token, data.target).catch(() => {});
+      return;
+    }
     if (data?.type === "chat") rememberChat(channel, data.message);
     if (data?.type === "suspect") rememberSuspect(channel, data);
     broadcast(channel, text, socket);

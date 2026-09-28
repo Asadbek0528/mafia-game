@@ -134,6 +134,7 @@ export type GameState = {
   players: GamePlayer[];
   lastRound: RoundResult | null;
   nightActions: NightActionInfo[];
+  previousNightActions: NightActionInfo[];
   dayTime: number;
   nightTime: number;
 };
@@ -949,19 +950,24 @@ export const api = {
       players.map((player) => getUsername(player.user_id)),
     );
 
-    const currentRoundInfo = rounds.find((round) => round.round_number === game.current_round) ?? null;
-    let nightActions: NightActionInfo[] = [];
-    if (game.current_phase === "NIGHT" && currentRoundInfo) {
-      const actions = await request<{ actor_id: number; target_id: number; action_type: NightActionInfo["type"]; created_at: string }[]>(
-        ENDPOINTS.nightActionList(currentRoundInfo.id),
-      ).catch(() => []);
-      nightActions = actions.map((action) => ({
+    type BackendNightActionFull = { actor_id: number; target_id: number; action_type: NightActionInfo["type"]; created_at: string };
+    const loadNightActions = async (roundNumber: number): Promise<NightActionInfo[]> => {
+      const round = rounds.find((item) => item.round_number === roundNumber);
+      if (!round) return [];
+      const actions = await request<BackendNightActionFull[]>(ENDPOINTS.nightActionList(round.id)).catch(() => []);
+      return actions.map((action) => ({
         type: action.action_type,
         actorId: action.actor_id,
         targetId: action.target_id,
         at: parseServerDate(action.created_at) ?? Date.now(),
       }));
-    }
+    };
+
+    const isNight = game.current_phase === "NIGHT";
+    const [nightActions, previousNightActions] = await Promise.all([
+      isNight ? loadNightActions(game.current_round) : Promise.resolve([]),
+      isNight ? loadNightActions(game.current_round - 1) : Promise.resolve([]),
+    ]);
 
     const currentRound =
       rounds.find((round) => round.round_number === game.current_round) ?? null;
@@ -1007,6 +1013,7 @@ export const api = {
       })),
       lastRound,
       nightActions,
+      previousNightActions,
       dayTime: room.day_time ?? DEFAULT_TIMES.day,
       nightTime: room.night_time ?? DEFAULT_TIMES.night,
     };
@@ -1018,16 +1025,26 @@ export const api = {
     targetId: number,
     type: "KILL" | "HEAL" | "CHECK",
   ): Promise<{ isMafia: boolean | null }> {
-    const action = await request<BackendNightAction>(ENDPOINTS.nightAction, {
-      method: "POST",
-      body: {
-        round_id: roundId,
-        actor_id: actorId,
-        target_id: targetId,
-        action_type: type,
-      },
-    });
-    return { isMafia: action?.is_mafia ?? null };
+    try {
+      const action = await request<BackendNightAction>(ENDPOINTS.nightAction, {
+        method: "POST",
+        body: {
+          round_id: roundId,
+          actor_id: actorId,
+          target_id: targetId,
+          action_type: type,
+        },
+      });
+      return { isMafia: action?.is_mafia ?? null };
+    } catch (error) {
+      if (!isServerDown(error)) throw error;
+      const actions = await request<(BackendNightAction & { actor_id: number; action_type: string })[]>(
+        ENDPOINTS.nightActionList(roundId),
+      ).catch(() => []);
+      const saved = actions.find((action) => action.actor_id === actorId && action.action_type === type);
+      if (!saved) throw error;
+      return { isMafia: saved.is_mafia ?? null };
+    }
   },
 
   vote(roundId: number, voterId: number, targetId: number) {
@@ -1037,14 +1054,20 @@ export const api = {
     });
   },
 
-  nextPhase(gameId: string, phase: GamePhase) {
+  async nextPhase(gameId: string, phase: GamePhase) {
     const path =
       phase === "NIGHT"
         ? ENDPOINTS.endNight(gameId)
         : phase === "DAY"
           ? ENDPOINTS.startVoting(gameId)
           : ENDPOINTS.endVoting(gameId);
-    return request(path, { method: "POST" });
+    try {
+      await request(path, { method: "POST" });
+    } catch (error) {
+      if (!isServerDown(error)) throw error;
+      const game = await request<BackendGame>(ENDPOINTS.gameDetail(gameId)).catch(() => null);
+      if (!game || (game.current_phase === phase && game.winner === null)) throw error;
+    }
   },
 };
 

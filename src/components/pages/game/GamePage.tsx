@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { showToast } from "@/components/pages/widgets/toast/Toast";
 import { api, type GamePlayer, type GameState, type NightActionInfo, type RoleKey } from "@/lib/api";
@@ -152,6 +152,18 @@ function NightTurns({ night }: { night: NightTurnState }) {
 
 type SuspectEvent = { type?: string; round: number; from: number; target: number | null };
 
+type Team = { role: RoleKey; ids: number[] };
+
+function withTeam(game: GameState | null, team: Team | null): GameState | null {
+  if (!game || !team) return game;
+  return {
+    ...game,
+    players: game.players.map((player) =>
+      player.role === null && team.ids.includes(player.id) ? { ...player, role: team.role } : player,
+    ),
+  };
+}
+
 function findMe(game: GameState, userId: number | undefined, username: string | undefined): GamePlayer | undefined {
   return game.players.find((player) => (userId !== undefined && player.userId === userId) || player.username === username);
 }
@@ -165,7 +177,9 @@ export default function GamePage() {
 
   const { user, isLoaded } = useCurrentUser();
 
-  const [game, setGame] = useState<GameState | null>(null);
+  const [rawGame, setGame] = useState<GameState | null>(null);
+  const [team, setTeam] = useState<Team | null>(null);
+  const game = useMemo(() => withTeam(rawGame, team), [rawGame, team]);
   const [loadError, setLoadError] = useState("");
   const [isRoleOpen, setIsRoleOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -288,6 +302,15 @@ export default function GamePage() {
     }
     if (payload?.type === "chat" && payload.message) {
       addChatMessages([payload.message]);
+      return;
+    }
+    const secret = data as { type?: string; role?: RoleKey; ids?: unknown; target?: unknown; isMafia?: unknown } | null;
+    if (secret?.type === "team" && secret.role && Array.isArray(secret.ids)) {
+      setTeam({ role: secret.role, ids: secret.ids.filter((id): id is number => typeof id === "number") });
+      return;
+    }
+    if (secret?.type === "check-result" && typeof secret.target === "number") {
+      showCheckResult(secret.target, typeof secret.isMafia === "boolean" ? secret.isMafia : null);
       return;
     }
     const suspect = data as { type?: string; round?: number; from?: number; target?: number | null; items?: unknown[] } | null;
@@ -434,6 +457,36 @@ export default function GamePage() {
     return () => clearInterval(timer);
   }, [isDemo, loadGame, notify]);
 
+  function showCheckResult(targetId: number, isMafia: boolean | null) {
+    const target = gameRef.current?.players.find((player) => player.id === targetId);
+    if (!target) return;
+    if (isMafia === null) {
+      setCheckResult(`Проверка ${target.username} отправлена, но ведущий пока не знает его роль.`);
+      return;
+    }
+    setCheckResult(isMafia ? `${target.username} — мафия! ❌` : `${target.username} — мирный ✅`);
+    setEffect({
+      key: `check-${targetId}-${Date.now()}`,
+      kind: isMafia ? "mafia" : "clean",
+      title: isMafia ? `${target.username} — мафия!` : `${target.username} — мирный`,
+      text: isMafia ? "Убедите город выгнать его днём." : "Этому игроку можно доверять.",
+    });
+  }
+
+  const myNightAction = game && me ? game.nightActions.find((action) => action.actorId === me.id) : undefined;
+  const askedCheckFor = useRef("");
+  useEffect(() => {
+    if (!game || !myNightAction || game.phase !== "NIGHT") return;
+    if (!isSent) {
+      sentTarget.current = myNightAction.targetId;
+      setIsSent(true);
+    }
+    const key = `${game.round}-${myNightAction.targetId}`;
+    if (myNightAction.type !== "CHECK" || !isLive || askedCheckFor.current === key) return;
+    askedCheckFor.current = key;
+    notify("check", { target: myNightAction.targetId });
+  }, [game, myNightAction, isSent, isLive, notify]);
+
   handleConfirmRef.current = handleConfirm;
 
   async function handleConfirm() {
@@ -469,16 +522,14 @@ export default function GamePage() {
       if (isMafia === null && target?.role) isMafia = target.role === "mafia";
 
       if (game.phase === "NIGHT" && me.role === "commissar" && target) {
-        if (isMafia === null) {
-          setCheckResult(`Проверка ${target.username} отправлена, но сервер не вернул результат.`);
+        if (isMafia !== null || isDemo) {
+          showCheckResult(target.id, isMafia);
+        } else if (isLive) {
+          askedCheckFor.current = `${game.round}-${target.id}`;
+          setCheckResult(`Ведущий проверяет ${target.username}…`);
+          notify("check", { target: target.id });
         } else {
-          setCheckResult(isMafia ? `${target.username} — мафия!` : `${target.username} — не мафия.`);
-          setEffect({
-            key: `check-${Date.now()}`,
-            kind: isMafia ? "mafia" : "clean",
-            title: isMafia ? `${target.username} — мафия!` : `${target.username} — мирный`,
-            text: isMafia ? "Убедите город выгнать его днём." : "Этому игроку можно доверять.",
-          });
+          setCheckResult("Проверка сохранена, но нет связи с ведущим. Результат придёт после переподключения.");
         }
       }
 
@@ -587,7 +638,9 @@ export default function GamePage() {
 
       let selectable = alivePlayers.filter((player) => player.id !== me?.id);
       if (role === "mafia") selectable = selectable.filter((player) => player.role !== "mafia");
-      if (role === "doctor") selectable = alivePlayers;
+      const lastHealId = game.previousNightActions.find((action) => action.type === "HEAL" && action.actorId === me?.id)?.targetId;
+      const lastHealName = game.players.find((player) => player.id === lastHealId)?.username;
+      if (role === "doctor") selectable = alivePlayers.filter((player) => player.id !== lastHealId);
 
       const myTurn = night.myIndex;
       const myInfo = myTurn !== null ? night.turns[myTurn] : null;
@@ -599,6 +652,7 @@ export default function GamePage() {
 
       const confirmText = role === "mafia" ? "Убить" : role === "doctor" ? "Вылечить" : "Проверить";
       let subtitle = `${getRole(role).nightTask} Осталось ${night.secondsInTurn} сек.`;
+      if (role === "doctor" && lastHealName) subtitle += ` ${lastHealName} вы лечили прошлой ночью — его сегодня нельзя.`;
       if (isBefore) subtitle = `Ваш ход скоро. ${sleepText}`;
       if (!isMyTurn && !isBefore && !isSent) subtitle = teamTarget ? `Напарник выбрал: ${teamTarget}. ${sleepText}` : `Ваше время вышло. ${sleepText}`;
       if (isSent) subtitle = `Выбор сделан. ${sleepText}`;
@@ -663,6 +717,11 @@ export default function GamePage() {
       canWrite = false;
       chatHint = "Ночью город спит";
     }
+  }
+
+  if (canWrite && !isDemo && !isLive) {
+    canWrite = false;
+    chatHint = "Чат недоступен: нет связи с сервером чата. Переподключаемся…";
   }
 
   const isDeadWatcher = me?.isAlive === false;

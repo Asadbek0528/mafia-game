@@ -69,6 +69,7 @@ export function createDemoGame(gameId: string, myName: string): GameState {
     players,
     lastRound: null,
     nightActions: [],
+    previousNightActions: [],
     dayTime: setup.dayTime,
     nightTime: setup.nightTime,
   };

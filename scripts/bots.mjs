@@ -26,6 +26,7 @@ if (!roomArg || (!isNewRoom && !/^\d+$/.test(roomArg)) || !Number.isInteger(coun
 }
 
 const NIGHT_ACTION = { mafia: "KILL", doctor: "HEAL", commissar: "CHECK" };
+const botRoles = new Map();
 const ROLE_NAME = { mafia: "мафия", doctor: "доктор", commissar: "комиссар", civilian: "житель" };
 const PHASE_NAME = { NIGHT: "ночь", DAY: "день", VOTING: "голосование" };
 const PHASE_ENDPOINT = { NIGHT: "end-night", DAY: "start-voting", VOTING: "end-voting" };
@@ -252,6 +253,8 @@ async function actIfNeeded(bot, gameId, state) {
 
   if (!state.role && me.role) {
     state.role = me.role;
+    botRoles.set(me.id, me.role);
+    notify(`/ws/game/${gameId}?token=${encodeURIComponent(bot.token)}`, "hello");
     console.log(`[${bot.username}] моя роль: ${ROLE_NAME[me.role] ?? me.role}`);
   }
 
@@ -282,15 +285,29 @@ async function actIfNeeded(bot, gameId, state) {
       const isPreviousDone = !previous || actions.some((item) => item.action_type === previous);
       const turnStart = state.seenAt.get(key) + NIGHT_TURN[me.role] * NIGHT_TURN_MS;
       if (!isPreviousDone && Date.now() < turnStart) return null;
-      const pool = me.role === "doctor" ? [...others, me] : me.role === "mafia" ? others.filter((player) => player.role !== "mafia") : others;
+      const previousRound = rounds.find((item) => item.round_number === game.current_round - 1);
+      const previousActions = previousRound
+        ? await request(`/night-action/list?round_id=${previousRound.id}`, { token: bot.token }).catch(() => [])
+        : [];
+      const lastHealId = previousActions.find((item) => item.action_type === "HEAL" && item.actor_id === me.id)?.target_id;
+      const isMafiaMate = (player) => player.role === "mafia" || botRoles.get(player.id) === "mafia";
+      const pool =
+        me.role === "doctor"
+          ? [...others, me].filter((player) => player.id !== lastHealId)
+          : me.role === "mafia"
+            ? others.filter((player) => !isMafiaMate(player))
+            : others;
       const target = randomItem(pool.length ? pool : others);
       if (!target) return null;
 
       await sleep(500 + Math.random() * 3500);
-      const result = await request("/night-action/create", {
-        method: "POST",
-        token: bot.token,
-        body: { round_id: round.id, actor_id: me.id, target_id: target.id, action_type: action },
+      const body = { round_id: round.id, actor_id: me.id, target_id: target.id, action_type: action };
+      const result = await request("/night-action/create", { method: "POST", token: bot.token, body }).catch(async (error) => {
+        if (error.status !== 500) throw error;
+        const saved = await request(`/night-action/list?round_id=${round.id}`, { token: bot.token }).catch(() => []);
+        const mine = saved.find((item) => item.actor_id === me.id && item.action_type === action);
+        if (!mine) throw error;
+        return mine;
       });
       const isMafia = result?.is_mafia ?? (target.role ? target.role === "mafia" : null);
       const extra = action === "CHECK" && isMafia !== null ? ` → ${isMafia ? "мафия!" : "не мафия"}` : "";

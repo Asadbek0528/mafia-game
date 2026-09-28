@@ -1,6 +1,9 @@
 import { spawn } from "node:child_process";
 
-import "./ws-server.mjs";
+import { setting } from "./env.mjs";
+
+process.env.WS_PORT ??= setting("WS_PORT", setting("NEXT_PUBLIC_WS_PORT", "3001"));
+await import("./ws-server.mjs");
 
 const args = process.argv.slice(2).filter((arg) => /^[\w.:=-]+$/.test(arg));
 
