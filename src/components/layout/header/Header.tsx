@@ -25,6 +25,11 @@ const MENU = [
     icon: <path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm6 5-3 5 3 5 3-5z" />,
   },
   {
+    href: "/rules",
+    title: "Правила",
+    icon: <path d="M5 3h11l3 3v15H5zm3 5v2h8V8zm0 4v2h8v-2zm0 4v2h5v-2z" />,
+  },
+  {
     href: "/friends",
     title: "Друзья",
     icon: (

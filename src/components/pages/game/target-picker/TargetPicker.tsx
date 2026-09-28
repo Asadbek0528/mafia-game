@@ -24,10 +24,11 @@ type TargetPickerProps = {
   onSelect: (playerId: number) => void;
   onConfirm?: () => void;
   suspicion?: Suspicion;
+  voteCounts?: Record<number, number>;
 };
 
 export default function TargetPicker(props: TargetPickerProps) {
-  const { title, subtitle, players, selectableIds, selectedId, meId, isSent, confirmText, showRole, onSelect, onConfirm, suspicion } = props;
+  const { title, subtitle, players, selectableIds, selectedId, meId, isSent, confirmText, showRole, onSelect, onConfirm, suspicion, voteCounts } = props;
 
   const canChoose = selectableIds.length > 0 && !isSent;
 
@@ -63,6 +64,11 @@ export default function TargetPicker(props: TargetPickerProps) {
                 </span>
 
                 {showRole(player) && player.role && <span className="target-picker-role">{getRole(player.role).name}</span>}
+                {voteCounts && (voteCounts[player.id] ?? 0) > 0 && (
+                  <span className="target-picker-votes" title="Голосов против">
+                    {voteCounts[player.id]} {voteWord(voteCounts[player.id])}
+                  </span>
+                )}
               </button>
               {suspicion && player.isAlive && (
                 <SuspectEye
@@ -85,6 +91,14 @@ export default function TargetPicker(props: TargetPickerProps) {
       )}
     </section>
   );
+}
+
+function voteWord(count: number): string {
+  const last = count % 10;
+  const lastTwo = count % 100;
+  if (last === 1 && lastTwo !== 11) return "голос";
+  if (last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14)) return "голоса";
+  return "голосов";
 }
 
 type SuspectEyeProps = {

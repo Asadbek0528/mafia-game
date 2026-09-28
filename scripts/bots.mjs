@@ -2,13 +2,14 @@ import { networkInterfaces } from "node:os";
 
 import { BACKEND_URL as BACKEND, setting } from "./env.mjs";
 
-const WS_URL = `ws://localhost:${setting("NEXT_PUBLIC_WS_PORT", "3001")}`;
+const WS_SETTING = setting("BOT_WS_URL", setting("NEXT_PUBLIC_WS_URL", "auto"));
+const WS_URL = WS_SETTING && WS_SETTING !== "auto" ? WS_SETTING.replace(/\/$/, "") : `ws://localhost:${setting("NEXT_PUBLIC_WS_PORT", "3001")}`;
 const SITE_PORT = setting("PORT", "3000");
 const PASSWORD = setting("BOT_PASSWORD", "botpass123");
 const PREFIX = setting("BOT_PREFIX", "bot");
 const EMAIL_DOMAIN = setting("BOT_EMAIL_DOMAIN", "example.com");
 const TICK_MS = 2000;
-const PHASE_SECONDS = { NIGHT: 90, DAY: 60, VOTING: 30 };
+const PHASE_SECONDS = { NIGHT: 90, DAY: 120, VOTING: 30 };
 const NIGHT_TURN = { mafia: 0, doctor: 1, commissar: 2 };
 const NIGHT_TURN_MS = 30_000;
 const PREVIOUS_ACTION = { mafia: null, doctor: "KILL", commissar: "HEAL" };
@@ -387,6 +388,23 @@ async function waitForPlayersAndStart(host) {
   return game.id;
 }
 
+async function finishIfMafiaWon(host, gameId) {
+  const [players, rounds] = await Promise.all([
+    request(`/game-player/list?game_id=${gameId}`, { token: host.token }),
+    request(`/game-round/list?game_id=${gameId}`, { token: host.token }),
+  ]);
+  const mafia = new Set([...botRoles].filter(([, role]) => role === "mafia").map(([id]) => id));
+  for (const round of rounds) {
+    const actions = await request(`/night-action/list?round_id=${round.id}`, { token: host.token }).catch(() => []);
+    for (const action of actions) if (action.action_type === "KILL") mafia.add(action.actor_id);
+  }
+  const alive = players.filter((player) => player.is_alive);
+  const aliveMafia = alive.filter((player) => mafia.has(player.id)).length;
+  if (aliveMafia === 0 || aliveMafia * 2 < alive.length) return;
+  await request(`/game/update/${gameId}`, { method: "PUT", token: host.token, body: { winner: "MAFIA" } });
+  console.log("[хозяин] мафии не меньше, чем мирных — мафия победила");
+}
+
 async function hostPhases(host, gameId) {
   let key = "";
   let phaseSeenAt = Date.now();
@@ -406,7 +424,12 @@ async function hostPhases(host, gameId) {
 
       const endsAt = parseServerDate(game.phase_ends_at) ?? phaseSeenAt + PHASE_SECONDS[phase] * 1000;
       if (Date.now() > endsAt + 3000) {
-        await request(`/game/${PHASE_ENDPOINT[phase]}/${gameId}`, { method: "POST", token: host.token });
+        await request(`/game/${PHASE_ENDPOINT[phase]}/${gameId}`, { method: "POST", token: host.token }).catch(async (error) => {
+          if (error.status !== 500) throw error;
+          const fresh = await request(`/game/detail?game_id=${gameId}`, { token: host.token });
+          if (fresh.current_phase === phase && fresh.current_round === game.current_round) throw error;
+        });
+        await finishIfMafiaWon(host, gameId).catch(() => {});
         notify(`/ws/game/${gameId}`, "phase");
       }
     } catch (error) {

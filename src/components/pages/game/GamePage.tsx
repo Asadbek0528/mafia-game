@@ -24,9 +24,9 @@ import "./game-page.scss";
 const REFRESH_EVERY_MS = 2000;
 const REFRESH_LIVE_MS = 10000;
 const RETRY_PHASE_MS = 3000;
-const OWNER_GRACE_S = 3;
-const BACKUP_DELAY_S = 10;
-const BACKUP_STEP_S = 4;
+const OWNER_GRACE_S = 1;
+const BACKUP_DELAY_S = 3;
+const BACKUP_STEP_S = 2;
 
 const NIGHT_ACTION: Partial<Record<RoleKey, "KILL" | "HEAL" | "CHECK">> = {
   mafia: "KILL",
@@ -123,6 +123,10 @@ function phaseStartEffect(game: GameState, me: GamePlayer | undefined): GameEffe
       return { key, kind: "blood", title: "Город выгнал вас", text: "Теперь вы наблюдатель." };
     }
     return { key, kind: "info", title: `Город выгнал ${nameOf(last.eliminatedPlayerId)}`, text: "Наступает ночь." };
+  }
+
+  if (game.phase === "NIGHT" && game.round > 1 && last?.roundNumber === game.round - 1 && !last.eliminatedPlayerId) {
+    return { key, kind: "info", title: "Голоса разделились", text: "Никто не выбыл. Наступает ночь." };
   }
 
   return null;
@@ -447,6 +451,8 @@ export default function GamePage() {
       }
       if (fresh.round === current.round && fresh.phase === current.phase && !fresh.winner) {
         await api.nextPhase(current.id, current.phase);
+        const knownMafia = (gameRef.current?.players ?? []).filter((player) => player.role === "mafia").map((player) => player.id);
+        await api.finishIfMafiaWon(current.id, knownMafia).catch(() => false);
         notify("phase");
         await loadGame();
       } else {
@@ -472,6 +478,14 @@ export default function GamePage() {
       text: isMafia ? "Убедите город выгнать его днём." : "Этому игроку можно доверять.",
     });
   }
+
+  const myVote = game && me && game.phase === "VOTING" ? game.votes.find((vote) => vote.voterId === me.id) : undefined;
+  useEffect(() => {
+    if (!myVote || isSent) return;
+    sentTarget.current = myVote.targetId;
+    setSelectedId(myVote.targetId);
+    setIsSent(true);
+  }, [myVote, isSent]);
 
   const myNightAction = game && me ? game.nightActions.find((action) => action.actorId === me.id) : undefined;
   const askedCheckFor = useRef("");
@@ -683,11 +697,17 @@ export default function GamePage() {
       );
     }
 
+    const voteCounts: Record<number, number> = {};
+    for (const vote of game.votes) voteCounts[vote.targetId] = (voteCounts[vote.targetId] ?? 0) + 1;
+    const votedCount = new Set(game.votes.map((vote) => vote.voterId)).size;
+    const progress = `Проголосовали ${votedCount} из ${alivePlayers.length}. Больше всех голосов — выбывает, при равенстве никто не выбывает.`;
+
     return (
       <TargetPicker
         {...common}
+        voteCounts={voteCounts}
         title="Голосование"
-        subtitle={iCanAct ? "Кого выгнать из города?" : "Живые игроки голосуют."}
+        subtitle={`${iCanAct ? (isSent ? "Ваш голос учтён." : "Кого выгнать из города?") : "Живые игроки голосуют."} ${progress}`}
         selectableIds={iCanAct ? alivePlayers.filter((player) => player.id !== me?.id).map((player) => player.id) : []}
         confirmText={iCanAct ? "Проголосовать" : undefined}
       />

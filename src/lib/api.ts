@@ -43,6 +43,8 @@ const ENDPOINTS = {
   startVoting: (gameId: string) => `/game/start-voting/${gameId}`,
   endVoting: (gameId: string) => `/game/end-voting/${gameId}`,
   gameDelete: (gameId: string) => `/game/delete/${gameId}`,
+  gameUpdate: (gameId: string) => `/game/update/${gameId}`,
+  voteList: (roundId: number) => `/vote/list?round_id=${roundId}`,
   nightAction: "/night-action/create",
   vote: "/vote/create",
   nightActionList: (roundId: number) => `/night-action/list?round_id=${roundId}`,
@@ -122,6 +124,8 @@ export type NightActionInfo = {
   at: number;
 };
 
+export type VoteInfo = { voterId: number; targetId: number };
+
 export type GameState = {
   id: string;
   roomId: string;
@@ -135,6 +139,8 @@ export type GameState = {
   lastRound: RoundResult | null;
   nightActions: NightActionInfo[];
   previousNightActions: NightActionInfo[];
+  votes: VoteInfo[];
+  mafiaCount: number;
   dayTime: number;
   nightTime: number;
 };
@@ -964,17 +970,24 @@ export const api = {
     };
 
     const isNight = game.current_phase === "NIGHT";
-    const [nightActions, previousNightActions] = await Promise.all([
+    const votingRound = game.current_phase === "VOTING" ? rounds.find((round) => round.round_number === game.current_round) : undefined;
+    const [nightActions, previousNightActions, votes] = await Promise.all([
       isNight ? loadNightActions(game.current_round) : Promise.resolve([]),
       isNight ? loadNightActions(game.current_round - 1) : Promise.resolve([]),
+      votingRound
+        ? request<{ voter_id: number; target_id: number }[]>(ENDPOINTS.voteList(votingRound.id))
+            .then((list) => list.map((vote) => ({ voterId: vote.voter_id, targetId: vote.target_id })))
+            .catch(() => [])
+        : Promise.resolve([]),
     ]);
 
     const currentRound =
       rounds.find((round) => round.round_number === game.current_round) ?? null;
 
-    const latest = [...rounds].sort(
-      (a, b) => b.round_number - a.round_number,
-    )[0];
+    const resultRoundNumber = game.current_phase === "NIGHT" ? game.current_round - 1 : game.current_round;
+    const latest =
+      rounds.find((round) => round.round_number === resultRoundNumber) ??
+      [...rounds].sort((a, b) => b.round_number - a.round_number)[0];
     let lastRound: RoundResult | null = null;
     if (latest) {
       lastRound = toRoundResult(
@@ -1014,6 +1027,8 @@ export const api = {
       lastRound,
       nightActions,
       previousNightActions,
+      votes,
+      mafiaCount: room.mafia_count,
       dayTime: room.day_time ?? DEFAULT_TIMES.day,
       nightTime: room.night_time ?? DEFAULT_TIMES.night,
     };
@@ -1052,6 +1067,30 @@ export const api = {
       method: "POST",
       body: { round_id: roundId, voter_id: voterId, target_id: targetId },
     });
+  },
+
+  async finishIfMafiaWon(gameId: string, knownMafiaIds: number[] = []): Promise<boolean> {
+    const game = await request<BackendGame>(ENDPOINTS.gameDetail(gameId));
+    if (game.winner !== null) return false;
+    const [players, rounds] = await Promise.all([
+      request<BackendGamePlayer[]>(ENDPOINTS.gamePlayers(gameId)),
+      request<BackendRoundShort[]>(ENDPOINTS.gameRounds(gameId)),
+    ]);
+    const mafia = new Set(knownMafiaIds);
+    for (const player of players) if (player.role === "mafia") mafia.add(player.id);
+    const actionLists = await Promise.all(
+      rounds.map((round) =>
+        request<{ actor_id: number; action_type: string }[]>(ENDPOINTS.nightActionList(round.id)).catch(() => []),
+      ),
+    );
+    for (const action of actionLists.flat()) if (action.action_type === "KILL") mafia.add(action.actor_id);
+
+    const alive = players.filter((player) => player.is_alive);
+    const aliveMafia = alive.filter((player) => mafia.has(player.id)).length;
+    if (aliveMafia === 0 || aliveMafia * 2 < alive.length) return false;
+
+    await request(ENDPOINTS.gameUpdate(gameId), { method: "PUT", body: { winner: "MAFIA" } });
+    return true;
   },
 
   async nextPhase(gameId: string, phase: GamePhase) {

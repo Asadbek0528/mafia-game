@@ -70,6 +70,8 @@ export function createDemoGame(gameId: string, myName: string): GameState {
     lastRound: null,
     nightActions: [],
     previousNightActions: [],
+    votes: [],
+    mafiaCount: setup.roles.mafia,
     dayTime: setup.dayTime,
     nightTime: setup.nightTime,
   };

@@ -242,6 +242,27 @@ async function answerCheck(socket, gameId, token, targetId) {
   reply(knownMafia.size >= room.mafia_count ? false : null);
 }
 
+async function finishIfMafiaWon(gameId, token) {
+  const game = await backend(`/game/detail?game_id=${gameId}`, token);
+  if (game.winner !== null) return false;
+  const [players, rounds] = await Promise.all([
+    backend(`/game-player/list?game_id=${gameId}`, token),
+    backend(`/game-round/list?game_id=${gameId}`, token),
+  ]);
+  const mafia = new Set();
+  for (const [id, role] of gameRoles.get(gameId) ?? []) if (role === "mafia") mafia.add(id);
+  for (const round of rounds) {
+    const actions = await backend(`/night-action/list?round_id=${round.id}`, token).catch(() => []);
+    for (const action of actions) if (action.action_type === "KILL") mafia.add(action.actor_id);
+  }
+  const alive = players.filter((player) => player.is_alive);
+  const aliveMafia = alive.filter((player) => mafia.has(player.id)).length;
+  if (aliveMafia === 0 || aliveMafia * 2 < alive.length) return false;
+  await backend(`/game/update/${gameId}`, token, "PUT", { winner: "MAFIA" });
+  console.log(`  Игра ${gameId}: мафии не меньше, чем мирных — победа мафии`);
+  return true;
+}
+
 const verifiedTokens = new Map();
 
 function userIdFromToken(token) {
@@ -352,6 +373,14 @@ server.on("connection", (socket, request) => {
 
     if (data && typeof data === "object" && handleControlMessage(channel, data, socket)) return;
     if (SERVER_ONLY_TYPES.includes(data?.type)) return;
+    if (data?.type === "phase" && gameId) {
+      const phaseToken = token ?? channelTokens.get(channel) ?? null;
+      finishIfMafiaWon(gameId, phaseToken)
+        .then((isOver) => {
+          if (isOver) broadcast(channel, { type: "update" });
+        })
+        .catch(() => {});
+    }
     if (data?.type === "check") {
       if (gameId && token) answerCheck(socket, gameId, token, data.target).catch(() => {});
       return;
