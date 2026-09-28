@@ -2,7 +2,7 @@ import { networkInterfaces } from "node:os";
 
 import type { NextConfig } from "next";
 
-const BACKEND_URL = (process.env.BACKEND_URL ?? "http://54.206.85.23").replace(/\/$/, "");
+const BACKEND_URL = (process.env.BACKEND_URL ?? "http://13.210.238.201").replace(/\/$/, "");
 
 function lanRank(address: string): number {
   if (address.startsWith("192.168.")) return 0;

@@ -16,4 +16,4 @@ export function setting(name, fallback) {
   return process.env[name] ?? fileEnv[name] ?? fallback;
 }
 
-export const BACKEND_URL = setting("BACKEND_URL", "http://54.206.85.23").replace(/\/$/, "");
+export const BACKEND_URL = setting("BACKEND_URL", "http://13.210.238.201").replace(/\/$/, "");
