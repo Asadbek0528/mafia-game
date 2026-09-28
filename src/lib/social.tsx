@@ -166,7 +166,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
         roomName: String(message.roomName ?? ""),
       };
       addNotice({ key: invite.key, kind: "invite", invite });
-      if ("vibrate" in navigator) navigator.vibrate?.(200);
+      if ("vibrate" in navigator && navigator.userActivation?.hasBeenActive) navigator.vibrate?.(200);
       return;
     }
 

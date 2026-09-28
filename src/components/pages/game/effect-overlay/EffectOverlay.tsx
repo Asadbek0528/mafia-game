@@ -21,7 +21,7 @@ const DURATION_MS = 4200;
 export default function EffectOverlay({ effect, onDone }: EffectOverlayProps) {
   useEffect(() => {
     if (!effect) return;
-    if ("vibrate" in navigator) navigator.vibrate?.(effect.kind === "blood" ? [120, 60, 220] : 120);
+    if ("vibrate" in navigator && navigator.userActivation?.hasBeenActive) navigator.vibrate?.(effect.kind === "blood" ? [120, 60, 220] : 120);
     const timer = setTimeout(onDone, DURATION_MS);
     return () => clearTimeout(timer);
   }, [effect, onDone]);
