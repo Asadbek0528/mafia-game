@@ -1,0 +1,259 @@
+.phase-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 75;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  cursor: pointer;
+  animation: phase-transition-life 3.2s ease forwards;
+}
+
+.phase-transition-sky {
+  position: absolute;
+  inset: 0;
+}
+
+.phase-transition-night .phase-transition-sky {
+  animation: phase-transition-to-night 3.2s ease forwards;
+}
+
+.phase-transition-day .phase-transition-sky {
+  animation: phase-transition-to-day 3.2s ease forwards;
+}
+
+.phase-transition-voting .phase-transition-sky {
+  background: radial-gradient(ellipse at center, #5a0710, #0a0000 70%);
+}
+
+.phase-transition-stars {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.5px 1.5px at 12% 18%, #ffffff, transparent),
+    radial-gradient(1px 1px at 28% 32%, #ffffff, transparent),
+    radial-gradient(1.5px 1.5px at 45% 12%, #ffffff, transparent),
+    radial-gradient(1px 1px at 63% 26%, #ffffff, transparent),
+    radial-gradient(1.5px 1.5px at 78% 14%, #ffffff, transparent),
+    radial-gradient(1px 1px at 88% 36%, #ffffff, transparent),
+    radial-gradient(1px 1px at 20% 48%, #ffffff, transparent),
+    radial-gradient(1.5px 1.5px at 70% 44%, #ffffff, transparent);
+  opacity: 0;
+}
+
+.phase-transition-night .phase-transition-stars {
+  animation: phase-transition-fade-in 2.4s 0.6s ease forwards;
+}
+
+.phase-transition-day .phase-transition-stars {
+  opacity: 1;
+  animation: phase-transition-fade-out 1.6s ease forwards;
+}
+
+.phase-transition-sun,
+.phase-transition-moon {
+  position: absolute;
+  left: 50%;
+  width: clamp(110px, 22vw, 190px);
+  height: clamp(110px, 22vw, 190px);
+  margin-left: calc(clamp(110px, 22vw, 190px) / -2);
+  border-radius: 50%;
+}
+
+.phase-transition-sun {
+  background: radial-gradient(circle at 40% 40%, #fff3c4, #ffb23d 45%, #e2551a 80%);
+  box-shadow: 0 0 80px 30px rgba(255, 150, 40, 0.55);
+}
+
+.phase-transition-moon {
+  background: radial-gradient(circle at 35% 35%, #ffffff, #dfe4f2 55%, #aab3c9);
+  box-shadow: 0 0 70px 20px rgba(200, 215, 255, 0.45);
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 26%;
+    left: 52%;
+    width: 18%;
+    height: 18%;
+    background: rgba(140, 150, 175, 0.5);
+    border-radius: 50%;
+    box-shadow: -40px 30px 0 -4px rgba(140, 150, 175, 0.4), -10px 60px 0 -8px rgba(140, 150, 175, 0.35);
+  }
+}
+
+.phase-transition-night {
+  .phase-transition-sun {
+    animation: phase-transition-set 2.6s cubic-bezier(0.5, 0, 0.7, 1) forwards;
+  }
+
+  .phase-transition-moon {
+    animation: phase-transition-moon-down 3s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+  }
+}
+
+.phase-transition-day {
+  .phase-transition-moon {
+    animation: phase-transition-moon-up 2.2s cubic-bezier(0.5, 0, 0.7, 1) forwards;
+  }
+
+  .phase-transition-sun {
+    animation: phase-transition-rise 3s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+  }
+}
+
+.phase-transition-voting {
+  .phase-transition-sun,
+  .phase-transition-moon {
+    display: none;
+  }
+}
+
+.phase-transition-city {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 26vh;
+  background: url("/img/street.webp") center bottom / cover no-repeat;
+  filter: brightness(0.25) contrast(1.2);
+  mask-image: linear-gradient(0deg, #000 55%, transparent);
+}
+
+.phase-transition-text {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  padding: 0 20px;
+  text-align: center;
+  animation: phase-transition-text 3.2s ease forwards;
+}
+
+.phase-transition-title {
+  font-family: var(--font-horror);
+  font-size: clamp(56px, 14vw, 120px);
+  line-height: 1;
+  color: #ffffff;
+  text-shadow: 0 0 40px rgba(0, 0, 0, 0.9);
+}
+
+.phase-transition-night .phase-transition-title {
+  color: #d6ddff;
+  text-shadow: 0 0 40px rgba(120, 140, 255, 0.55);
+}
+
+.phase-transition-day .phase-transition-title {
+  color: #ffd27a;
+  text-shadow: 0 0 40px rgba(255, 150, 40, 0.6);
+}
+
+.phase-transition-voting .phase-transition-title {
+  color: #ff3b46;
+  text-shadow: 0 0 40px rgba(255, 30, 40, 0.6);
+}
+
+.phase-transition-subtitle {
+  font-size: clamp(16px, 3.6vw, 22px);
+  color: #efe6e6;
+}
+
+@keyframes phase-transition-life {
+  0% {
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes phase-transition-to-night {
+  from {
+    background: linear-gradient(180deg, #d9722a, #6b1d0e 55%, #150404);
+  }
+  to {
+    background: linear-gradient(180deg, #03051a, #0a0f2e 55%, #020208);
+  }
+}
+
+@keyframes phase-transition-to-day {
+  from {
+    background: linear-gradient(180deg, #03051a, #0a0f2e 55%, #020208);
+  }
+  to {
+    background: linear-gradient(180deg, #f0a24a, #a8431c 55%, #2a0a06);
+  }
+}
+
+@keyframes phase-transition-set {
+  from {
+    top: 18vh;
+  }
+  to {
+    top: 110vh;
+  }
+}
+
+@keyframes phase-transition-moon-down {
+  0% {
+    top: -40vh;
+  }
+  30% {
+    top: -40vh;
+  }
+  100% {
+    top: 12vh;
+  }
+}
+
+@keyframes phase-transition-moon-up {
+  from {
+    top: 12vh;
+  }
+  to {
+    top: -45vh;
+  }
+}
+
+@keyframes phase-transition-rise {
+  0% {
+    top: 110vh;
+  }
+  25% {
+    top: 110vh;
+  }
+  100% {
+    top: 14vh;
+  }
+}
+
+@keyframes phase-transition-fade-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes phase-transition-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes phase-transition-text {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+  }
+  30% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 1;
+  }
+}

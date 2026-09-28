@@ -8,9 +8,10 @@ const PASSWORD = setting("BOT_PASSWORD", "botpass123");
 const PREFIX = setting("BOT_PREFIX", "bot");
 const EMAIL_DOMAIN = setting("BOT_EMAIL_DOMAIN", "example.com");
 const TICK_MS = 2000;
-const PHASE_SECONDS = { NIGHT: 60, DAY: 60, VOTING: 30 };
+const PHASE_SECONDS = { NIGHT: 90, DAY: 60, VOTING: 30 };
 const NIGHT_TURN = { mafia: 0, doctor: 1, commissar: 2 };
-const NIGHT_TURN_MS = 10_000;
+const NIGHT_TURN_MS = 30_000;
+const PREVIOUS_ACTION = { mafia: null, doctor: "KILL", commissar: "HEAL" };
 
 const [roomArg, countArg, humansArg] = process.argv.slice(2);
 const isNewRoom = roomArg === "new";
@@ -272,9 +273,17 @@ async function actIfNeeded(bot, gameId, state) {
         return null;
       }
       if (!state.seenAt.has(key)) state.seenAt.set(key, Date.now());
+      const actions = await request(`/night-action/list?round_id=${round.id}`, { token: bot.token }).catch(() => []);
+      if (me.role === "mafia" && actions.some((item) => item.action_type === "KILL")) {
+        state.done.add(key);
+        return null;
+      }
+      const previous = PREVIOUS_ACTION[me.role];
+      const isPreviousDone = !previous || actions.some((item) => item.action_type === previous);
       const turnStart = state.seenAt.get(key) + NIGHT_TURN[me.role] * NIGHT_TURN_MS;
-      if (Date.now() < turnStart + 1000) return null;
-      const target = randomItem(me.role === "doctor" ? [...others, me] : others);
+      if (!isPreviousDone && Date.now() < turnStart) return null;
+      const pool = me.role === "doctor" ? [...others, me] : me.role === "mafia" ? others.filter((player) => player.role !== "mafia") : others;
+      const target = randomItem(pool.length ? pool : others);
       if (!target) return null;
 
       await sleep(500 + Math.random() * 3500);

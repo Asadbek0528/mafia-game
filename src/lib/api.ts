@@ -115,6 +115,13 @@ export type RoundResult = {
   eliminatedPlayerId: number | null;
 };
 
+export type NightActionInfo = {
+  type: "KILL" | "HEAL" | "CHECK";
+  actorId: number;
+  targetId: number;
+  at: number;
+};
+
 export type GameState = {
   id: string;
   roomId: string;
@@ -126,6 +133,7 @@ export type GameState = {
   winner: GameWinner | null;
   players: GamePlayer[];
   lastRound: RoundResult | null;
+  nightActions: NightActionInfo[];
   dayTime: number;
   nightTime: number;
 };
@@ -941,6 +949,20 @@ export const api = {
       players.map((player) => getUsername(player.user_id)),
     );
 
+    const currentRoundInfo = rounds.find((round) => round.round_number === game.current_round) ?? null;
+    let nightActions: NightActionInfo[] = [];
+    if (game.current_phase === "NIGHT" && currentRoundInfo) {
+      const actions = await request<{ actor_id: number; target_id: number; action_type: NightActionInfo["type"]; created_at: string }[]>(
+        ENDPOINTS.nightActionList(currentRoundInfo.id),
+      ).catch(() => []);
+      nightActions = actions.map((action) => ({
+        type: action.action_type,
+        actorId: action.actor_id,
+        targetId: action.target_id,
+        at: parseServerDate(action.created_at) ?? Date.now(),
+      }));
+    }
+
     const currentRound =
       rounds.find((round) => round.round_number === game.current_round) ?? null;
 
@@ -984,6 +1006,7 @@ export const api = {
         isAlive: player.is_alive,
       })),
       lastRound,
+      nightActions,
       dayTime: room.day_time ?? DEFAULT_TIMES.day,
       nightTime: room.night_time ?? DEFAULT_TIMES.night,
     };

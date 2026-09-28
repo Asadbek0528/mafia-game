@@ -110,8 +110,8 @@ export default function RoomSettings(props: RoomSettingsProps) {
         label="Время ночи"
         value={room.night_time}
         unit=" сек"
-        min={30}
-        max={120}
+        min={60}
+        max={180}
         step={10}
         canEdit={isOwner}
         onChange={(value) => onChange({ night_time: value })}

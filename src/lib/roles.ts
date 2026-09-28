@@ -112,11 +112,11 @@ export function getRole(key: RoleKey): Role {
 
 export const DEFAULT_TIMES = {
   day: 60,
-  night: 60,
+  night: 90,
   voting: 30,
 };
 
-export const NIGHT_TURN_SECONDS = 10;
+export const NIGHT_TURN_SECONDS = 30;
 
 export const NIGHT_TURNS: { role: RoleKey; title: string }[] = [
   { role: "mafia", title: "Мафия" },

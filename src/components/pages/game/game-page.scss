@@ -100,6 +100,11 @@
   }
 }
 
+.game-page-turn i {
+  font-style: normal;
+  color: var(--color-green);
+}
+
 .game-page-turn-done {
   opacity: 0.45;
 }

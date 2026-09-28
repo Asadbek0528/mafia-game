@@ -68,6 +68,7 @@ export function createDemoGame(gameId: string, myName: string): GameState {
     winner: null,
     players,
     lastRound: null,
+    nightActions: [],
     dayTime: setup.dayTime,
     nightTime: setup.nightTime,
   };
@@ -106,6 +107,7 @@ export function advanceDemoGame(game: GameState, me: GamePlayer | undefined, myT
       players,
       phase: "DAY",
       winner: findWinner(players),
+      nightActions: [],
       lastRound: { roundNumber: game.round, killedPlayerId: isSaved ? null : mafiaTarget, savedByDoctor: isSaved, savedPlayerId: isSaved ? mafiaTarget : null, eliminatedPlayerId: null },
     };
   }
@@ -125,6 +127,7 @@ export function advanceDemoGame(game: GameState, me: GamePlayer | undefined, myT
     round: game.round + 1,
     roundId: game.round + 1,
     winner: findWinner(players),
+    nightActions: [],
     lastRound: {
       roundNumber: game.round,
       killedPlayerId: game.lastRound?.killedPlayerId ?? null,
