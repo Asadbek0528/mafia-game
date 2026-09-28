@@ -65,7 +65,7 @@ export default function TargetPicker(props: TargetPickerProps) {
                 )}
                 {voteCounts && (voteCounts[player.id] ?? 0) > 0 && (
                   <span className="target-picker-votes" title="Голосов против этого игрока">
-                    🗳 {voteCounts[player.id]} {voteWord(voteCounts[player.id])}
+                    <VoteIcon /> {voteCounts[player.id]} {voteWord(voteCounts[player.id])}
                   </span>
                 )}
               </button>
@@ -80,6 +80,16 @@ export default function TargetPicker(props: TargetPickerProps) {
         </button>
       )}
     </section>
+  );
+}
+
+export function VoteIcon() {
+  return (
+    <svg className="vote-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <circle cx="12" cy="12" r="8" />
+      <circle cx="12" cy="12" r="3" fill="currentColor" />
+      <path d="M12 1v5M12 18v5M1 12h5M18 12h5" strokeLinecap="round" />
+    </svg>
   );
 }
 

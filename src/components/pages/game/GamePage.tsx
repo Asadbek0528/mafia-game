@@ -145,47 +145,28 @@ function NightTurns({ night }: { night: NightTurnState }) {
 }
 
 const NIGHT_ROLE_HINT: Record<RoleKey, string> = {
-  mafia: "Вы мафия: когда настанет ваш ход, нажмите на игрока и «Убить». Своих мафиози вы видите — их выбрать нельзя.",
-  doctor: "Вы доктор: в свой ход нажмите на игрока и «Вылечить». Если мафия выбрала его — он выживет. Одного и того же нельзя лечить две ночи подряд.",
-  commissar: "Вы комиссар: в свой ход нажмите на игрока и «Проверить». Ответ «мафия» или «мирный» увидите только вы.",
-  civilian: "Вы житель: ночью делать ничего не нужно, просто ждите утра.",
+  mafia: "Вы мафия — выберите жертву.",
+  doctor: "Вы доктор — выберите, кого лечить.",
+  commissar: "Вы комиссар — выберите, кого проверить.",
+  civilian: "Вы житель — ждите утра.",
 };
 
-function narrate(game: GameState, me: GamePlayer | undefined, isFirst: boolean): string {
+function narrate(game: GameState, me: GamePlayer | undefined): string {
   const nameOf = (id: number | null) => game.players.find((player) => player.id === id)?.username ?? "игрок";
   const last = game.lastRound;
-  const lines: string[] = [];
 
   if (game.phase === "NIGHT") {
-    if (game.round > 1 && last?.roundNumber === game.round - 1) {
-      lines.push(last.eliminatedPlayerId ? `Город выгнал ${nameOf(last.eliminatedPlayerId)}.` : "Голоса разделились — никто не выбыл.");
-    }
-    lines.push(`🌙 Ночь ${game.round}. Город засыпает, чат закрыт. По очереди ходят: мафия → доктор → комиссар.`);
-    if (me && !me.isAlive) lines.push("Вы выбыли и только наблюдаете.");
-    else if (me?.role) lines.push(NIGHT_ROLE_HINT[me.role]);
+    const role = me && !me.isAlive ? "Вы наблюдаете." : me?.role ? NIGHT_ROLE_HINT[me.role] : "";
+    return `🌙 Ночь ${game.round}. ${role}`.trim();
   }
-
   if (game.phase === "DAY") {
-    let night = "Этой ночью никто не погиб.";
-    if (last?.savedByDoctor) night = "Мафия напала, но доктор спас жертву — никто не погиб.";
-    else if (last?.killedPlayerId) night = `Этой ночью мафия убила ${nameOf(last.killedPlayerId)}.`;
-    lines.push(`☀️ День ${game.round}. ${night}`);
-    lines.push(
-      `Обсудите в чате, кто похож на мафию. Через ${game.dayTime} сек — голосование.`,
-    );
+    let night = "Никто не погиб.";
+    if (last?.savedByDoctor) night = "Доктор спас жертву.";
+    else if (last?.killedPlayerId) night = `Убит ${nameOf(last.killedPlayerId)}.`;
+    return `☀️ День ${game.round}. ${night}`;
   }
-
-  if (game.phase === "VOTING") {
-    lines.push(`🗳 Голосование — ${DEFAULT_TIMES.voting} сек, чат открыт. Нажмите на игрока, которого хотите выгнать, и «Проголосовать». ✓ — уже проголосовал.`);
-    lines.push("У кого больше всех голосов — выбывает. Если поровну — никто не выбывает.");
-  }
-
-  if (isFirst && me?.role && game.round === 1 && game.phase === "NIGHT") {
-    lines.unshift("Игра началась! Жители должны найти и выгнать всю мафию. Мафия побеждает, когда её не меньше, чем остальных.");
-  }
-  return lines.join(" ");
+  return "Голосование: кого выгнать?";
 }
-
 
 type Team = { role: RoleKey; ids: number[] };
 
@@ -387,7 +368,7 @@ export default function GamePage() {
       const narratorUser = userRef.current;
       const narratorMe = findMe(current, narratorUser?.id, narratorUser?.username);
       addChatMessages([
-        { id: `host-${phaseKey}`, name: "Ведущий", text: narrate(current, narratorMe, !isLiveChange), time: Date.now(), scope: "all", system: true },
+        { id: `host-${phaseKey}`, name: "Ведущий", text: narrate(current, narratorMe), time: Date.now(), scope: "all", system: true },
       ]);
     }
 
@@ -538,8 +519,8 @@ export default function GamePage() {
     if (!gameWinner) return;
     const text =
       gameWinner === "MAFIA"
-        ? "🏁 Игра окончена. Победила мафия — её стало не меньше, чем мирных жителей."
-        : "🏁 Игра окончена. Победили жители — вся мафия выбыла.";
+        ? "🏁 Победила мафия."
+        : "🏁 Победили жители.";
     addChatMessages([{ id: `host-winner`, name: "Ведущий", text, time: Date.now(), scope: "all", system: true }]);
   }, [gameWinner, addChatMessages]);
 

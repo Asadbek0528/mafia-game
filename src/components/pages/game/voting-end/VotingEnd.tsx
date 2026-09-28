@@ -1,5 +1,6 @@
 "use client";
 
+import { VoteIcon } from "../target-picker/TargetPicker";
 import "./voting-end.scss";
 
 export type VotingEndInfo =
@@ -57,7 +58,7 @@ export default function VotingEnd({ info }: { info: VotingEndInfo | null }) {
       <p className="voting-end-title">{info.isMe ? "Город выгоняет вас" : `Город выгоняет ${info.name}`}</p>
       {info.votes !== null && (
         <p className="voting-end-votes">
-          🗳 {info.votes} {voteWord(info.votes)}
+          <VoteIcon /> {info.votes} {voteWord(info.votes)}
         </p>
       )}
       <p className="voting-end-text">{info.isMe ? "Теперь вы наблюдатель." : "Наступает ночь…"}</p>
