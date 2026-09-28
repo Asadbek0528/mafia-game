@@ -5,7 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 import { showToast } from "@/components/pages/widgets/toast/Toast";
 
-import { SESSION_EXPIRED_EVENT, type User } from "./api";
+import { api as backendApi, ApiError, SESSION_EXPIRED_EVENT, type User } from "./api";
 import { getUser, logout, rememberPageAfterLogin } from "./auth";
 import { useLiveUpdates } from "./socket";
 
@@ -115,6 +115,20 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   const myId = me && !me.guest && me.id ? me.id : null;
+
+  const checkedUser = useRef<number | null>(null);
+  useEffect(() => {
+    if (!myId || checkedUser.current === myId) return;
+    checkedUser.current = myId;
+    backendApi.getPublicUser(myId).catch((error: unknown) => {
+      if (!(error instanceof ApiError) || error.status !== 404) return;
+      if (window.location.pathname.startsWith("/register")) return;
+      rememberPageAfterLogin(window.location.pathname);
+      logout();
+      showToast("Сервер обновился, и вашего аккаунта на нём нет. Зарегистрируйтесь заново.", "error");
+      router.replace("/register");
+    });
+  }, [myId, router]);
 
   const addNotice = useCallback((notice: SocialNotice) => {
     setNotices((old) => [...old.filter((item) => item.key !== notice.key), notice].slice(-4));
