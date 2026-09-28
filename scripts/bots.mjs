@@ -9,7 +9,7 @@ const PASSWORD = setting("BOT_PASSWORD", "botpass123");
 const PREFIX = setting("BOT_PREFIX", "bot");
 const EMAIL_DOMAIN = setting("BOT_EMAIL_DOMAIN", "example.com");
 const TICK_MS = 2000;
-const PHASE_SECONDS = { NIGHT: 90, DAY: 120, VOTING: 30 };
+const PHASE_SECONDS = { NIGHT: 90, DAY: 90, VOTING: 60 };
 const NIGHT_TURN = { mafia: 0, doctor: 1, commissar: 2 };
 const NIGHT_TURN_MS = 30_000;
 const PREVIOUS_ACTION = { mafia: null, doctor: "KILL", commissar: "HEAL" };
@@ -211,18 +211,9 @@ function sayInChat(bot, gameId, text, scope) {
   notify(`/ws/game/${gameId}`, "chat", { message });
 }
 
-function suspect(gameId, round, me, others) {
-  const target = randomItem(others);
-  if (!target) return;
-  notify(`/ws/game/${gameId}`, "suspect", { round, from: me.id, target: target.id });
-}
-
 async function maybeChat(bot, gameId, state, key, phase, me, others, round) {
   if (state.chatted.has(key) || !me?.is_alive) return;
   state.chatted.add(key);
-  if (phase === "DAY" && Math.random() < 0.8) {
-    setTimeout(() => suspect(gameId, round, me, others), 4000 + Math.random() * 20000);
-  }
   if (phase === "DAY" && Math.random() < 0.6) {
     await sleep(3000 + Math.random() * 12000);
     sayInChat(bot, gameId, randomItem(DAY_PHRASES), "all");
@@ -420,10 +411,14 @@ async function hostPhases(host, gameId) {
         key = currentKey;
         phaseSeenAt = Date.now();
         console.log(`[хозяин] ${PHASE_NAME[phase]} ${game.current_round}`);
+        if (phase === "DAY") {
+          await finishIfMafiaWon(host, gameId).catch(() => {});
+          notify(`/ws/game/${gameId}`, "phase");
+        }
       }
 
       const endsAt = parseServerDate(game.phase_ends_at) ?? phaseSeenAt + PHASE_SECONDS[phase] * 1000;
-      if (Date.now() > endsAt + 3000) {
+      if (Date.now() > endsAt + 8000) {
         await request(`/game/${PHASE_ENDPOINT[phase]}/${gameId}`, { method: "POST", token: host.token }).catch(async (error) => {
           if (error.status !== 500) throw error;
           const fresh = await request(`/game/detail?game_id=${gameId}`, { token: host.token });

@@ -15,7 +15,6 @@ const watchedRooms = new Map();
 const gameSeenAt = new Map();
 const channelTokens = new Map();
 const chatHistory = new Map();
-const suspectHistory = new Map();
 const gameRoles = new Map();
 const TEAM_ROLES = ["mafia", "doctor", "commissar"];
 const SERVER_ONLY_TYPES = ["team", "check-result"];
@@ -162,14 +161,6 @@ function rememberChat(channel, message) {
   if (history.messages.length > CHAT_LIMIT) history.messages.shift();
   history.touchedAt = Date.now();
   chatHistory.set(channel, history);
-}
-
-function rememberSuspect(channel, data) {
-  if (typeof data.round !== "number" || typeof data.from !== "number") return;
-  const history = suspectHistory.get(channel) ?? { items: new Map(), touchedAt: 0 };
-  history.items.set(`${data.round}:${data.from}`, { type: "suspect", round: data.round, from: data.from, target: data.target ?? null });
-  history.touchedAt = Date.now();
-  suspectHistory.set(channel, history);
 }
 
 function handleControlMessage(channel, data, socket) {
@@ -352,10 +343,6 @@ server.on("connection", (socket, request) => {
   if (history?.messages.length) {
     socket.send(JSON.stringify({ type: "chat-history", messages: history.messages }));
   }
-  const suspects = suspectHistory.get(channel);
-  if (suspects?.items.size) {
-    socket.send(JSON.stringify({ type: "suspect-history", items: [...suspects.items.values()] }));
-  }
 
   socket.isAlive = true;
   socket.on("pong", () => {
@@ -386,7 +373,6 @@ server.on("connection", (socket, request) => {
       return;
     }
     if (data?.type === "chat") rememberChat(channel, data.message);
-    if (data?.type === "suspect") rememberSuspect(channel, data);
     broadcast(channel, text, socket);
   });
 
@@ -417,9 +403,6 @@ setInterval(() => {
   const now = Date.now();
   for (const [channel, history] of chatHistory) {
     if (now - history.touchedAt > CHAT_KEEP_MS) chatHistory.delete(channel);
-  }
-  for (const [channel, history] of suspectHistory) {
-    if (now - history.touchedAt > CHAT_KEEP_MS) suspectHistory.delete(channel);
   }
 }, 10 * 60 * 1000).unref();
 

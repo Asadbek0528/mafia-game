@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { showToast } from "@/components/pages/widgets/toast/Toast";
-import { api, type GamePlayer, type GameState, type NightActionInfo, type RoleKey } from "@/lib/api";
+import { api, type GamePlayer, type GameState, type NightActionInfo, type RoleKey, type VoteInfo } from "@/lib/api";
 import { rememberPageAfterLogin, useCurrentUser } from "@/lib/auth";
 import { advanceDemoGame, createDemoGame } from "@/lib/demo-game";
 import { DEFAULT_TIMES, getRole, NIGHT_TURN_SECONDS, NIGHT_TURNS } from "@/lib/roles";
@@ -18,15 +18,16 @@ import GameOver from "./game-over/GameOver";
 import PhaseTransition, { PHASE_TRANSITION_MS, type PhaseTransitionInfo } from "./phase-transition/PhaseTransition";
 import RoleReveal from "./role-reveal/RoleReveal";
 import SkyClock from "./sky-clock/SkyClock";
-import TargetPicker, { type Suspicion } from "./target-picker/TargetPicker";
+import TargetPicker from "./target-picker/TargetPicker";
+import VotingEnd, { VOTING_RESULT_MS, type VotingEndInfo } from "./voting-end/VotingEnd";
 import "./game-page.scss";
 
 const REFRESH_EVERY_MS = 2000;
 const REFRESH_LIVE_MS = 10000;
 const RETRY_PHASE_MS = 3000;
-const OWNER_GRACE_S = 1;
-const BACKUP_DELAY_S = 3;
-const BACKUP_STEP_S = 2;
+const OWNER_GRACE_S = 5;
+const BACKUP_DELAY_S = 9;
+const BACKUP_STEP_S = 3;
 
 const NIGHT_ACTION: Partial<Record<RoleKey, "KILL" | "HEAL" | "CHECK">> = {
   mafia: "KILL",
@@ -118,17 +119,6 @@ function phaseStartEffect(game: GameState, me: GamePlayer | undefined): GameEffe
     }
   }
 
-  if (game.phase === "NIGHT" && game.round > 1 && last?.eliminatedPlayerId) {
-    if (last.eliminatedPlayerId === me?.id) {
-      return { key, kind: "blood", title: "Город выгнал вас", text: "Теперь вы наблюдатель." };
-    }
-    return { key, kind: "info", title: `Город выгнал ${nameOf(last.eliminatedPlayerId)}`, text: "Наступает ночь." };
-  }
-
-  if (game.phase === "NIGHT" && game.round > 1 && last?.roundNumber === game.round - 1 && !last.eliminatedPlayerId) {
-    return { key, kind: "info", title: "Голоса разделились", text: "Никто не выбыл. Наступает ночь." };
-  }
-
   return null;
 }
 
@@ -181,12 +171,12 @@ function narrate(game: GameState, me: GamePlayer | undefined, isFirst: boolean):
     else if (last?.killedPlayerId) night = `Этой ночью мафия убила ${nameOf(last.killedPlayerId)}.`;
     lines.push(`☀️ День ${game.round}. ${night}`);
     lines.push(
-      `Обсудите в чате, кто похож на мафию. Нажмите 👁 рядом с игроком, если подозреваете его. Через ${game.dayTime} сек — голосование.`,
+      `Обсудите в чате, кто похож на мафию. Через ${game.dayTime} сек — голосование.`,
     );
   }
 
   if (game.phase === "VOTING") {
-    lines.push("🗳 Голосование. Нажмите на игрока, которого хотите выгнать, и «Проголосовать».");
+    lines.push(`🗳 Голосование — ${DEFAULT_TIMES.voting} сек, чат открыт. Нажмите на игрока, которого хотите выгнать, и «Проголосовать». ✓ — уже проголосовал.`);
     lines.push("У кого больше всех голосов — выбывает. Если поровну — никто не выбывает.");
   }
 
@@ -196,7 +186,6 @@ function narrate(game: GameState, me: GamePlayer | undefined, isFirst: boolean):
   return lines.join(" ");
 }
 
-type SuspectEvent = { type?: string; round: number; from: number; target: number | null };
 
 type Team = { role: RoleKey; ids: number[] };
 
@@ -235,10 +224,11 @@ export default function GamePage() {
   const clearTransition = useCallback(() => setTransition(null), []);
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [effect, setEffect] = useState<GameEffect | null>(null);
+  const [votingResult, setVotingResult] = useState<VotingEndInfo | null>(null);
+  const lastVotes = useRef<{ round: number; votes: VoteInfo[] }>({ round: 0, votes: [] });
   const handleConfirmRef = useRef<(() => void) | null>(null);
   const clearEffect = useCallback(() => setEffect(null), []);
   const [isEnding, setIsEnding] = useState(false);
-  const [suspects, setSuspects] = useState<Record<string, Record<number, number | null>>>({});
   const [secondsLeft, setSecondsLeft] = useState(0);
 
   const gameRef = useRef<GameState | null>(null);
@@ -328,17 +318,6 @@ export default function GamePage() {
     });
   }, []);
 
-  const addSuspects = useCallback((items: SuspectEvent[]) => {
-    setSuspects((old) => {
-      const next = { ...old };
-      for (const item of items) {
-        if (typeof item?.round !== "number" || typeof item.from !== "number") continue;
-        next[item.round] = { ...next[item.round], [item.from]: item.target ?? null };
-      }
-      return next;
-    });
-  }, []);
-
   const { isLive, notify } = useLiveUpdates(!isDemo && hasGame ? WS_PATHS.game(gameId) : null, (data) => {
     const payload = data as { type?: string; message?: ChatMessage; messages?: ChatMessage[] } | null;
     if (payload?.type === "room-closed") {
@@ -357,15 +336,6 @@ export default function GamePage() {
     }
     if (secret?.type === "check-result" && typeof secret.target === "number") {
       showCheckResult(secret.target, typeof secret.isMafia === "boolean" ? secret.isMafia : null);
-      return;
-    }
-    const suspect = data as { type?: string; round?: number; from?: number; target?: number | null; items?: unknown[] } | null;
-    if (suspect?.type === "suspect") {
-      addSuspects([suspect as SuspectEvent]);
-      return;
-    }
-    if (suspect?.type === "suspect-history" && Array.isArray(suspect.items)) {
-      addSuspects(suspect.items as SuspectEvent[]);
       return;
     }
     if (payload?.type === "chat-history" && Array.isArray(payload.messages)) {
@@ -402,6 +372,7 @@ export default function GamePage() {
     const current = gameRef.current;
     if (!current || describedPhase.current === phaseKey) return;
     const isLiveChange = describedPhase.current !== "";
+    const wasVoting = describedPhase.current.endsWith("-VOTING");
     describedPhase.current = phaseKey;
 
     setSelectedId(null);
@@ -420,14 +391,47 @@ export default function GamePage() {
       ]);
     }
 
-    if (isLiveChange && !current.winner) {
-      setTransition({ key: phaseKey, phase: current.phase, round: current.round });
-      const currentUser = userRef.current;
-      const mine = findMe(current, currentUser?.id, currentUser?.username);
-      const next = phaseStartEffect(current, mine);
-      if (next) setTimeout(() => setEffect(next), PHASE_TRANSITION_MS);
+    const currentUser = userRef.current;
+    const mine = findMe(current, currentUser?.id, currentUser?.username);
+
+    let delay = 0;
+    if (isLiveChange && wasVoting) {
+      const eliminatedId = current.lastRound?.eliminatedPlayerId ?? null;
+      const eliminated = current.players.find((player) => player.id === eliminatedId);
+      const voted = lastVotes.current.votes.filter((vote) => vote.targetId === eliminatedId).length;
+      setVotingResult(
+        eliminated
+          ? { kind: "result", key: phaseKey, name: eliminated.username, votes: voted > 0 ? voted : null, isMe: eliminated.id === mine?.id }
+          : { kind: "tie", key: phaseKey },
+      );
+      delay = VOTING_RESULT_MS;
+      setTimeout(() => setVotingResult(null), VOTING_RESULT_MS);
     }
-  }, [phaseKey, addChatMessages]);
+
+    if (isLiveChange && !current.winner) {
+      setTimeout(() => {
+        setTransition({ key: phaseKey, phase: current.phase, round: current.round });
+        const next = phaseStartEffect(current, mine);
+        if (next) setTimeout(() => setEffect(next), PHASE_TRANSITION_MS);
+      }, delay);
+    }
+
+    if (isLiveChange && !isDemo && current.phase === "DAY" && !current.winner) {
+      const knownMafia = current.players.filter((player) => player.role === "mafia").map((player) => player.id);
+      api
+        .finishIfMafiaWon(current.id, knownMafia)
+        .then((isOver) => {
+          if (!isOver) return;
+          notify("phase");
+          loadGame().catch(() => {});
+        })
+        .catch(() => {});
+    }
+  }, [phaseKey, addChatMessages, isDemo, notify, loadGame]);
+
+  useEffect(() => {
+    if (game?.phase === "VOTING") lastVotes.current = { round: game.round, votes: game.votes };
+  }, [game]);
 
   const serverPhaseEnd = game?.phaseEndsAt ?? null;
   useEffect(() => {
@@ -661,27 +665,6 @@ export default function GamePage() {
   function renderPhase() {
     if (!game) return null;
 
-    const roundSuspects = suspects[game.round] ?? {};
-    const counts: Record<number, number> = {};
-    for (const [from, target] of Object.entries(roundSuspects)) {
-      const voter = game.players.find((player) => player.id === Number(from));
-      if (target === null || !voter?.isAlive) continue;
-      counts[target] = (counts[target] ?? 0) + 1;
-    }
-    const ranked = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-    const topId = ranked.length > 0 && (ranked.length === 1 || ranked[0][1] > ranked[1][1]) ? Number(ranked[0][0]) : null;
-
-    const suspicion: Suspicion | undefined =
-      game.phase === "NIGHT"
-        ? undefined
-        : {
-            counts,
-            mine: me ? (roundSuspects[me.id] ?? null) : null,
-            canSuspect: iCanAct,
-            topId,
-            onSuspect: toggleSuspect,
-          };
-
     const common = {
       players: game.players,
       selectedId,
@@ -690,7 +673,6 @@ export default function GamePage() {
       showRole: canSeeRole,
       onSelect: setSelectedId,
       onConfirm: handleConfirm,
-      suspicion,
     };
 
     if (game.phase === "NIGHT") {
@@ -766,6 +748,7 @@ export default function GamePage() {
       <TargetPicker
         {...common}
         voteCounts={voteCounts}
+        votedIds={[...new Set(game.votes.map((vote) => vote.voterId))]}
         title="Голосование"
         subtitle={`${iCanAct ? (isSent ? "Ваш голос учтён." : "Кого выгнать из города?") : "Живые игроки голосуют."} ${progress}`}
         selectableIds={iCanAct ? alivePlayers.filter((player) => player.id !== me?.id).map((player) => player.id) : []}
@@ -795,11 +778,11 @@ export default function GamePage() {
     }
 
     if (game.phase === "DAY") {
-      return { text: `💬 Обсуждайте в чате, кто мафия. 👁 — отметить подозреваемого. Голосование через ${secondsLeft} сек.`, isAction: false };
+      return { text: `💬 Обсуждайте в чате, кто мафия. Голосование через ${secondsLeft} сек.`, isAction: false };
     }
 
     if (isSent) return { text: "✓ Голос учтён. Ждём остальных.", isAction: false };
-    return { text: "👉 Нажмите на игрока, которого хотите выгнать, потом «Проголосовать».", isAction: true };
+    return { text: `👉 Нажмите на игрока, которого хотите выгнать, потом «Проголосовать». Осталось ${secondsLeft} сек.`, isAction: true };
   }
 
   const todo = getTodo();
@@ -838,14 +821,6 @@ export default function GamePage() {
   const visibleChat = chat.filter(
     (message) => message.scope === "all" || isGameOver || (message.scope === "dead" && isDeadWatcher),
   );
-
-  function toggleSuspect(targetId: number) {
-    if (!game || !me || !iCanAct) return;
-    const current = suspects[game.round]?.[me.id] ?? null;
-    const item: SuspectEvent = { type: "suspect", round: game.round, from: me.id, target: current === targetId ? null : targetId };
-    addSuspects([item]);
-    notify("suspect", { ...item });
-  }
 
   function sendChat(text: string) {
     if (!myName) return;
@@ -923,6 +898,16 @@ export default function GamePage() {
       </div>
 
       {isRoleOpen && me?.role && <RoleReveal role={me.role} onClose={closeRole} />}
+      <VotingEnd
+        info={
+          votingResult ??
+          (game.phase === "VOTING" && !isGameOver && secondsLeft <= 3
+            ? secondsLeft > 0
+              ? { kind: "countdown", seconds: secondsLeft }
+              : { kind: "counting" }
+            : null)
+        }
+      />
       <PhaseTransition info={transition} onDone={clearTransition} />
       <EffectOverlay effect={effect} onDone={clearEffect} />
     </div>
