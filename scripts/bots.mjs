@@ -340,6 +340,14 @@ async function runBot(bot) {
       if (!gameId) {
         gameId = await findGameId(bot.token);
         if (!gameId) {
+          const room = await request(`/room/detail?room_id=${roomId}`, { token: bot.token }).catch((error) => {
+            if (error.status === 404) return null;
+            throw error;
+          });
+          if (!room || room.status === "FINISHED") {
+            console.log(`[${bot.username}] комнату ${roomId} закрыли — выхожу`);
+            return null;
+          }
           if (!isWaitingShown) console.log(`[${bot.username}] ждёт начала игры…`);
           isWaitingShown = true;
           await sleep(TICK_MS);
@@ -473,5 +481,6 @@ if (isNewRoom) {
 
 const winners = await Promise.all(playing);
 const winner = winners.find(Boolean);
-console.log(`\nИгра окончена. Победа: ${winner === "MAFIA" ? "мафии" : "жителей"}`);
+if (winner) console.log(`\nИгра окончена. Победа: ${winner === "MAFIA" ? "мафии" : "жителей"}`);
+else console.log("\nБоты остановлены: комната закрыта.");
 process.exit(0);

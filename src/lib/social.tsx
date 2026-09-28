@@ -120,14 +120,25 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!myId || checkedUser.current === myId) return;
     checkedUser.current = myId;
-    backendApi.getPublicUser(myId).catch((error: unknown) => {
-      if (!(error instanceof ApiError) || error.status !== 404) return;
+    const signOut = (text: string) => {
       if (window.location.pathname.startsWith("/register")) return;
       rememberPageAfterLogin(window.location.pathname);
       logout();
-      showToast("Сервер обновился, и вашего аккаунта на нём нет. Зарегистрируйтесь заново.", "error");
+      showToast(text, "error");
       router.replace("/register");
-    });
+    };
+    backendApi
+      .getPublicUser(myId)
+      .then((account) => {
+        const savedName = getUser()?.username;
+        if (savedName && account.username !== savedName) {
+          signOut(`Вход устарел: на сервере этот аккаунт теперь «${account.username}». Войдите снова.`);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!(error instanceof ApiError) || error.status !== 404) return;
+        signOut("Сервер обновился, и вашего аккаунта на нём нет. Зарегистрируйтесь заново.");
+      });
   }, [myId, router]);
 
   const addNotice = useCallback((notice: SocialNotice) => {
