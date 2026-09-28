@@ -151,6 +151,14 @@ const NIGHT_ROLE_HINT: Record<RoleKey, string> = {
   civilian: "Вы житель — ждите утра.",
 };
 
+function formatSeconds(total: number): string {
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+  if (minutes === 0) return `${seconds} сек`;
+  if (seconds === 0) return `${minutes} мин`;
+  return `${minutes} мин ${seconds} сек`;
+}
+
 function narrate(game: GameState, me: GamePlayer | undefined): string {
   const nameOf = (id: number | null) => game.players.find((player) => player.id === id)?.username ?? "игрок";
   const last = game.lastRound;
@@ -205,6 +213,7 @@ export default function GamePage() {
   const clearTransition = useCallback(() => setTransition(null), []);
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [effect, setEffect] = useState<GameEffect | null>(null);
+  const [hostLine, setHostLine] = useState("");
   const [votingResult, setVotingResult] = useState<VotingEndInfo | null>(null);
   const lastVotes = useRef<{ round: number; votes: VoteInfo[] }>({ round: 0, votes: [] });
   const handleConfirmRef = useRef<(() => void) | null>(null);
@@ -366,10 +375,7 @@ export default function GamePage() {
 
     if (!current.winner) {
       const narratorUser = userRef.current;
-      const narratorMe = findMe(current, narratorUser?.id, narratorUser?.username);
-      addChatMessages([
-        { id: `host-${phaseKey}`, name: "Ведущий", text: narrate(current, narratorMe), time: Date.now(), scope: "all", system: true },
-      ]);
+      setHostLine(narrate(current, findMe(current, narratorUser?.id, narratorUser?.username)));
     }
 
     const currentUser = userRef.current;
@@ -408,7 +414,7 @@ export default function GamePage() {
         })
         .catch(() => {});
     }
-  }, [phaseKey, addChatMessages, isDemo, notify, loadGame]);
+  }, [phaseKey, isDemo, notify, loadGame]);
 
   useEffect(() => {
     if (game?.phase === "VOTING") lastVotes.current = { round: game.round, votes: game.votes };
@@ -517,12 +523,8 @@ export default function GamePage() {
   const gameWinner = game?.winner ?? null;
   useEffect(() => {
     if (!gameWinner) return;
-    const text =
-      gameWinner === "MAFIA"
-        ? "🏁 Победила мафия."
-        : "🏁 Победили жители.";
-    addChatMessages([{ id: `host-winner`, name: "Ведущий", text, time: Date.now(), scope: "all", system: true }]);
-  }, [gameWinner, addChatMessages]);
+    setHostLine(gameWinner === "MAFIA" ? "🏁 Победила мафия." : "🏁 Победили жители.");
+  }, [gameWinner]);
 
   const myVote = game && me && game.phase === "VOTING" ? game.votes.find((vote) => vote.voterId === me.id) : undefined;
   useEffect(() => {
@@ -662,7 +664,7 @@ export default function GamePage() {
       const activeName = night.activeIndex !== null ? NIGHT_TURNS[night.activeIndex].title : null;
       const sleepText = activeName
         ? `Сейчас ходит: ${activeName} (${night.secondsInTurn} сек)`
-        : `Все сделали ход. Утро через ${secondsLeft} сек.`;
+        : `Все сделали ход. Утро через ${formatSeconds(secondsLeft)}.`;
 
       if (!iCanAct || role === "civilian" || !role) {
         return (
@@ -759,11 +761,11 @@ export default function GamePage() {
     }
 
     if (game.phase === "DAY") {
-      return { text: `💬 Обсуждайте в чате, кто мафия. Голосование через ${secondsLeft} сек.`, isAction: false };
+      return { text: `💬 Обсуждайте в чате, кто мафия. До голосования ${formatSeconds(secondsLeft)}.`, isAction: false };
     }
 
     if (isSent) return { text: "✓ Голос учтён. Ждём остальных.", isAction: false };
-    return { text: `👉 Нажмите на игрока, которого хотите выгнать, потом «Проголосовать». Осталось ${secondsLeft} сек.`, isAction: true };
+    return { text: `👉 Нажмите на игрока, которого хотите выгнать, потом «Проголосовать». Осталось ${formatSeconds(secondsLeft)}.`, isAction: true };
   }
 
   const todo = getTodo();
@@ -847,7 +849,7 @@ export default function GamePage() {
             {chatPanel}
           </>
         ) : (
-          <div className="game-page-grid">
+          <div className={game.phase === "NIGHT" ? "game-page-grid game-page-grid-solo" : "game-page-grid"}>
             <main className="game-page-main">
               <SkyClock
                 phase={game.phase}
@@ -856,6 +858,12 @@ export default function GamePage() {
                 duration={getPhaseDuration(game)}
                 hint={skyHint}
               />
+              {hostLine && (
+                <p className="game-page-host" role="status">
+                  <b>🎙 Ведущий</b>
+                  {hostLine}
+                </p>
+              )}
               {todo.text && (
                 <p className={todo.isAction ? "game-page-todo game-page-todo-action" : "game-page-todo"} role="status">
                   {todo.text}
@@ -873,7 +881,7 @@ export default function GamePage() {
                 )}
               </div>
             </main>
-            <aside className="game-page-side">{chatPanel}</aside>
+            {game.phase !== "NIGHT" && <aside className="game-page-side">{chatPanel}</aside>}
           </div>
         )}
       </div>

@@ -114,7 +114,7 @@ export function getRole(key: RoleKey): Role {
 }
 
 export const DEFAULT_TIMES = {
-  day: 90,
+  day: 120,
   night: 90,
   voting: 60,
 };

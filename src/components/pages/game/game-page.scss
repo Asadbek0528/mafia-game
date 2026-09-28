@@ -41,6 +41,10 @@
   align-items: start;
 }
 
+.game-page-grid-solo {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .game-page-main {
   display: grid;
   gap: 14px;
@@ -114,6 +118,28 @@
   border-color: var(--color-red);
   box-shadow: 0 0 16px var(--color-red-glow);
   opacity: 1;
+}
+
+.game-page-host {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0;
+  padding: 12px 16px;
+  font-size: 17px;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(90deg, rgba(60, 40, 6, 0.95), rgba(20, 12, 4, 0.9));
+  border: 1px solid #b8860b;
+  border-radius: var(--radius-big);
+
+  b {
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #ffc24a;
+  }
 }
 
 .game-page-todo {
