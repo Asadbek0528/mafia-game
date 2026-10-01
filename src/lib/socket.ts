@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getToken } from "./auth";
 
-const WS_SETTING = process.env.NEXT_PUBLIC_WS_URL ?? "auto";
-const WS_PORT = process.env.NEXT_PUBLIC_WS_PORT ?? "3001";
-const ROOM_PATH = process.env.NEXT_PUBLIC_WS_ROOM_PATH ?? "/ws/room/{id}";
-const GAME_PATH = process.env.NEXT_PUBLIC_WS_GAME_PATH ?? "/ws/game/{id}";
+const WS_SETTING = process.env.NEXT_PUBLIC_WS_URL?.trim() || "auto";
+const WS_PORT = process.env.NEXT_PUBLIC_WS_PORT?.trim() || "3001";
+const ROOM_PATH = process.env.NEXT_PUBLIC_WS_ROOM_PATH?.trim() || "/ws/room/{id}";
+const GAME_PATH = process.env.NEXT_PUBLIC_WS_GAME_PATH?.trim() || "/ws/game/{id}";
 const MAX_RETRY_MS = 8000;
 
 export const WS_PATHS = {

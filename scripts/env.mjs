@@ -13,7 +13,8 @@ function readEnvFile() {
 const fileEnv = readEnvFile();
 
 export function setting(name, fallback) {
-  return process.env[name] ?? fileEnv[name] ?? fallback;
+  const value = process.env[name] ?? fileEnv[name];
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
 }
 
 export const BACKEND_URL = setting("BACKEND_URL", "http://13.210.238.201").replace(/\/$/, "");

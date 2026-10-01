@@ -2,9 +2,9 @@ import { networkInterfaces } from "node:os";
 
 import type { NextConfig } from "next";
 
-const BACKEND_URL = (process.env.BACKEND_URL ?? "http://13.210.238.201").replace(/\/$/, "");
+const BACKEND_URL = (process.env.BACKEND_URL?.trim() || "http://13.210.238.201").replace(/\/$/, "");
 const WS_PORT = process.env.WS_PORT ?? process.env.NEXT_PUBLIC_WS_PORT ?? "3001";
-const WS_TARGET = (process.env.WS_INTERNAL_URL ?? `http://127.0.0.1:${WS_PORT}`).replace(/\/$/, "");
+const WS_TARGET = (process.env.WS_INTERNAL_URL?.trim() || `http://127.0.0.1:${WS_PORT}`).replace(/\/$/, "");
 
 function lanRank(address: string): number {
   if (address.startsWith("192.168.")) return 0;
