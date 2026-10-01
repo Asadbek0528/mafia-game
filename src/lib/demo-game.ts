@@ -1,4 +1,4 @@
-import type { GamePlayer, GameState, GameWinner, RoleCounts, RoleKey } from "./api";
+import type { EliminationReason, GamePlayer, GameState, GameWinner, RoleCounts, RoleKey } from "./api";
 import { countRoles, DEFAULT_TIMES } from "./roles";
 import { DEMO_NAMES } from "./demo";
 
@@ -87,8 +87,10 @@ function findWinner(players: GamePlayer[]): GameWinner | null {
   return null;
 }
 
-function kill(players: GamePlayer[], playerId: number | null): GamePlayer[] {
-  return players.map((player) => (player.id === playerId ? { ...player, isAlive: false } : player));
+function kill(players: GamePlayer[], playerId: number | null, round: number, reason: EliminationReason): GamePlayer[] {
+  return players.map((player) =>
+    player.id === playerId ? { ...player, isAlive: false, eliminatedRound: round, eliminatedReason: reason } : player,
+  );
 }
 
 export function advanceDemoGame(game: GameState, me: GamePlayer | undefined, myTarget: number | null): GameState {
@@ -103,7 +105,7 @@ export function advanceDemoGame(game: GameState, me: GamePlayer | undefined, myT
     const healTarget = !doctorAlive ? null : iCanAct && me?.role === "doctor" ? myTarget : randomItem(alive)?.id ?? null;
 
     const isSaved = mafiaTarget !== null && mafiaTarget === healTarget;
-    const players = isSaved ? game.players : kill(game.players, mafiaTarget);
+    const players = isSaved ? game.players : kill(game.players, mafiaTarget, game.round, "NIGHT_KILL");
 
     return {
       ...game,
@@ -120,7 +122,7 @@ export function advanceDemoGame(game: GameState, me: GamePlayer | undefined, myT
   }
 
   const target = iCanAct ? myTarget : randomItem(alive)?.id ?? null;
-  const players = kill(game.players, target);
+  const players = kill(game.players, target, game.round, "VOTE");
 
   return {
     ...game,

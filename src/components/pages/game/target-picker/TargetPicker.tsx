@@ -4,15 +4,18 @@ import { getRole } from "@/lib/roles";
 import "./target-picker.scss";
 
 type TargetPickerProps = {
-  title: string;
+  title?: string;
   subtitle?: string;
   players: GamePlayer[];
   selectableIds: number[];
   selectedId: number | null;
   meId: number | null;
   isSent: boolean;
+  isUrgent?: boolean;
   confirmText?: string;
+  headerButton?: React.ReactNode;
   showRole: (player: GamePlayer) => boolean;
+  deathLabel: (player: GamePlayer) => string;
   onSelect: (playerId: number) => void;
   onConfirm?: () => void;
   voteCounts?: Record<number, number>;
@@ -20,19 +23,36 @@ type TargetPickerProps = {
 };
 
 export default function TargetPicker(props: TargetPickerProps) {
-  const { title, subtitle, players, selectableIds, selectedId, meId, isSent, confirmText, showRole, onSelect, onConfirm, voteCounts, votedIds } = props;
+  const { title, subtitle, players, selectableIds, selectedId, meId, isSent, isUrgent, confirmText, headerButton, showRole, deathLabel, onSelect, onConfirm, voteCounts, votedIds } = props;
 
   const canChoose = selectableIds.length > 0 && !isSent;
+  const aliveCount = players.filter((player) => player.isAlive).length;
 
   return (
     <section className="target-picker">
-      <h2 className="target-picker-title">{title}</h2>
-      {subtitle && <p className="target-picker-subtitle">{subtitle}</p>}
+      <div className="target-picker-top">
+        <h2 className="target-picker-heading">
+          Игроки
+          <span title="Живых из всех">
+            {aliveCount}/{players.length}
+          </span>
+        </h2>
+        {headerButton}
+      </div>
+
+      {(title || subtitle) && (
+        <div className={isUrgent ? "target-picker-task target-picker-task-urgent" : "target-picker-task"} role="status">
+          {title && <p className="target-picker-title">{title}</p>}
+          {subtitle && <p className="target-picker-subtitle">{subtitle}</p>}
+        </div>
+      )}
 
       <ul className="target-picker-list">
         {players.map((player) => {
           const isSelectable = canChoose && selectableIds.includes(player.id);
           const isSelected = player.id === selectedId;
+          const hasVoted = votedIds?.includes(player.id) ?? false;
+          const votes = voteCounts?.[player.id] ?? 0;
 
           let className = "target-picker-player";
           if (!player.isAlive) className += " target-picker-player-dead";
@@ -48,24 +68,30 @@ export default function TargetPicker(props: TargetPickerProps) {
                 onClick={() => onSelect(player.id)}
                 aria-pressed={isSelected}
               >
-                <Avatar name={player.username} size={52} />
+                <Avatar name={player.username} size={56} />
                 <span className="target-picker-name">
-                  {player.username}
-                  {player.id === meId && " (вы)"}
+                  {player.isAlive ? <i className="target-picker-dot" aria-hidden="true" /> : <SkullIcon />}
+                  <span>{player.username}</span>
                 </span>
 
-                {showRole(player) && player.role && <span className="target-picker-role">{getRole(player.role).name}</span>}
-                {votedIds && player.isAlive && (
-                  <span
-                    className={votedIds.includes(player.id) ? "target-picker-voted target-picker-voted-yes" : "target-picker-voted"}
-                    title={votedIds.includes(player.id) ? "Уже проголосовал" : "Ещё не проголосовал"}
-                  >
-                    {votedIds.includes(player.id) ? "✓" : "✗"}
+                {player.id === meId && <span className="target-picker-me">Вы</span>}
+                {showRole(player) && player.role && (
+                  <span className={player.role === "mafia" ? "target-picker-chip target-picker-chip-mafia" : "target-picker-chip target-picker-chip-town"}>
+                    {getRole(player.role).name}
                   </span>
                 )}
-                {voteCounts && (voteCounts[player.id] ?? 0) > 0 && (
+                {!player.isAlive && <span className="target-picker-chip target-picker-chip-dead">{deathLabel(player)}</span>}
+                {votedIds && player.isAlive && (
+                  <span
+                    className={hasVoted ? "target-picker-voted target-picker-voted-yes" : "target-picker-voted"}
+                    title={hasVoted ? "Уже проголосовал" : "Ещё не проголосовал"}
+                  >
+                    {hasVoted ? "✓" : "✗"}
+                  </span>
+                )}
+                {votes > 0 && (
                   <span className="target-picker-votes" title="Голосов против этого игрока">
-                    <VoteIcon /> {voteCounts[player.id]} {voteWord(voteCounts[player.id])}
+                    <VoteIcon /> {votes} {voteWord(votes)}
                   </span>
                 )}
               </button>
@@ -80,6 +106,14 @@ export default function TargetPicker(props: TargetPickerProps) {
         </button>
       )}
     </section>
+  );
+}
+
+function SkullIcon() {
+  return (
+    <svg className="target-picker-skull" viewBox="0 0 24 24" fill="currentColor" aria-label="Выбыл">
+      <path d="M12 2C7 2 3.5 5.600 3.500 10.200c0 2.600 1.100 4.600 2.800 6V19c0 .8.700 1.500 1.500 1.500H9V22h2v-1.500h2V22h2v-1.500h1.200c.8 0 1.500-.7 1.500-1.500v-2.800c1.700-1.400 2.800-3.400 2.800-6C20.500 5.600 17 2 12 2zM8.500 13.500a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm7 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" />
+    </svg>
   );
 }
 

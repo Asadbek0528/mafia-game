@@ -233,6 +233,20 @@ async function answerCheck(socket, gameId, token, targetId) {
   reply(knownMafia.size >= room.mafia_count ? false : null);
 }
 
+async function answerRoles(socket, gameId, token) {
+  await socket.rolePromise;
+  const userId = userIdFromToken(token);
+  const [players, game] = await Promise.all([
+    backend(`/game-player/list?game_id=${gameId}`, token),
+    backend(`/game/detail?game_id=${gameId}`, token),
+  ]);
+  const me = players.find((player) => player.user_id === userId);
+  if (!me || (me.is_alive && game.winner === null)) return;
+  const roles = Object.fromEntries(gameRoles.get(gameId) ?? []);
+  for (const player of players) if (player.role) roles[player.id] = player.role;
+  if (socket.readyState === socket.OPEN) socket.send(JSON.stringify({ type: "roles", roles }));
+}
+
 async function finishIfMafiaWon(gameId, token) {
   const game = await backend(`/game/detail?game_id=${gameId}`, token);
   if (game.winner !== null) return false;
@@ -370,6 +384,10 @@ server.on("connection", (socket, request) => {
     }
     if (data?.type === "check") {
       if (gameId && token) answerCheck(socket, gameId, token, data.target).catch(() => {});
+      return;
+    }
+    if (data?.type === "roles") {
+      if (gameId && token) answerRoles(socket, gameId, token).catch(() => {});
       return;
     }
     if (data?.type === "chat") rememberChat(channel, data.message);

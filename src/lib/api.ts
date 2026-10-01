@@ -36,6 +36,8 @@ const ENDPOINTS = {
   gameList: "/game/list",
   gameDetail: (gameId: string) => `/game/detail?game_id=${gameId}`,
   gamePlayers: (gameId: string) => `/game-player/list?game_id=${gameId}`,
+  gamePlayerDetail: (gamePlayerId: number) =>
+    `/game-player/detail?game_player_id=${gamePlayerId}`,
   gameRounds: (gameId: string) => `/game-round/list?game_id=${gameId}`,
   gameRoundDetail: (roundId: number) =>
     `/game-round/detail?round_id=${roundId}`,
@@ -101,12 +103,16 @@ export type RoomFull = {
 export type GamePhase = "NIGHT" | "DAY" | "VOTING";
 export type GameWinner = "MAFIA" | "CITIZENS";
 
+export type EliminationReason = "NIGHT_KILL" | "VOTE";
+
 export type GamePlayer = {
   id: number;
   userId: number;
   username: string;
   role: RoleKey | null;
   isAlive: boolean;
+  eliminatedRound?: number | null;
+  eliminatedReason?: EliminationReason | null;
 };
 
 export type RoundResult = {
@@ -218,6 +224,10 @@ type BackendGamePlayer = {
   user_id: number;
   role: RoleKey | null;
   is_alive: boolean;
+};
+type BackendGamePlayerDetail = BackendGamePlayer & {
+  eliminated_round: number | null;
+  eliminated_reason: EliminationReason | null;
 };
 type BackendRoundShort = {
   id: number;
@@ -413,6 +423,21 @@ async function refreshAccessToken(): Promise<boolean> {
 }
 
 const usernameCache = new Map<number, string>();
+const eliminationCache = new Map<number, { round: number | null; reason: EliminationReason | null }>();
+
+async function getElimination(player: BackendGamePlayer) {
+  if (player.is_alive) return null;
+  const cached = eliminationCache.get(player.id);
+  if (cached) return cached;
+  try {
+    const detail = await request<BackendGamePlayerDetail>(ENDPOINTS.gamePlayerDetail(player.id));
+    const info = { round: detail.eliminated_round ?? null, reason: detail.eliminated_reason ?? null };
+    if (info.round !== null || info.reason !== null) eliminationCache.set(player.id, info);
+    return info;
+  } catch {
+    return null;
+  }
+}
 const myGamesCache = new Map<string, MyGame | null>();
 
 async function hadAnyMoves(gameId: number): Promise<boolean> {
@@ -943,6 +968,24 @@ export const api = {
     return active ? String(active.id) : null;
   },
 
+  async findMyActiveGame(): Promise<{ gameId: string; roomName: string } | null> {
+    const myId = getUser()?.id;
+    if (!myId) return null;
+    const [games, roomPlayers] = await Promise.all([
+      request<BackendGame[]>(ENDPOINTS.gameList),
+      request<BackendRoomPlayer[]>(ENDPOINTS.roomPlayerList()),
+    ]);
+    const myRooms = new Set(roomPlayers.filter((player) => player.user_id === myId).map((player) => player.room_id));
+    const active = games
+      .filter((game) => game.winner === null && myRooms.has(game.room_id))
+      .sort((a, b) => b.id - a.id)[0];
+    if (!active) return null;
+    const roomName = await request<BackendRoom>(ENDPOINTS.roomDetail(String(active.room_id)))
+      .then((room) => room.room_name)
+      .catch(() => "");
+    return { gameId: String(active.id), roomName };
+  },
+
   async getGame(gameId: string): Promise<GameState> {
     const game = await request<BackendGame>(ENDPOINTS.gameDetail(gameId));
 
@@ -952,9 +995,10 @@ export const api = {
       request<BackendRoom>(ENDPOINTS.roomDetail(String(game.room_id))),
     ]);
 
-    const names = await Promise.all(
-      players.map((player) => getUsername(player.user_id)),
-    );
+    const [names, eliminations] = await Promise.all([
+      Promise.all(players.map((player) => getUsername(player.user_id))),
+      Promise.all(players.map(getElimination)),
+    ]);
 
     type BackendNightActionFull = { actor_id: number; target_id: number; action_type: NightActionInfo["type"]; created_at: string };
     const loadNightActions = async (roundNumber: number): Promise<NightActionInfo[]> => {
@@ -983,6 +1027,11 @@ export const api = {
 
     const currentRound =
       rounds.find((round) => round.round_number === game.current_round) ?? null;
+
+    const toRoundNumber = (value: number | null): number | null => {
+      if (value === null || value <= game.current_round) return value;
+      return rounds.find((round) => round.id === value)?.round_number ?? null;
+    };
 
     const resultRoundNumber = game.current_phase === "NIGHT" ? game.current_round - 1 : game.current_round;
     const latest =
@@ -1023,6 +1072,8 @@ export const api = {
         username: names[index],
         role: player.role,
         isAlive: player.is_alive,
+        eliminatedRound: toRoundNumber(eliminations[index]?.round ?? null),
+        eliminatedReason: eliminations[index]?.reason ?? null,
       })),
       lastRound,
       nightActions,

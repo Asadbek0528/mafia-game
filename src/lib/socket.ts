@@ -6,21 +6,22 @@ const WS_SETTING = process.env.NEXT_PUBLIC_WS_URL ?? "auto";
 const WS_PORT = process.env.NEXT_PUBLIC_WS_PORT ?? "3001";
 const ROOM_PATH = process.env.NEXT_PUBLIC_WS_ROOM_PATH ?? "/ws/room/{id}";
 const GAME_PATH = process.env.NEXT_PUBLIC_WS_GAME_PATH ?? "/ws/game/{id}";
+const MAX_RETRY_MS = 8000;
 
 export const WS_PATHS = {
   room: (roomId: string) => ROOM_PATH.replace("{id}", roomId),
   game: (gameId: string) => GAME_PATH.replace("{id}", gameId),
 };
 
-function getServerUrl(): string {
-  if (WS_SETTING !== "auto") return WS_SETTING;
+function getServerUrls(): string[] {
+  if (WS_SETTING !== "auto") return [WS_SETTING.replace(/\/$/, "")];
   const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-  return `${protocol}://${window.location.hostname}:${WS_PORT}`;
+  return [`${protocol}://${window.location.host}`, `${protocol}://${window.location.hostname}:${WS_PORT}`];
 }
 
-function buildUrl(path: string): string {
+function buildUrl(server: string, path: string): string {
   const token = getToken();
-  const url = getServerUrl() + path;
+  const url = server + path;
   if (!token) return url;
   const separator = path.includes("?") ? "&" : "?";
   return `${url}${separator}token=${encodeURIComponent(token)}`;
@@ -45,18 +46,29 @@ export function useLiveUpdates(path: string | null, onMessage: (data: unknown) =
 
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     let attempt = 0;
+    let serverIndex = 0;
     let isStopped = false;
+    const servers = getServerUrls();
 
     function scheduleReconnect() {
       attempt += 1;
-      const delay = Math.min(30_000, 1000 * 2 ** attempt);
+      const delay = Math.min(MAX_RETRY_MS, 500 * 2 ** attempt);
+      clearTimeout(retryTimer);
       retryTimer = setTimeout(connect, delay);
+    }
+
+    function reconnectNow() {
+      if (isStopped || document.hidden || socketRef.current) return;
+      attempt = 0;
+      clearTimeout(retryTimer);
+      connect();
     }
 
     function connect() {
       let socket: WebSocket;
+      let wasOpen = false;
       try {
-        socket = new WebSocket(buildUrl(path!));
+        socket = new WebSocket(buildUrl(servers[serverIndex % servers.length], path!));
       } catch {
         scheduleReconnect();
         return;
@@ -64,6 +76,7 @@ export function useLiveUpdates(path: string | null, onMessage: (data: unknown) =
       socketRef.current = socket;
 
       socket.onopen = () => {
+        wasOpen = true;
         attempt = 0;
         setIsLive(true);
         socket.send(JSON.stringify({ type: "hello" }));
@@ -80,8 +93,10 @@ export function useLiveUpdates(path: string | null, onMessage: (data: unknown) =
       };
 
       socket.onclose = () => {
-        if (socketRef.current === socket) socketRef.current = null;
+        if (socketRef.current !== socket) return;
+        socketRef.current = null;
         setIsLive(false);
+        if (!wasOpen) serverIndex += 1;
         if (!isStopped) scheduleReconnect();
       };
 
@@ -89,12 +104,17 @@ export function useLiveUpdates(path: string | null, onMessage: (data: unknown) =
     }
 
     connect();
+    document.addEventListener("visibilitychange", reconnectNow);
+    window.addEventListener("online", reconnectNow);
 
     return () => {
       isStopped = true;
       clearTimeout(retryTimer);
-      socketRef.current?.close();
+      document.removeEventListener("visibilitychange", reconnectNow);
+      window.removeEventListener("online", reconnectNow);
+      const socket = socketRef.current;
       socketRef.current = null;
+      socket?.close();
       setIsLive(false);
     };
   }, [path]);

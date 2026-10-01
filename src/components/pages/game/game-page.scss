@@ -2,35 +2,23 @@
   min-height: 100vh;
   min-height: 100dvh;
   padding: 18px;
-  background-color: #000000;
-  background-position: center;
-  background-size: cover;
+  background-color: #050203;
+  background-image:
+    radial-gradient(ellipse at 50% 0, rgba(140, 10, 20, 0.28), transparent 60%),
+    linear-gradient(90deg, rgba(120, 8, 16, 0.22), transparent 18%, transparent 82%, rgba(120, 8, 16, 0.22));
   background-attachment: fixed;
-  transition: background-color 1s;
 }
 
 .game-page-night {
   background-image:
-    linear-gradient(180deg, rgba(5, 8, 25, 0.8), rgba(0, 0, 0, 0.95)),
-    url("/img/hero.webp");
-}
-
-.game-page-day {
-  background-image:
-    linear-gradient(180deg, rgba(60, 25, 5, 0.55), rgba(0, 0, 0, 0.9)),
-    url("/img/street.webp");
-}
-
-.game-page-voting {
-  background-image:
-    linear-gradient(180deg, rgba(90, 0, 8, 0.65), rgba(0, 0, 0, 0.95)),
-    url("/img/street.webp");
+    radial-gradient(ellipse at 50% 0, rgba(40, 50, 140, 0.28), transparent 60%),
+    linear-gradient(90deg, rgba(20, 26, 80, 0.25), transparent 18%, transparent 82%, rgba(20, 26, 80, 0.25));
 }
 
 .game-page-content {
   display: grid;
-  gap: 14px;
-  max-width: 1200px;
+  gap: 12px;
+  max-width: 1100px;
   margin: 0 auto;
 }
 
@@ -58,18 +46,6 @@
   min-width: 0;
 }
 
-.game-page-exit {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-}
-
-.game-page-end {
-  color: #ff9ea4;
-  border-color: var(--color-line-red);
-}
-
 .game-page-turns {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -89,9 +65,9 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text-muted);
-  background: rgba(10, 3, 4, 0.78);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius);
+  background: rgba(12, 8, 9, 0.9);
+  border: 1px solid #2a1719;
+  border-radius: 12px;
 
   b {
     min-width: 22px;
@@ -126,16 +102,16 @@
   align-items: baseline;
   gap: 4px 10px;
   margin: 0;
-  padding: 12px 16px;
-  font-size: 17px;
+  padding: 10px 14px;
+  font-size: 15px;
   font-weight: 600;
   color: #fff;
-  background: linear-gradient(90deg, rgba(60, 40, 6, 0.95), rgba(20, 12, 4, 0.9));
-  border: 1px solid #b8860b;
-  border-radius: var(--radius-big);
+  background: linear-gradient(90deg, rgba(48, 32, 6, 0.92), rgba(16, 10, 6, 0.92));
+  border: 1px solid rgba(184, 134, 11, 0.55);
+  border-radius: 14px;
 
   b {
-    font-size: 13px;
+    font-size: 12px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: #ffc24a;
@@ -144,12 +120,12 @@
 
 .game-page-todo {
   margin: 0;
-  padding: 12px 16px;
-  font-size: 16px;
+  padding: 10px 14px;
+  font-size: 15px;
   font-weight: 600;
-  background: rgba(20, 12, 4, 0.9);
-  border: 1px solid #6b4d12;
-  border-radius: var(--radius-big);
+  background: rgba(12, 8, 9, 0.9);
+  border: 1px solid #2a1719;
+  border-radius: 14px;
 }
 
 .game-page-todo-action {
@@ -172,7 +148,7 @@
   text-align: center;
   background: rgba(20, 5, 6, 0.9);
   border: 1px solid var(--color-red);
-  border-radius: var(--radius-big);
+  border-radius: 14px;
 }
 
 .game-page-connecting {
@@ -209,45 +185,6 @@
   color: var(--color-text-muted);
 }
 
-.game-page-connection {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  z-index: 20;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  font-size: 12px;
-  color: #c9f5d9;
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(47, 211, 107, 0.4);
-  border-radius: 999px;
-
-  span {
-    width: 8px;
-    height: 8px;
-    background: var(--color-green);
-    border-radius: 50%;
-  }
-}
-
-.game-page-connection-bad {
-  color: #ffe2a8;
-  border-color: rgba(227, 165, 49, 0.5);
-
-  span {
-    background: var(--color-yellow);
-    animation: game-page-blink 1s ease-in-out infinite;
-  }
-}
-
-@keyframes game-page-blink {
-  50% {
-    opacity: 0.3;
-  }
-}
-
 .game-page-message {
   padding: 60px 20px;
   text-align: center;
@@ -262,8 +199,12 @@
 
 @media (max-width: 600px) {
   .game-page {
-    padding: 10px;
+    padding: 10px 10px 16px;
     background-attachment: scroll;
+  }
+
+  .game-page-turn {
+    font-size: 12px;
   }
 
   .game-page-content,

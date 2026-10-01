@@ -1,21 +1,65 @@
 .dead-banner {
+  position: relative;
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 14px;
-  padding: 12px 16px;
-  background: linear-gradient(90deg, rgba(90, 0, 8, 0.85), rgba(20, 0, 2, 0.85));
-  border: 1px solid var(--color-red-dark);
-  border-radius: var(--radius-big);
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  overflow: hidden;
+  background-color: #1c0306;
+  background-image:
+    linear-gradient(90deg, rgba(40, 3, 7, 0.97) 45%, rgba(40, 3, 7, 0.55) 80%, rgba(40, 3, 7, 0.75)),
+    url("/img/hero.webp");
+  background-position: center, right -40px center;
+  background-repeat: no-repeat;
+  background-size: auto, auto 150%;
+  border: 1px solid var(--color-red);
+  border-radius: 18px;
+  box-shadow: 0 0 22px rgba(224, 32, 43, 0.25), inset 0 0 30px rgba(224, 32, 43, 0.12);
+}
+
+.dead-banner-icon {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  color: var(--color-red);
+  filter: drop-shadow(0 0 10px rgba(224, 32, 43, 0.7));
+}
+
+.dead-banner-body {
+  min-width: 0;
+  max-width: 460px;
 }
 
 .dead-banner-title {
-  font-family: var(--font-horror);
-  font-size: 26px;
-  color: var(--color-red);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.15;
+  color: #ff2f3b;
 }
 
 .dead-banner-text {
+  margin-top: 4px;
   font-size: 14px;
-  color: #e6d6d6;
+  line-height: 1.4;
+  color: #eadede;
+}
+
+@media (max-width: 380px) {
+  .dead-banner {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .dead-banner-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .dead-banner-title {
+    font-size: 20px;
+  }
+
+  .dead-banner-text {
+    font-size: 13px;
+  }
 }

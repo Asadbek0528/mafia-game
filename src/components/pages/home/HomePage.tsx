@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -23,6 +24,7 @@ export default function HomePage() {
 
   const [rooms, setRooms] = useState<RoomShort[] | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [myGame, setMyGame] = useState<{ gameId: string; roomName: string } | null>(null);
 
   useEffect(() => {
     if (isLoaded && !user) {
@@ -33,6 +35,25 @@ export default function HomePage() {
   useEffect(() => {
     loadOrDemo(api.getRooms, DEMO_ROOMS).then(setRooms);
   }, []);
+
+  const userId = user?.id;
+  useEffect(() => {
+    if (!userId) return;
+    let isStopped = false;
+    const check = () =>
+      api
+        .findMyActiveGame()
+        .then((game) => {
+          if (!isStopped) setMyGame(game);
+        })
+        .catch(() => {});
+    check();
+    const timer = setInterval(check, 15000);
+    return () => {
+      isStopped = true;
+      clearInterval(timer);
+    };
+  }, [userId]);
 
   function handleQuickPlay() {
     const freeRoom = rooms?.find((room) => room.status === "waiting" && room.players < room.max_players);
@@ -51,6 +72,18 @@ export default function HomePage() {
   return (
     <div className="home-page">
       <main className="home-page-main">
+        {myGame && (
+          <div className="home-page-rejoin" role="status">
+            <p>
+              <b>Вы в игре{myGame.roomName ? ` «${myGame.roomName}»` : ""}</b>
+              Игра ещё идёт — можно вернуться.
+            </p>
+            <Link href={`/game/${myGame.gameId}`} className="btn btn-red">
+              Вернуться в игру
+            </Link>
+          </div>
+        )}
+
         <Hero onPlay={handleQuickPlay} onCreateRoom={() => setIsModalOpen(true)} />
 
         <section className="panel">

@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import Avatar from "@/components/pages/widgets/avatar/Avatar";
+
 import "./game-chat.scss";
 
 export type ChatMessage = {
@@ -29,12 +31,22 @@ function formatTime(time: number): string {
 
 export default function GameChat({ messages, myName, canWrite, scope, hint, onSend }: GameChatProps) {
   const [text, setText] = useState("");
+  const [isOpen, setIsOpen] = useState(true);
+  const [seenCount, setSeenCount] = useState(0);
   const listRef = useRef<HTMLUListElement>(null);
 
   useEffect(() => {
+    if (window.matchMedia("(max-width: 960px)").matches) setIsOpen(false);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setSeenCount(messages.length);
     const list = listRef.current;
     if (list) list.scrollTop = list.scrollHeight;
-  }, [messages.length]);
+  }, [messages.length, isOpen]);
+
+  const unread = isOpen ? 0 : Math.max(0, messages.length - seenCount);
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -47,10 +59,27 @@ export default function GameChat({ messages, myName, canWrite, scope, hint, onSe
   return (
     <section className="game-chat">
       <h2 className="game-chat-title">
-        Чат
-        {scope === "dead" && canWrite && <span className="game-chat-badge">чат погибших</span>}
+        <button
+          type="button"
+          className={isOpen ? "game-chat-tab game-chat-tab-open" : "game-chat-tab"}
+          aria-expanded={isOpen}
+          onClick={() => setIsOpen((old) => !old)}
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-8l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm4 5.2a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6zm4 0a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6zm4 0a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6z" />
+          </svg>
+          Чат
+          {unread > 0 && <b className="game-chat-unread">{unread}</b>}
+          <svg className="game-chat-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
+        {!isOpen && <span className="game-chat-closed">{unread > 0 ? "Новые сообщения" : "Нажмите, чтобы открыть"}</span>}
+        {isOpen && scope === "dead" && canWrite && <span className="game-chat-badge">вас видят только погибшие</span>}
       </h2>
 
+      {isOpen && (
+        <>
       <ul ref={listRef} className="game-chat-list">
         {messages.length === 0 && <li className="game-chat-empty">Сообщений пока нет.</li>}
         {messages.map((message) => {
@@ -60,12 +89,15 @@ export default function GameChat({ messages, myName, canWrite, scope, hint, onSe
 
           return (
             <li key={message.id} className={className}>
-              <p className="game-chat-meta">
-                <b>{message.name}</b>
-                {message.scope === "dead" && " · погибший"}
-                <time>{formatTime(message.time)}</time>
-              </p>
-              <p className="game-chat-text">{message.text}</p>
+              <Avatar name={message.name} size={38} />
+              <div className="game-chat-bubble">
+                <p className="game-chat-meta">
+                  <b>{message.name}</b>
+                  {message.scope === "dead" && <i>погибший</i>}
+                  <time>{formatTime(message.time)}</time>
+                </p>
+                <p className="game-chat-text">{message.text}</p>
+              </div>
             </li>
           );
         })}
@@ -87,6 +119,8 @@ export default function GameChat({ messages, myName, canWrite, scope, hint, onSe
           </svg>
         </button>
       </form>
+        </>
+      )}
     </section>
   );
 }

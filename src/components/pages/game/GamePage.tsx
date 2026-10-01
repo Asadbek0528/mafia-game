@@ -15,9 +15,9 @@ import EffectOverlay, { type GameEffect } from "./effect-overlay/EffectOverlay";
 import GameHeader from "./game-header/GameHeader";
 import GameChat, { type ChatMessage } from "./game-chat/GameChat";
 import GameOver from "./game-over/GameOver";
+import GameTopBar, { type GameConnection } from "./game-topbar/GameTopBar";
 import PhaseTransition, { PHASE_TRANSITION_MS, type PhaseTransitionInfo } from "./phase-transition/PhaseTransition";
 import RoleReveal from "./role-reveal/RoleReveal";
-import SkyClock from "./sky-clock/SkyClock";
 import TargetPicker from "./target-picker/TargetPicker";
 import VotingEnd, { VOTING_RESULT_MS, type VotingEndInfo } from "./voting-end/VotingEnd";
 import "./game-page.scss";
@@ -178,14 +178,37 @@ function narrate(game: GameState, me: GamePlayer | undefined): string {
 
 type Team = { role: RoleKey; ids: number[] };
 
-function withTeam(game: GameState | null, team: Team | null): GameState | null {
-  if (!game || !team) return game;
+type RevealedRoles = Record<number, RoleKey>;
+
+const ROLE_KEYS: RoleKey[] = ["mafia", "doctor", "commissar", "civilian"];
+
+function withTeam(game: GameState | null, team: Team | null, revealed: RevealedRoles): GameState | null {
+  if (!game) return game;
   return {
     ...game,
-    players: game.players.map((player) =>
-      player.role === null && team.ids.includes(player.id) ? { ...player, role: team.role } : player,
-    ),
+    players: game.players.map((player) => {
+      if (player.role !== null) return player;
+      if (team?.ids.includes(player.id)) return { ...player, role: team.role };
+      return revealed[player.id] ? { ...player, role: revealed[player.id] } : player;
+    }),
   };
+}
+
+function getDeathLabel(game: GameState, player: GamePlayer): string {
+  let reason = player.eliminatedReason ?? null;
+  let round = player.eliminatedRound ?? null;
+  const last = game.lastRound;
+  if (reason === null && last?.killedPlayerId === player.id) {
+    reason = "NIGHT_KILL";
+    round = last.roundNumber;
+  }
+  if (reason === null && last?.eliminatedPlayerId === player.id) {
+    reason = "VOTE";
+    round = last.roundNumber;
+  }
+  if (reason === "NIGHT_KILL") return round ? `Убит (Ночь ${round})` : "Убит ночью";
+  if (reason === "VOTE") return round ? `Изгнан (День ${round})` : "Изгнан";
+  return "Выбыл";
 }
 
 function findMe(game: GameState, userId: number | undefined, username: string | undefined): GamePlayer | undefined {
@@ -203,7 +226,8 @@ export default function GamePage() {
 
   const [rawGame, setGame] = useState<GameState | null>(null);
   const [team, setTeam] = useState<Team | null>(null);
-  const game = useMemo(() => withTeam(rawGame, team), [rawGame, team]);
+  const [revealed, setRevealed] = useState<RevealedRoles>({});
+  const game = useMemo(() => withTeam(rawGame, team, revealed), [rawGame, team, revealed]);
   const [loadError, setLoadError] = useState("");
   const [isRoleOpen, setIsRoleOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -219,6 +243,7 @@ export default function GamePage() {
   const handleConfirmRef = useRef<(() => void) | null>(null);
   const clearEffect = useCallback(() => setEffect(null), []);
   const [isEnding, setIsEnding] = useState(false);
+  const [areRolesShown, setAreRolesShown] = useState(true);
   const [secondsLeft, setSecondsLeft] = useState(0);
 
   const gameRef = useRef<GameState | null>(null);
@@ -322,6 +347,15 @@ export default function GamePage() {
     const secret = data as { type?: string; role?: RoleKey; ids?: unknown; target?: unknown; isMafia?: unknown } | null;
     if (secret?.type === "team" && secret.role && Array.isArray(secret.ids)) {
       setTeam({ role: secret.role, ids: secret.ids.filter((id): id is number => typeof id === "number") });
+      return;
+    }
+    const reveal = data as { type?: string; roles?: Record<string, unknown> } | null;
+    if (reveal?.type === "roles" && reveal.roles && typeof reveal.roles === "object") {
+      const next: RevealedRoles = {};
+      for (const [id, role] of Object.entries(reveal.roles)) {
+        if (ROLE_KEYS.includes(role as RoleKey)) next[Number(id)] = role as RoleKey;
+      }
+      setRevealed(next);
       return;
     }
     if (secret?.type === "check-result" && typeof secret.target === "number") {
@@ -526,6 +560,11 @@ export default function GamePage() {
     setHostLine(gameWinner === "MAFIA" ? "🏁 Победила мафия." : "🏁 Победили жители.");
   }, [gameWinner]);
 
+  const amDead = me?.isAlive === false;
+  useEffect(() => {
+    if (amDead && isLive) notify("roles");
+  }, [amDead, isLive, phaseKey, notify]);
+
   const myVote = game && me && game.phase === "VOTING" ? game.votes.find((vote) => vote.voterId === me.id) : undefined;
   useEffect(() => {
     if (!myVote || isSent) return;
@@ -641,15 +680,32 @@ export default function GamePage() {
 
   function canSeeRole(player: GamePlayer): boolean {
     if (!player.role) return false;
-    if (isGameOver || player.id === me?.id || me?.isAlive === false) return true;
+    if (isGameOver || player.id === me?.id) return true;
+    if (me?.isAlive === false) return areRolesShown;
     return me?.role !== undefined && me.role !== null && TEAM_ROLES.includes(me.role) && player.role === me.role;
   }
 
   function renderPhase() {
     if (!game) return null;
 
+    const isWatcher = me?.isAlive === false;
+    const headerButton = isWatcher ? (
+      <button type="button" className="target-picker-button" aria-pressed={areRolesShown} onClick={() => setAreRolesShown((old) => !old)}>
+        <EyeIcon />
+        {areRolesShown ? "Скрыть роли" : "Смотреть роли"}
+      </button>
+    ) : me?.role ? (
+      <button type="button" className="target-picker-button" onClick={() => setIsRoleOpen(true)}>
+        <EyeIcon />
+        Моя роль
+      </button>
+    ) : undefined;
+
     const common = {
       players: game.players,
+      headerButton,
+      deathLabel: (player: GamePlayer) => getDeathLabel(game, player),
+      isUrgent: todo.isAction,
       selectedId,
       meId: me?.id ?? null,
       isSent,
@@ -690,7 +746,7 @@ export default function GamePage() {
       const teamTarget = teamAction ? game.players.find((player) => player.id === teamAction.targetId)?.username : null;
 
       const confirmText = role === "mafia" ? "Убить" : role === "doctor" ? "Вылечить" : "Проверить";
-      let subtitle = `${getRole(role).nightTask} Осталось ${night.secondsInTurn} сек.`;
+      let subtitle = `Нажмите на игрока, потом «${confirmText}». Осталось ${night.secondsInTurn} сек.`;
       if (role === "doctor" && lastHealName) subtitle += ` ${lastHealName} вы лечили прошлой ночью — его сегодня нельзя.`;
       if (isBefore) subtitle = `Ваш ход скоро. ${sleepText}`;
       if (!isMyTurn && !isBefore && !isSent) subtitle = teamTarget ? `Напарник выбрал: ${teamTarget}. ${sleepText}` : `Ваше время вышло. ${sleepText}`;
@@ -712,14 +768,7 @@ export default function GamePage() {
     }
 
     if (game.phase === "DAY") {
-      return (
-        <TargetPicker
-          {...common}
-          title={`День ${game.round}`}
-          subtitle="Обсудите, кто может быть мафией. Скоро голосование."
-          selectableIds={[]}
-        />
-      );
+      return <TargetPicker {...common} selectableIds={[]} />;
     }
 
     const voteCounts: Record<number, number> = {};
@@ -743,7 +792,7 @@ export default function GamePage() {
   function getTodo(): { text: string; isAction: boolean } {
     if (!game) return { text: "", isAction: false };
     if (!me) return { text: "👀 Вы зритель: смотрите за игрой.", isAction: false };
-    if (!me.isAlive) return { text: "👻 Вы выбыли: наблюдайте. Вы видите все роли и пишете только в чат погибших.", isAction: false };
+    if (!me.isAlive) return { text: "", isAction: false };
 
     if (game.phase === "NIGHT") {
       const role = me.role;
@@ -760,9 +809,7 @@ export default function GamePage() {
       return { text: "Ваш ход прошёл. Ждите утра.", isAction: false };
     }
 
-    if (game.phase === "DAY") {
-      return { text: `💬 Обсуждайте в чате, кто мафия. До голосования ${formatSeconds(secondsLeft)}.`, isAction: false };
-    }
+    if (game.phase === "DAY") return { text: "", isAction: false };
 
     if (isSent) return { text: "✓ Голос учтён. Ждём остальных.", isAction: false };
     return { text: `👉 Нажмите на игрока, которого хотите выгнать, потом «Проголосовать». Осталось ${formatSeconds(secondsLeft)}.`, isAction: true };
@@ -822,26 +869,24 @@ export default function GamePage() {
     <GameChat messages={visibleChat} myName={myName} canWrite={canWrite} scope={chatScope} hint={chatHint} onSend={sendChat} />
   );
 
+  let connection: GameConnection = isLive ? "live" : "slow";
+  if (isOffline) connection = "offline";
+  if (isDemo) connection = "demo";
+
   return (
     <div className={`game-page game-page-${game.phase.toLowerCase()}`}>
-      {!isDemo && (
-        <p className={isOffline ? "game-page-connection game-page-connection-bad" : "game-page-connection"} role="status">
-          <span />
-          {isOffline ? "Переподключаемся…" : isLive ? "Онлайн" : "Онлайн (без WebSocket)"}
-        </p>
-      )}
       <div className="game-page-content">
-        <GameHeader
-          phase={game.phase}
-          round={game.round}
-          secondsLeft={isGameOver ? 0 : secondsLeft}
-          myRole={me?.role ?? null}
+        <GameTopBar
           aliveCount={alivePlayers.length}
           totalCount={game.players.length}
+          connection={connection}
+          canShowRole={Boolean(me?.role)}
+          canEndGame={isGameOwner && !isDemo && !isGameOver}
+          isEnding={isEnding}
           onShowRole={() => setIsRoleOpen(true)}
+          onExit={() => router.push("/")}
+          onEndGame={handleEndGame}
         />
-
-        {me && !me.isAlive && !isGameOver && <DeadBanner />}
 
         {isGameOver && game.winner ? (
           <>
@@ -849,40 +894,29 @@ export default function GamePage() {
             {chatPanel}
           </>
         ) : (
-          <div className={game.phase === "NIGHT" ? "game-page-grid game-page-grid-solo" : "game-page-grid"}>
-            <main className="game-page-main">
-              <SkyClock
-                phase={game.phase}
-                round={game.round}
-                secondsLeft={secondsLeft}
-                duration={getPhaseDuration(game)}
-                hint={skyHint}
-              />
-              {hostLine && (
-                <p className="game-page-host" role="status">
-                  <b>🎙 Ведущий</b>
-                  {hostLine}
-                </p>
-              )}
-              {todo.text && (
-                <p className={todo.isAction ? "game-page-todo game-page-todo-action" : "game-page-todo"} role="status">
-                  {todo.text}
-                </p>
-              )}
-              {renderPhase()}
-              <div className="game-page-exit">
-                <button type="button" className="btn btn-dark btn-small" onClick={() => router.push("/")}>
-                  В меню
-                </button>
-                {isGameOwner && !isDemo && (
-                  <button type="button" className="btn btn-dark btn-small game-page-end" onClick={handleEndGame} disabled={isEnding}>
-                    {isEnding ? "Завершаем…" : "Завершить игру"}
-                  </button>
+          <>
+            <GameHeader phase={game.phase} round={game.round} secondsLeft={secondsLeft} duration={getPhaseDuration(game)} hint={skyHint} />
+
+            {me && !me.isAlive && <DeadBanner />}
+
+            <div className={game.phase === "NIGHT" ? "game-page-grid game-page-grid-solo" : "game-page-grid"}>
+              <main className="game-page-main">
+                {hostLine && (
+                  <p className="game-page-host" role="status">
+                    <b>🎙 Ведущий</b>
+                    {hostLine}
+                  </p>
                 )}
-              </div>
-            </main>
-            {game.phase !== "NIGHT" && <aside className="game-page-side">{chatPanel}</aside>}
-          </div>
+                {!me && todo.text && (
+                  <p className={todo.isAction ? "game-page-todo game-page-todo-action" : "game-page-todo"} role="status">
+                    {todo.text}
+                  </p>
+                )}
+                {renderPhase()}
+              </main>
+              {game.phase !== "NIGHT" && <aside className="game-page-side">{chatPanel}</aside>}
+            </div>
+          </>
         )}
       </div>
 
@@ -900,5 +934,14 @@ export default function GamePage() {
       <PhaseTransition info={transition} onDone={clearTransition} />
       <EffectOverlay effect={effect} onDone={clearEffect} />
     </div>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z" />
+      <circle cx="12" cy="12" r="2.8" fill="currentColor" />
+    </svg>
   );
 }
