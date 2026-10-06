@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import Avatar from "@/components/pages/widgets/avatar/Avatar";
+import AvatarPicker from "@/components/pages/widgets/avatar-picker/AvatarPicker";
 import { api, type User } from "@/lib/api";
 import { getRefreshToken, getToken, logout, saveLogin, useCurrentUser } from "@/lib/auth";
 import { formatPlayerId, toPlayerId } from "@/lib/player-id";
@@ -41,6 +42,16 @@ export default function ProfileCard() {
     else showToast(`Ваш ID: ${playerId}`);
   }
 
+  async function savePhoto(image: string) {
+    await api.updatePhoto(image);
+    setUser((old) => {
+      if (!old) return old;
+      const next = { ...old, profile_image: image };
+      saveLogin(next, getToken(), getRefreshToken());
+      return next;
+    });
+  }
+
   async function handleLogout() {
     await api.logout();
     logout();
@@ -58,7 +69,11 @@ export default function ProfileCard() {
   return (
     <section className="panel profile-card">
       <div className="profile-card-top">
-        <Avatar name={user.username} image={user.profile_image} size={64} />
+        {user.guest || !user.id ? (
+          <Avatar name={user.username} image={user.profile_image} size={64} />
+        ) : (
+          <AvatarPicker name={user.username} image={user.profile_image} size={64} onPick={savePhoto} />
+        )}
 
         <div className="profile-card-info">
           <p className="profile-card-name">{user.username}</p>

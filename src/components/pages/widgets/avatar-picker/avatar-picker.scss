@@ -1,0 +1,84 @@
+.avatar-picker {
+  position: relative;
+  display: inline-grid;
+  flex: none;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+
+  .avatar {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  &:disabled {
+    cursor: wait;
+  }
+}
+
+.avatar-picker-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.2s;
+
+  svg {
+    width: 38%;
+    height: 38%;
+  }
+}
+
+.avatar-picker:hover .avatar-picker-overlay,
+.avatar-picker:focus-visible .avatar-picker-overlay,
+.avatar-picker-over .avatar-picker-overlay,
+.avatar-picker-saving .avatar-picker-overlay {
+  opacity: 1;
+}
+
+.avatar-picker-over {
+  box-shadow: 0 0 0 3px var(--color-red), 0 0 24px rgba(224, 32, 43, 0.6);
+}
+
+.avatar-picker-spinner {
+  width: 40%;
+  height: 40%;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: avatar-picker-spin 0.8s linear infinite;
+}
+
+@keyframes avatar-picker-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (hover: none) {
+  .avatar-picker .avatar-picker-overlay {
+    opacity: 0;
+  }
+
+  .avatar-picker::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 30%;
+    height: 30%;
+    background: var(--color-red) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 8h3l2-3h6l2 3h3v11H4z'/%3E%3Ccircle cx='12' cy='13' r='3.5'/%3E%3C/svg%3E") center / 62% no-repeat;
+    border: 2px solid #0c0707;
+    border-radius: 50%;
+  }
+
+  .avatar-picker-saving .avatar-picker-overlay {
+    opacity: 1;
+  }
+}

@@ -773,6 +773,13 @@ export const api = {
     usernameCache.delete(myId);
   },
 
+  async updatePhoto(profileImage: string | null) {
+    await request(ENDPOINTS.userUpdate(getMyId()), {
+      method: "PUT",
+      body: { profile_image: profileImage },
+    });
+  },
+
   async getPublicUser(userId: number): Promise<PublicUser> {
     const user = await request<BackendUser>(ENDPOINTS.userDetail(userId));
     usernameCache.set(userId, user.username);

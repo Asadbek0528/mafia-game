@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
-import Avatar from "@/components/pages/widgets/avatar/Avatar";
+import AvatarPicker from "@/components/pages/widgets/avatar-picker/AvatarPicker";
 import { showToast } from "@/components/pages/widgets/toast/Toast";
 import { api } from "@/lib/api";
 import { getRefreshToken, getToken, saveLogin, useCurrentUser } from "@/lib/auth";
-import { resizeImage } from "@/lib/image";
 import "./profile-edit-form.scss";
 
 const MAX_FILE_MB = 5;
@@ -41,7 +40,6 @@ type ProfileEditFormProps = {
 
 export default function ProfileEditForm({ onSaved }: ProfileEditFormProps) {
   const { user } = useCurrentUser();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [values, setValues] = useState<FormValues>(EMPTY);
   const [photo, setPhoto] = useState<string | null>(null);
@@ -79,22 +77,16 @@ export default function ProfileEditForm({ onSaved }: ProfileEditFormProps) {
     setValues({ ...values, [name]: value });
   }
 
-  async function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
+  async function savePhoto(image: string | null) {
+    await api.updatePhoto(image);
+    setPhoto(image);
+    if (user) saveLogin({ ...user, profile_image: image }, getToken(), getRefreshToken());
+  }
 
-    if (!file.type.startsWith("image/")) {
-      showToast("Это не картинка. Выберите JPG, PNG или WEBP.", "error");
-      return;
-    }
-    if (file.size > MAX_FILE_MB * 1024 * 1024) {
-      showToast(`Файл больше ${MAX_FILE_MB} МБ. Выберите поменьше.`, "error");
-      return;
-    }
-
+  async function removePhoto() {
     try {
-      setPhoto(await resizeImage(file));
+      await savePhoto(null);
+      showToast("Фото убрано.", "success");
     } catch (error) {
       showToast((error as Error).message, "error");
     }
@@ -139,21 +131,17 @@ export default function ProfileEditForm({ onSaved }: ProfileEditFormProps) {
 
       <form className="profile-edit-form" onSubmit={handleSubmit} noValidate>
         <div className="profile-edit-photo">
-          <Avatar name={values.username || "?"} image={photo} size={96} />
+          <AvatarPicker name={values.username || "?"} image={photo} size={96} onPick={savePhoto} pasteAnywhere />
 
           <div className="profile-edit-photo-buttons">
-            <button type="button" className="btn btn-dark btn-small" onClick={() => fileInputRef.current?.click()}>
-              Загрузить фото
-            </button>
+            <p className="profile-edit-photo-title">Нажмите на фото, перетащите картинку или вставьте её (Ctrl+V)</p>
+            <p className="profile-edit-hint">JPG, PNG или WEBP, до {MAX_FILE_MB} МБ — сохраняется сразу</p>
             {photo && (
-              <button type="button" className="btn-link" onClick={() => setPhoto(null)}>
+              <button type="button" className="btn-link" onClick={removePhoto}>
                 Убрать фото
               </button>
             )}
-            <p className="profile-edit-hint">JPG, PNG или WEBP, до {MAX_FILE_MB} МБ</p>
           </div>
-
-          <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handlePhotoChange} />
         </div>
 
         <div className="profile-edit-row">
