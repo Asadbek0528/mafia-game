@@ -15,15 +15,12 @@ const MAX_FILE_MB = 5;
 type FormValues = {
   username: string;
   email: string;
-  newPassword: string;
-  repeatPassword: string;
-  currentPassword: string;
 };
 
 type FormErrors = Record<keyof FormValues, string>;
 
-const EMPTY: FormValues = { username: "", email: "", newPassword: "", repeatPassword: "", currentPassword: "" };
-const NO_ERRORS: FormErrors = { username: "", email: "", newPassword: "", repeatPassword: "", currentPassword: "" };
+const EMPTY: FormValues = { username: "", email: "" };
+const NO_ERRORS: FormErrors = { username: "", email: "" };
 
 function validate(values: FormValues): FormErrors {
   const errors = { ...NO_ERRORS };
@@ -34,11 +31,6 @@ function validate(values: FormValues): FormErrors {
 
   if (!values.email) errors.email = "Введите email.";
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) errors.email = "Email выглядит неправильно.";
-
-  if (values.newPassword && values.newPassword.length < 6) errors.newPassword = "Пароль — минимум 6 символов.";
-  if (values.newPassword && values.repeatPassword !== values.newPassword) errors.repeatPassword = "Пароли не совпадают.";
-
-  if (!values.currentPassword) errors.currentPassword = "Введите текущий пароль, чтобы сохранить.";
 
   return errors;
 }
@@ -119,18 +111,15 @@ export default function ProfileEditForm({ onSaved }: ProfileEditFormProps) {
 
     setIsSaving(true);
     try {
-      const password = clean.newPassword || clean.currentPassword;
-
       await api.updateProfile({
         username: clean.username,
         email: clean.email,
-        password,
         profileImage: photo,
       });
 
       saveLogin({ ...user, username: clean.username, email: clean.email, profile_image: photo }, getToken(), getRefreshToken());
 
-      setValues({ ...clean, newPassword: "", repeatPassword: "", currentPassword: "" });
+      setValues(clean);
       showToast("Профиль сохранён.", "success");
       onSaved();
     } catch (error) {
@@ -193,47 +182,7 @@ export default function ProfileEditForm({ onSaved }: ProfileEditFormProps) {
           </label>
         </div>
 
-        <p className="profile-edit-section">Сменить пароль (необязательно)</p>
-        <div className="profile-edit-row">
-          <label className="profile-edit-field">
-            <span className="profile-edit-label">Новый пароль</span>
-            <input
-              className={inputClass("newPassword")}
-              type="password"
-              autoComplete="new-password"
-              placeholder="минимум 6 символов"
-              value={values.newPassword}
-              onChange={(event) => setField("newPassword", event.target.value)}
-            />
-            {errors.newPassword && <span className="profile-edit-error">{errors.newPassword}</span>}
-          </label>
-
-          <label className="profile-edit-field">
-            <span className="profile-edit-label">Повторите новый пароль</span>
-            <input
-              className={inputClass("repeatPassword")}
-              type="password"
-              autoComplete="new-password"
-              value={values.repeatPassword}
-              onChange={(event) => setField("repeatPassword", event.target.value)}
-            />
-            {errors.repeatPassword && <span className="profile-edit-error">{errors.repeatPassword}</span>}
-          </label>
-        </div>
-
         <div className="profile-edit-confirm">
-          <label className="profile-edit-field">
-            <span className="profile-edit-label">Текущий пароль — чтобы сохранить изменения</span>
-            <input
-              className={inputClass("currentPassword")}
-              type="password"
-              autoComplete="current-password"
-              value={values.currentPassword}
-              onChange={(event) => setField("currentPassword", event.target.value)}
-            />
-            {errors.currentPassword && <span className="profile-edit-error">{errors.currentPassword}</span>}
-          </label>
-
           <button type="submit" className="btn btn-red profile-edit-save" disabled={isSaving}>
             {isSaving ? "Сохраняем…" : "Сохранить"}
           </button>

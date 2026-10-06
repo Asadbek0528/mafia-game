@@ -233,6 +233,25 @@ async function answerCheck(socket, gameId, token, targetId) {
   reply(knownMafia.size >= room.mafia_count ? false : null);
 }
 
+async function answerNightRoles(socket, gameId, token) {
+  await socket.rolePromise;
+  const [players, game] = await Promise.all([
+    backend(`/game-player/list?game_id=${gameId}`, token),
+    backend(`/game/detail?game_id=${gameId}`, token),
+  ]);
+  const room = await backend(`/room/detail?room_id=${game.room_id}`, token);
+  const known = gameRoles.get(gameId) ?? new Map();
+  for (const player of players) if (player.role) known.set(player.id, player.role);
+  const counts = { mafia: room.mafia_count, doctor: room.doctor_count, commissar: room.commissar_count };
+  const present = {};
+  for (const [role, count] of Object.entries(counts)) {
+    const members = players.filter((player) => known.get(player.id) === role);
+    if (members.some((player) => player.is_alive)) present[role] = true;
+    else if (count <= 0 || members.length >= count) present[role] = false;
+  }
+  if (socket.readyState === socket.OPEN) socket.send(JSON.stringify({ type: "night-roles", present }));
+}
+
 async function answerRoles(socket, gameId, token) {
   await socket.rolePromise;
   const userId = userIdFromToken(token);
@@ -283,7 +302,7 @@ function userIdFromToken(token) {
 async function verifyUser(token, claimedId) {
   if (!token) return false;
   if (!verifiedTokens.has(token)) {
-    const response = await fetch(`${BACKEND_URL}/game-player/list?game_id=0`, {
+    const response = await fetch(`${BACKEND_URL}/friend/list`, {
       headers: { Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(10000),
     }).catch(() => null);
@@ -384,6 +403,10 @@ server.on("connection", (socket, request) => {
     }
     if (data?.type === "check") {
       if (gameId && token) answerCheck(socket, gameId, token, data.target).catch(() => {});
+      return;
+    }
+    if (data?.type === "night-roles") {
+      if (gameId && token) answerNightRoles(socket, gameId, token).catch(() => {});
       return;
     }
     if (data?.type === "roles") {

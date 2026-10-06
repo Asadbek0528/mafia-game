@@ -12,6 +12,7 @@ export type ChatMessage = {
   text: string;
   time: number;
   scope: "all" | "mafia" | "dead";
+  lastWord?: boolean;
 };
 
 type GameChatProps = {
@@ -20,6 +21,7 @@ type GameChatProps = {
   canWrite: boolean;
   scope: ChatMessage["scope"];
   hint: string;
+  forceOpen?: boolean;
   onSend: (text: string) => void;
 };
 
@@ -29,7 +31,7 @@ function formatTime(time: number): string {
   return new Date(time).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
 }
 
-export default function GameChat({ messages, myName, canWrite, scope, hint, onSend }: GameChatProps) {
+export default function GameChat({ messages, myName, canWrite, scope, hint, forceOpen = false, onSend }: GameChatProps) {
   const [text, setText] = useState("");
   const [isOpen, setIsOpen] = useState(true);
   const [seenCount, setSeenCount] = useState(0);
@@ -38,6 +40,10 @@ export default function GameChat({ messages, myName, canWrite, scope, hint, onSe
   useEffect(() => {
     if (window.matchMedia("(max-width: 960px)").matches) setIsOpen(false);
   }, []);
+
+  useEffect(() => {
+    if (forceOpen) setIsOpen(true);
+  }, [forceOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -86,6 +92,7 @@ export default function GameChat({ messages, myName, canWrite, scope, hint, onSe
           let className = "game-chat-message";
           if (message.name === myName) className += " game-chat-message-mine";
           if (message.scope !== "all") className += " game-chat-message-private";
+          if (message.lastWord) className += " game-chat-message-last";
 
           return (
             <li key={message.id} className={className}>
@@ -94,6 +101,7 @@ export default function GameChat({ messages, myName, canWrite, scope, hint, onSe
                 <p className="game-chat-meta">
                   <b>{message.name}</b>
                   {message.scope === "dead" && <i>погибший</i>}
+                  {message.lastWord && <i>последнее слово</i>}
                   <time>{formatTime(message.time)}</time>
                 </p>
                 <p className="game-chat-text">{message.text}</p>

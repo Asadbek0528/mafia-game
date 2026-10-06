@@ -65,10 +65,9 @@
 }
 
 .profile-edit-confirm {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: flex;
+  justify-content: flex-end;
   gap: 12px;
-  align-items: end;
   padding-top: 14px;
   border-top: 1px solid var(--color-line);
 }
@@ -79,9 +78,6 @@
 
 @media (max-width: 640px) {
   .profile-edit-row,
-  .profile-edit-confirm {
-    grid-template-columns: 1fr;
-  }
 
   .profile-edit-save {
     width: 100%;

@@ -32,6 +32,10 @@ const ENDPOINTS = {
   roomPlayerDelete: (roomPlayerId: number) =>
     `/room-player/delete/${roomPlayerId}`,
 
+  friendList: "/friend/list",
+  friendAdd: "/friend/add",
+  friendDelete: (friendId: number) => `/friend/delete/${friendId}`,
+
   gameCreate: "/game/create",
   gameList: "/game/list",
   gameDetail: (gameId: string) => `/game/detail?game_id=${gameId}`,
@@ -753,21 +757,16 @@ export const api = {
   async updateProfile(changes: {
     username: string;
     email: string;
-    password: string;
     profileImage: string | null;
   }) {
     const myId = getMyId();
-    const me = getUser();
 
     await request(ENDPOINTS.userUpdate(myId), {
       method: "PUT",
       body: {
         username: changes.username,
         email: changes.email,
-        password: changes.password,
         profile_image: changes.profileImage,
-        age: me?.age ?? 0,
-        role: "player",
       },
     });
 
@@ -778,6 +777,20 @@ export const api = {
     const user = await request<BackendUser>(ENDPOINTS.userDetail(userId));
     usernameCache.set(userId, user.username);
     return { id: userId, username: user.username, profileImage: user.profile_image ?? null };
+  },
+
+  async getFriends(): Promise<PublicUser[]> {
+    const list = await request<{ id: number; username: string; profile_image?: string | null }[]>(ENDPOINTS.friendList);
+    for (const friend of list) usernameCache.set(friend.id, friend.username);
+    return list.map((friend) => ({ id: friend.id, username: friend.username, profileImage: friend.profile_image ?? null }));
+  },
+
+  async addFriend(friendId: number) {
+    await request(ENDPOINTS.friendAdd, { method: "POST", body: { friend_id: friendId } });
+  },
+
+  async removeFriend(friendId: number) {
+    await request(ENDPOINTS.friendDelete(friendId), { method: "DELETE" });
   },
 
   async searchUsers(query: string): Promise<PublicUser[]> {

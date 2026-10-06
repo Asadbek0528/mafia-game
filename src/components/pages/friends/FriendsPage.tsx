@@ -12,7 +12,7 @@ import { formatPlayerId, fromPlayerId, toPlayerId } from "@/lib/player-id";
 import { type FriendInfo, statusText, useSocial } from "@/lib/social";
 import "./friends-page.scss";
 
-type Tab = "friends" | "requests" | "search";
+type Tab = "friends" | "search";
 
 export default function FriendsPage() {
   const router = useRouter();
@@ -27,7 +27,6 @@ export default function FriendsPage() {
   if (!user || user.guest) return null;
 
   const online = social.friends.filter((friend) => friend.online).length;
-  const requestsCount = social.incoming.length;
 
   return (
     <main className="friends-page">
@@ -42,16 +41,12 @@ export default function FriendsPage() {
         <TabButton active={tab === "friends"} onClick={() => setTab("friends")}>
           Мои друзья
         </TabButton>
-        <TabButton active={tab === "requests"} onClick={() => setTab("requests")} badge={requestsCount}>
-          Заявки
-        </TabButton>
         <TabButton active={tab === "search"} onClick={() => setTab("search")}>
           Найти
         </TabButton>
       </div>
 
       {tab === "friends" && <FriendsList onFind={() => setTab("search")} />}
-      {tab === "requests" && <RequestsList />}
       {tab === "search" && <SearchPlayers myId={user.id ?? null} />}
     </main>
   );
@@ -126,68 +121,6 @@ function FriendsList({ onFind }: { onFind: () => void }) {
   );
 }
 
-function RequestsList() {
-  const social = useSocial();
-
-  if (social.incoming.length === 0 && social.outgoing.length === 0) {
-    return (
-      <section className="panel friends-page-empty">
-        <p>Заявок нет.</p>
-      </section>
-    );
-  }
-
-  return (
-    <div className="friends-page-requests">
-      {social.incoming.length > 0 && (
-        <section className="panel">
-          <h2 className="panel-title friends-page-subtitle">Входящие</h2>
-          <ul className="friends-page-list">
-            {social.incoming.map((request) => (
-              <li key={request.id} className="friends-page-row">
-                <Avatar name={request.username} size={40} />
-                <Link href={`/player/${toPlayerId(request.id)}`} className="friends-page-name friends-page-link">
-                  {request.username}
-                </Link>
-                <div className="friends-page-actions">
-                  <button type="button" className="btn btn-red btn-small" onClick={() => social.accept(request.id)}>
-                    Принять
-                  </button>
-                  <button type="button" className="btn btn-dark btn-small" onClick={() => social.decline(request.id)}>
-                    Отклонить
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {social.outgoing.length > 0 && (
-        <section className="panel">
-          <h2 className="panel-title friends-page-subtitle">Отправленные</h2>
-          <ul className="friends-page-list">
-            {social.outgoing.map((request) => (
-              <li key={request.id} className="friends-page-row">
-                <Avatar name={request.username} size={40} />
-                <Link href={`/player/${toPlayerId(request.id)}`} className="friends-page-name friends-page-link">
-                  {request.username}
-                </Link>
-                <div className="friends-page-actions">
-                  <span className="friends-page-waiting">Ждём ответа</span>
-                  <button type="button" className="btn btn-dark btn-small" onClick={() => social.cancel(request.id)}>
-                    Отменить
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-    </div>
-  );
-}
-
 function SearchPlayers({ myId }: { myId: number | null }) {
   const social = useSocial();
   const [query, setQuery] = useState("");
@@ -223,23 +156,12 @@ function SearchPlayers({ myId }: { myId: number | null }) {
   function actionFor(player: PublicUser) {
     if (player.id === myId) return <span className="friends-page-waiting">Это вы</span>;
     if (social.friends.some((friend) => friend.id === player.id)) return <span className="friends-page-waiting">В друзьях ✓</span>;
-    if (social.outgoing.some((item) => item.id === player.id)) return <span className="friends-page-waiting">Заявка отправлена</span>;
-    if (social.incoming.some((item) => item.id === player.id)) {
-      return (
-        <button type="button" className="btn btn-red btn-small" onClick={() => social.accept(player.id)}>
-          Принять
-        </button>
-      );
-    }
     return (
       <button
         type="button"
         className="btn btn-red btn-small"
         disabled={!social.isReady}
-        onClick={() => {
-          social.sendRequest(player.id, player.username);
-          showToast(`Заявка отправлена ${player.username}.`, "success");
-        }}
+        onClick={() => social.sendRequest(player.id, player.username)}
       >
         Добавить
       </button>

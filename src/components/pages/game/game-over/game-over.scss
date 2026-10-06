@@ -49,6 +49,18 @@
   color: #d8cccc;
 }
 
+.game-over-reason {
+  max-width: 520px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #eadede;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--color-line-red);
+  border-radius: 10px;
+}
+
 .game-over-my-result {
   margin-top: 10px;
   font-size: 20px;

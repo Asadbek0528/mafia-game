@@ -20,10 +20,11 @@ type TargetPickerProps = {
   onConfirm?: () => void;
   voteCounts?: Record<number, number>;
   votedIds?: number[];
+  voteLines?: { voter: string; target: string }[];
 };
 
 export default function TargetPicker(props: TargetPickerProps) {
-  const { title, subtitle, players, selectableIds, selectedId, meId, isSent, isUrgent, confirmText, headerButton, showRole, deathLabel, onSelect, onConfirm, voteCounts, votedIds } = props;
+  const { title, subtitle, players, selectableIds, selectedId, meId, isSent, isUrgent, confirmText, headerButton, showRole, deathLabel, onSelect, onConfirm, voteCounts, votedIds, voteLines } = props;
 
   const canChoose = selectableIds.length > 0 && !isSent;
   const aliveCount = players.filter((player) => player.isAlive).length;
@@ -99,6 +100,21 @@ export default function TargetPicker(props: TargetPickerProps) {
           );
         })}
       </ul>
+
+      {voteLines && voteLines.length > 0 && (
+        <div className="target-picker-who">
+          <p className="target-picker-who-title">Кто за кого</p>
+          <ul>
+            {voteLines.map((line) => (
+              <li key={`${line.voter}-${line.target}`}>
+                <b>{line.voter}</b>
+                <span aria-label="голосует против">→</span>
+                <b>{line.target}</b>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {confirmText && onConfirm && (
         <button className="btn btn-red target-picker-confirm" disabled={selectedId === null || isSent} onClick={onConfirm}>

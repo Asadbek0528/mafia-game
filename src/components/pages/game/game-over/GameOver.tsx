@@ -11,11 +11,13 @@ type GameOverProps = {
   players: GamePlayer[];
   rounds: number;
   myRole: GamePlayer["role"] | null;
+  mafiaCount: number;
   backLink: string;
 };
 
-export default function GameOver({ winner, players, rounds, myRole, backLink }: GameOverProps) {
+export default function GameOver({ winner, players, rounds, myRole, mafiaCount, backLink }: GameOverProps) {
   const mafiaWon = winner === "MAFIA";
+  const reason = getReason(mafiaWon, players, mafiaCount);
 
   let myResult = "";
   if (myRole) {
@@ -39,6 +41,7 @@ export default function GameOver({ winner, players, rounds, myRole, backLink }: 
           <p className="game-over-subtitle">
             {mafiaWon ? "Мафия захватила город." : "Вся мафия раскрыта. Город спасён."}
           </p>
+          <p className="game-over-reason">{reason}</p>
           {myResult && <p className="game-over-my-result">{myResult}</p>}
           <p className="game-over-rounds">Раундов сыграно: {rounds}</p>
 
@@ -79,4 +82,17 @@ export default function GameOver({ winner, players, rounds, myRole, backLink }: 
       </ul>
     </section>
   );
+}
+
+function getReason(mafiaWon: boolean, players: GamePlayer[], mafiaCount: number): string {
+  const alive = players.filter((player) => player.isAlive);
+  if (!mafiaWon) return "Вся мафия выбыла из игры — город очищен.";
+
+  const knownMafia = alive.filter((player) => player.role === "mafia").length;
+  const mafia = knownMafia > 0 ? knownMafia : Math.min(mafiaCount, alive.length);
+  const town = alive.length - mafia;
+  if (mafia > 0 && town >= 0 && mafia >= town) {
+    return `В живых осталось: мафия — ${mafia}, мирные — ${town}. Когда мафии столько же, сколько мирных, город уже не может выгнать её голосованием, поэтому по правилам побеждает мафия.`;
+  }
+  return "Мафия добилась своего: мирных жителей осталось слишком мало.";
 }

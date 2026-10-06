@@ -271,6 +271,46 @@
   }
 }
 
+.target-picker-who {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  background: rgba(22, 17, 19, 0.95);
+  border: 1px solid #2c2225;
+  border-radius: 12px;
+
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    font-size: 13px;
+    background: #1b1214;
+    border: 1px solid #3a2a2d;
+    border-radius: 999px;
+  }
+
+  span {
+    color: var(--color-red);
+    font-weight: 700;
+  }
+}
+
+.target-picker-who-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
 .target-picker-confirm {
   width: 100%;
   min-height: 50px;

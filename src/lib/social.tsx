@@ -5,7 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 import { showToast } from "@/components/pages/widgets/toast/Toast";
 
-import { api as backendApi, ApiError, SESSION_EXPIRED_EVENT, type User } from "./api";
+import { api as backendApi, ApiError, type PublicUser, SESSION_EXPIRED_EVENT, type User } from "./api";
 import { getUser, logout, rememberPageAfterLogin } from "./auth";
 import { useLiveUpdates } from "./socket";
 
@@ -20,6 +20,8 @@ export type FriendInfo = {
 };
 
 export type FriendRequest = { id: number; username: string };
+
+type Presence = { id: number; online: boolean; status: FriendStatus; roomId: string | null };
 
 export type RoomInvite = {
   key: string;
@@ -104,10 +106,16 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener(SESSION_EXPIRED_EVENT, handleExpired);
     return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleExpired);
   }, [router]);
-  const [friends, setFriends] = useState<FriendInfo[]>([]);
-  const [incoming, setIncoming] = useState<FriendRequest[]>([]);
-  const [outgoing, setOutgoing] = useState<FriendRequest[]>([]);
+
+  const [list, setList] = useState<PublicUser[]>([]);
+  const [isListLoaded, setIsListLoaded] = useState(false);
+  const [presence, setPresence] = useState<Record<number, Presence>>({});
   const [notices, setNotices] = useState<SocialNotice[]>([]);
+  const listRef = useRef(list);
+
+  useEffect(() => {
+    listRef.current = list;
+  }, [list]);
 
   useEffect(() => {
     const user = getUser();
@@ -141,6 +149,27 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
       });
   }, [myId, router]);
 
+  const loadFriends = useCallback(async () => {
+    if (!myId) return;
+    try {
+      setList(await backendApi.getFriends());
+    } catch {
+      // оставляем старый список, попробуем в следующий раз
+    } finally {
+      setIsListLoaded(true);
+    }
+  }, [myId]);
+
+  useEffect(() => {
+    if (!myId) {
+      setList([]);
+      setIsListLoaded(false);
+      setPresence({});
+      return;
+    }
+    loadFriends();
+  }, [myId, loadFriends]);
+
   const addNotice = useCallback((notice: SocialNotice) => {
     setNotices((old) => [...old.filter((item) => item.key !== notice.key), notice].slice(-4));
   }, []);
@@ -149,23 +178,24 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     const message = data as Record<string, unknown> | null;
     if (!message || typeof message.type !== "string") return;
 
-    if (message.type === "social-state") {
-      const list = (message.friends as FriendInfo[]) ?? [];
-      setFriends([...list].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || a.username.localeCompare(b.username)));
-      setIncoming((message.incoming as FriendRequest[]) ?? []);
-      setOutgoing((message.outgoing as FriendRequest[]) ?? []);
+    if (message.type === "presence" && Array.isArray(message.friends)) {
+      const next: Record<number, Presence> = {};
+      for (const item of message.friends as Presence[]) if (typeof item?.id === "number") next[item.id] = item;
+      setPresence(next);
       return;
     }
 
-    if (message.type === "friend-request") {
+    if (message.type === "friend-added") {
       const from = message.from as FriendRequest;
-      addNotice({ key: `request-${from.id}`, kind: "request", from });
+      loadFriends();
+      if (!listRef.current.some((friend) => friend.id === from.id)) {
+        addNotice({ key: `request-${from.id}`, kind: "request", from });
+      }
       return;
     }
 
-    if (message.type === "friend-accepted") {
-      const by = message.by as FriendRequest;
-      addNotice({ key: nextKey(), kind: "text", text: `${by.username} принял(а) вашу заявку в друзья` });
+    if (message.type === "friend-removed") {
+      loadFriends();
       return;
     }
 
@@ -186,9 +216,16 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     }
   });
 
+  const friendIds = useMemo(() => list.map((friend) => friend.id).join(","), [list]);
+
   useEffect(() => {
     if (isLive && me?.username) notify("identify", { username: me.username });
   }, [isLive, me?.username, notify]);
+
+  useEffect(() => {
+    if (!isLive) return;
+    notify("watch", { ids: friendIds ? friendIds.split(",").map(Number) : [] });
+  }, [isLive, friendIds, notify]);
 
   useEffect(() => {
     if (!isLive) return;
@@ -197,41 +234,82 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     notify("status", { status, roomId: room?.[1] ?? null });
   }, [isLive, pathname, notify]);
 
-  useEffect(() => {
-    if (!myId) {
-      setFriends([]);
-      setIncoming([]);
-      setOutgoing([]);
-    }
-  }, [myId]);
+  const friends = useMemo<FriendInfo[]>(
+    () =>
+      list
+        .map((friend) => {
+          const info = presence[friend.id];
+          const online = info?.online === true;
+          return {
+            id: friend.id,
+            username: friend.username,
+            online,
+            status: online ? (info?.status ?? "online") : ("offline" as FriendStatus),
+            roomId: online ? (info?.roomId ?? null) : null,
+          };
+        })
+        .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || a.username.localeCompare(b.username)),
+    [list, presence],
+  );
 
   const dismiss = useCallback((key: string) => {
     setNotices((old) => old.filter((item) => item.key !== key));
   }, []);
 
+  const addFriend = useCallback(
+    async (id: number) => {
+      dismiss(`request-${id}`);
+      if (listRef.current.some((friend) => friend.id === id)) return;
+      try {
+        await backendApi.addFriend(id);
+        await loadFriends();
+        notify("friend-added", { to: id });
+        showToast("Друг добавлен.", "success");
+      } catch (error) {
+        showToast((error as Error).message, "error");
+      }
+    },
+    [dismiss, loadFriends, notify],
+  );
+
+  const removeFriend = useCallback(
+    async (id: number) => {
+      try {
+        await backendApi.removeFriend(id);
+        await loadFriends();
+        notify("friend-removed", { to: id });
+      } catch (error) {
+        showToast((error as Error).message, "error");
+      }
+    },
+    [loadFriends, notify],
+  );
+
   const api = useMemo<SocialApi>(
     () => ({
-      isReady: isLive,
+      isReady: myId !== null && isListLoaded,
       myId,
       friends,
-      incoming,
-      outgoing,
+      incoming: [],
+      outgoing: [],
       notices,
       dismiss,
-      sendRequest: (id, username) => notify("friend-request", { to: id, toName: username }),
+      sendRequest: (id) => {
+        addFriend(id);
+      },
       accept: (id) => {
-        notify("friend-accept", { to: id });
-        dismiss(`request-${id}`);
+        addFriend(id);
       },
-      decline: (id) => {
-        notify("friend-decline", { to: id });
-        dismiss(`request-${id}`);
+      decline: (id) => dismiss(`request-${id}`),
+      cancel: (id) => {
+        removeFriend(id);
       },
-      cancel: (id) => notify("friend-cancel", { to: id }),
-      remove: (id) => notify("friend-remove", { to: id }),
+      remove: (id) => {
+        removeFriend(id);
+      },
       invite: (id, roomId, roomName) => notify("invite", { to: id, roomId, roomName }),
     }),
-    [isLive, myId, friends, incoming, outgoing, notices, dismiss, notify],
+    [myId, isListLoaded, friends, notices, dismiss, addFriend, removeFriend, notify],
   );
 
   return <SocialContext.Provider value={api}>{children}</SocialContext.Provider>;

@@ -141,6 +141,33 @@
   }
 }
 
+.game-page-last-word {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0;
+  padding: 10px 14px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(90deg, rgba(60, 40, 70, 0.92), rgba(16, 10, 18, 0.92));
+  border: 1px solid rgba(190, 150, 255, 0.45);
+  border-radius: 14px;
+
+  b {
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #d9c2ff;
+  }
+}
+
+.game-page-last-word-mine {
+  border-color: #d9c2ff;
+  animation: game-page-todo-pulse 1.6s ease-in-out infinite;
+}
+
 .game-page-check {
   padding: 14px;
   font-size: 18px;

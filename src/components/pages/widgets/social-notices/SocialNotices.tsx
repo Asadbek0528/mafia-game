@@ -57,13 +57,13 @@ export default function SocialNotices() {
             <div key={notice.key} className="social-notice">
               <Avatar name={notice.from.username} size={40} />
               <div className="social-notice-body">
-                <p className="social-notice-title">{notice.from.username} хочет добавить вас в друзья</p>
+                <p className="social-notice-title">{notice.from.username} добавил(а) вас в друзья</p>
                 <div className="social-notice-buttons">
                   <button type="button" className="btn btn-red btn-small" onClick={() => social.accept(notice.from.id)}>
-                    Принять
+                    Добавить в ответ
                   </button>
                   <button type="button" className="btn btn-dark btn-small" onClick={() => social.decline(notice.from.id)}>
-                    Отклонить
+                    Скрыть
                   </button>
                 </div>
               </div>

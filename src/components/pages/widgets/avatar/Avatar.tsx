@@ -24,7 +24,7 @@ export default function Avatar({ name, size = 40, image, empty = false }: Avatar
     );
   }
 
-  if (image) {
+  if (image && /^(data:image\/|https?:\/\/|\/)/.test(image)) {
     return (
       <img className="avatar avatar-photo" src={image} alt="" width={size} height={size} style={{ width: size, height: size }} />
     );

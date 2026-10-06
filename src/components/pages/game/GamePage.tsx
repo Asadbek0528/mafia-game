@@ -28,6 +28,8 @@ const RETRY_PHASE_MS = 3000;
 const OWNER_GRACE_S = 5;
 const BACKUP_DELAY_S = 9;
 const BACKUP_STEP_S = 3;
+const NIGHT_END_GRACE_MS = 2000;
+const LAST_WORD_S = 30;
 
 const NIGHT_ACTION: Partial<Record<RoleKey, "KILL" | "HEAL" | "CHECK">> = {
   mafia: "KILL",
@@ -68,18 +70,22 @@ type NightTurnState = {
   secondsInTurn: number;
   myIndex: number | null;
   allDone: boolean;
+  turnsEnd: number;
 };
+
+type NightRoles = Partial<Record<RoleKey, boolean>>;
 
 const TEAM_ROLES: RoleKey[] = ["mafia", "doctor", "commissar"];
 
-function getNightTurn(game: GameState, phaseEnd: number, now: number, myRole: RoleKey | null): NightTurnState {
+function getNightTurn(game: GameState, phaseEnd: number, now: number, myRole: RoleKey | null, nightRoles: NightRoles | null): NightTurnState {
   const turnMs = NIGHT_TURN_SECONDS * 1000;
   const nightStart = phaseEnd - game.nightTime * 1000;
   const hasHiddenRoles = game.players.some((player) => player.isAlive && player.role === null);
 
   let cursor = nightStart;
   const turns: TurnInfo[] = NIGHT_TURNS.map((turn) => {
-    const present = hasHiddenRoles || game.players.some((player) => player.isAlive && player.role === turn.role);
+    const knownAlive = game.players.some((player) => player.isAlive && player.role === turn.role);
+    const present = knownAlive || (nightRoles?.[turn.role] ?? hasHiddenRoles);
     const type = NIGHT_ACTION[turn.role];
     const first = game.nightActions.filter((action) => action.type === type).sort((a, b) => a.at - b.at)[0];
     let turnEnd = present ? cursor + turnMs : cursor;
@@ -93,7 +99,7 @@ function getNightTurn(game: GameState, phaseEnd: number, now: number, myRole: Ro
   const activeIndex = index >= 0 ? index : null;
   const secondsInTurn = activeIndex === null ? 0 : Math.max(0, Math.ceil((turns[activeIndex].end - now) / 1000));
   const found = myRole ? NIGHT_TURNS.findIndex((turn) => turn.role === myRole) : -1;
-  return { turns, activeIndex, secondsInTurn, myIndex: found >= 0 ? found : null, allDone: now >= cursor };
+  return { turns, activeIndex, secondsInTurn, myIndex: found >= 0 ? found : null, allDone: now >= cursor, turnsEnd: cursor };
 }
 
 function phaseStartEffect(game: GameState, me: GamePlayer | undefined): GameEffect | null {
@@ -244,6 +250,9 @@ export default function GamePage() {
   const clearEffect = useCallback(() => setEffect(null), []);
   const [isEnding, setIsEnding] = useState(false);
   const [areRolesShown, setAreRolesShown] = useState(true);
+  const [nightRoles, setNightRoles] = useState<NightRoles | null>(null);
+  const nightRolesRef = useRef<NightRoles | null>(null);
+  const earlyEndFailed = useRef("");
   const [secondsLeft, setSecondsLeft] = useState(0);
 
   const gameRef = useRef<GameState | null>(null);
@@ -315,7 +324,7 @@ export default function GamePage() {
     if (!current || current.phase !== "NIGHT" || isSent || selectedId === null) return;
     const currentUser = userRef.current;
     const mine = findMe(current, currentUser?.id, currentUser?.username);
-    const turn = getNightTurn(current, phaseEndsAt.current, Date.now(), mine?.role ?? null);
+    const turn = getNightTurn(current, phaseEndsAt.current, Date.now(), mine?.role ?? null, nightRolesRef.current);
     if (turn.myIndex === null || turn.activeIndex === turn.myIndex) return;
     if (Date.now() < turn.turns[turn.myIndex].end) return;
     const key = `${current.round}-${selectedId}`;
@@ -347,6 +356,14 @@ export default function GamePage() {
     const secret = data as { type?: string; role?: RoleKey; ids?: unknown; target?: unknown; isMafia?: unknown } | null;
     if (secret?.type === "team" && secret.role && Array.isArray(secret.ids)) {
       setTeam({ role: secret.role, ids: secret.ids.filter((id): id is number => typeof id === "number") });
+      return;
+    }
+    const alive = data as { type?: string; present?: Record<string, unknown> } | null;
+    if (alive?.type === "night-roles" && alive.present && typeof alive.present === "object") {
+      const next: NightRoles = {};
+      for (const role of ROLE_KEYS) if (typeof alive.present[role] === "boolean") next[role] = alive.present[role] as boolean;
+      nightRolesRef.current = next;
+      setNightRoles(next);
       return;
     }
     const reveal = data as { type?: string; roles?: Record<string, unknown> } | null;
@@ -479,14 +496,25 @@ export default function GamePage() {
       const current = gameRef.current;
       if (!current || current.winner) return;
 
-      const left = Math.max(0, Math.ceil((phaseEndsAt.current - Date.now()) / 1000));
-      setSecondsLeft(left);
-
       const key = `${current.round}-${current.phase}`;
-      if (left > 0 || finishedPhase.current === key || Date.now() < retryPhaseAt.current) return;
-
       const currentUser = userRef.current;
       const myPlayer = findMe(current, currentUser?.id, currentUser?.username);
+
+      let phaseEnd = phaseEndsAt.current;
+      let isEarly = false;
+      if (current.phase === "NIGHT" && earlyEndFailed.current !== key) {
+        const turns = getNightTurn(current, phaseEndsAt.current, Date.now(), myPlayer?.role ?? null, nightRolesRef.current);
+        const earlyEnd = turns.turnsEnd + NIGHT_END_GRACE_MS;
+        if (earlyEnd < phaseEnd) {
+          phaseEnd = earlyEnd;
+          isEarly = true;
+        }
+      }
+
+      const left = Math.max(0, Math.ceil((phaseEnd - Date.now()) / 1000));
+      setSecondsLeft(left);
+
+      if (left > 0 || finishedPhase.current === key || Date.now() < retryPhaseAt.current) return;
 
       if (isDemo) {
         finishedPhase.current = key;
@@ -495,7 +523,7 @@ export default function GamePage() {
       }
 
       const isOwner = currentUser?.id !== undefined && currentUser.id === current.ownerUserId;
-      const overdue = (Date.now() - phaseEndsAt.current) / 1000;
+      const overdue = (Date.now() - phaseEnd) / 1000;
       if (isOwner) {
         if (overdue < OWNER_GRACE_S) return;
       } else {
@@ -508,7 +536,12 @@ export default function GamePage() {
       }
 
       finishedPhase.current = key;
-      switchPhase(current).catch((error: Error) => {
+      switchPhase(current, isEarly).catch((error: Error) => {
+        if (isEarly) {
+          earlyEndFailed.current = key;
+          finishedPhase.current = "";
+          return;
+        }
         if (isOwner && phaseErrorShown.current !== key) showToast(error.message, "error");
         phaseErrorShown.current = key;
         retryPhaseAt.current = Date.now() + RETRY_PHASE_MS;
@@ -516,9 +549,9 @@ export default function GamePage() {
       });
     }, 1000);
 
-    async function switchPhase(current: GameState) {
+    async function switchPhase(current: GameState, isEarly: boolean) {
       const fresh = await api.getGame(current.id);
-      if (fresh.phaseEndsAt !== null && fresh.phaseEndsAt > Date.now()) {
+      if (!isEarly && fresh.phaseEndsAt !== null && fresh.phaseEndsAt > Date.now()) {
         phaseEndsAt.current = fresh.phaseEndsAt;
         finishedPhase.current = "";
         setGame(fresh);
@@ -561,9 +594,15 @@ export default function GamePage() {
   }, [gameWinner]);
 
   const amDead = me?.isAlive === false;
+  const isFinished = game?.winner != null;
   useEffect(() => {
-    if (amDead && isLive) notify("roles");
-  }, [amDead, isLive, phaseKey, notify]);
+    if ((amDead || isFinished) && isLive) notify("roles");
+  }, [amDead, isFinished, isLive, phaseKey, notify]);
+
+  const isNightNow = game?.phase === "NIGHT";
+  useEffect(() => {
+    if (isNightNow && isLive && !isDemo) notify("night-roles");
+  }, [isNightNow, isLive, isDemo, phaseKey, notify]);
 
   const myVote = game && me && game.phase === "VOTING" ? game.votes.find((vote) => vote.voterId === me.id) : undefined;
   useEffect(() => {
@@ -660,7 +699,7 @@ export default function GamePage() {
   const alivePlayers = game.players.filter((player) => player.isAlive);
   const isGameOver = game.winner !== null;
   const isGameOwner = user?.id !== undefined && user.id === game.ownerUserId;
-  const night = getNightTurn(game, phaseEndsAt.current, Date.now(), me?.role ?? null);
+  const night = getNightTurn(game, phaseEndsAt.current, Date.now(), me?.role ?? null, nightRoles);
 
   async function handleEndGame() {
     if (!game || isEnding) return;
@@ -781,6 +820,10 @@ export default function GamePage() {
         {...common}
         voteCounts={voteCounts}
         votedIds={[...new Set(game.votes.map((vote) => vote.voterId))]}
+        voteLines={game.votes.map((vote) => ({
+          voter: game.players.find((player) => player.id === vote.voterId)?.username ?? "Игрок",
+          target: game.players.find((player) => player.id === vote.targetId)?.username ?? "Игрок",
+        }))}
         title="Голосование"
         subtitle={`${iCanAct ? (isSent ? "Ваш голос учтён." : "Кого выгнать из города?") : "Живые игроки голосуют."} ${progress}`}
         selectableIds={iCanAct ? alivePlayers.filter((player) => player.id !== me?.id).map((player) => player.id) : []}
@@ -826,6 +869,16 @@ export default function GamePage() {
   if (game.phase === "VOTING") skyHint = "Выберите, кого выгнать";
 
   const myName = me?.username ?? user?.username ?? "";
+  const phaseDuration = getPhaseDuration(game);
+  const lastWordLeft = Math.max(0, LAST_WORD_S - (phaseDuration - secondsLeft));
+  let lastWordId: number | null = null;
+  if (!isGameOver && lastWordLeft > 0 && game.lastRound) {
+    if (game.phase === "DAY" && game.lastRound.roundNumber === game.round) lastWordId = game.lastRound.killedPlayerId;
+    if (game.phase === "NIGHT" && game.lastRound.roundNumber === game.round - 1) lastWordId = game.lastRound.eliminatedPlayerId;
+  }
+  const lastWordPlayer = game.players.find((player) => player.id === lastWordId && !player.isAlive) ?? null;
+  const isMyLastWord = lastWordPlayer !== null && lastWordPlayer.id === me?.id;
+
   let chatScope: ChatMessage["scope"] = "all";
   let canWrite = true;
   let chatHint = "";
@@ -834,11 +887,13 @@ export default function GamePage() {
     if (!me) {
       canWrite = false;
       chatHint = "Вы зритель — только читаете";
+    } else if (isMyLastWord) {
+      chatScope = "all";
     } else if (!me.isAlive) {
       chatScope = "dead";
     } else if (game.phase === "NIGHT") {
       canWrite = false;
-      chatHint = "Ночью город спит";
+      chatHint = lastWordPlayer ? "Сейчас говорит только выбывший" : "Ночью город спит";
     }
   }
 
@@ -860,13 +915,22 @@ export default function GamePage() {
       text,
       time: Date.now(),
       scope: chatScope,
+      lastWord: isMyLastWord || undefined,
     };
     addChatMessages([message]);
     notify("chat", { message });
   }
 
   const chatPanel = (
-    <GameChat messages={visibleChat} myName={myName} canWrite={canWrite} scope={chatScope} hint={chatHint} onSend={sendChat} />
+    <GameChat
+      messages={visibleChat}
+      myName={myName}
+      canWrite={canWrite}
+      scope={chatScope}
+      hint={chatHint}
+      forceOpen={isMyLastWord}
+      onSend={sendChat}
+    />
   );
 
   let connection: GameConnection = isLive ? "live" : "slow";
@@ -890,7 +954,7 @@ export default function GamePage() {
 
         {isGameOver && game.winner ? (
           <>
-            <GameOver winner={game.winner} players={game.players} rounds={game.round} myRole={me?.role ?? null} backLink={backLink} />
+            <GameOver winner={game.winner} players={game.players} rounds={game.round} myRole={me?.role ?? null} mafiaCount={game.mafiaCount} backLink={backLink} />
             {chatPanel}
           </>
         ) : (
@@ -899,7 +963,16 @@ export default function GamePage() {
 
             {me && !me.isAlive && <DeadBanner />}
 
-            <div className={game.phase === "NIGHT" ? "game-page-grid game-page-grid-solo" : "game-page-grid"}>
+            {lastWordPlayer && (
+              <p className={isMyLastWord ? "game-page-last-word game-page-last-word-mine" : "game-page-last-word"} role="status">
+                <b>🕯 Последнее слово · {lastWordLeft} сек</b>
+                {isMyLastWord
+                  ? "Вы выбыли, но можете сказать последнее слово — напишите в чат, его увидят все."
+                  : `${lastWordPlayer.username} говорит последнее слово. Смотрите чат.`}
+              </p>
+            )}
+
+            <div className={game.phase === "NIGHT" && !lastWordPlayer ? "game-page-grid game-page-grid-solo" : "game-page-grid"}>
               <main className="game-page-main">
                 {hostLine && (
                   <p className="game-page-host" role="status">
@@ -914,7 +987,7 @@ export default function GamePage() {
                 )}
                 {renderPhase()}
               </main>
-              {game.phase !== "NIGHT" && <aside className="game-page-side">{chatPanel}</aside>}
+              {(game.phase !== "NIGHT" || lastWordPlayer) && <aside className="game-page-side">{chatPanel}</aside>}
             </div>
           </>
         )}

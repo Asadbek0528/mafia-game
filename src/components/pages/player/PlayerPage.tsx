@@ -70,8 +70,6 @@ export default function PlayerPage() {
 
   const isMe = user.id === player.id;
   const friend = social.friends.find((item) => item.id === player.id);
-  const isRequested = social.outgoing.some((item) => item.id === player.id);
-  const hasIncoming = social.incoming.some((item) => item.id === player.id);
 
   async function copyId() {
     if (await copyText(playerId)) showToast("ID скопирован.", "success");
@@ -84,22 +82,13 @@ export default function PlayerPage() {
       if (!window.confirm(`Удалить ${player.username} из друзей?`)) return;
       social.remove(player.id);
       showToast(`${player.username} удалён из друзей.`);
-    } else if (hasIncoming) {
-      social.accept(player.id);
-      showToast(`Теперь вы друзья с ${player.username}.`, "success");
-    } else if (isRequested) {
-      social.cancel(player.id);
-      showToast("Заявка отменена.");
     } else {
       social.sendRequest(player.id, player.username);
-      showToast(`Заявка отправлена ${player.username}.`, "success");
     }
   }
 
   let friendLabel = "Добавить в друзья";
   if (friend) friendLabel = "В друзьях ✓";
-  else if (hasIncoming) friendLabel = "Принять заявку";
-  else if (isRequested) friendLabel = "Заявка отправлена";
 
   return (
     <main className="player-page">
@@ -134,7 +123,7 @@ export default function PlayerPage() {
           !user.guest && (
             <button
               type="button"
-              className={friend || isRequested ? "btn btn-dark btn-small" : "btn btn-red btn-small"}
+              className={friend ? "btn btn-dark btn-small" : "btn btn-red btn-small"}
               onClick={handleFriendButton}
               disabled={!social.isReady}
               title={social.isReady ? undefined : "Нет связи с сервером"}
