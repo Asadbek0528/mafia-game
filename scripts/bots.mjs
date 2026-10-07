@@ -2,7 +2,10 @@ import { networkInterfaces } from "node:os";
 
 import { BACKEND_URL as BACKEND, setting } from "./env.mjs";
 
-const WS_SETTING = setting("BOT_WS_URL", setting("NEXT_PUBLIC_WS_URL", "auto"));
+const IS_ONLINE = process.argv.includes("--online");
+const ONLINE_WS_URL = setting("ONLINE_WS_URL", "wss://mafia-ws-81ly.onrender.com");
+const ONLINE_SITE_URL = setting("ONLINE_SITE_URL", "https://mafia-game-neon.vercel.app");
+const WS_SETTING = IS_ONLINE ? ONLINE_WS_URL : setting("BOT_WS_URL", setting("NEXT_PUBLIC_WS_URL", "auto"));
 const WS_URL = WS_SETTING && WS_SETTING !== "auto" ? WS_SETTING.replace(/\/$/, "") : `ws://localhost:${setting("NEXT_PUBLIC_WS_PORT", "3001")}`;
 const SITE_PORT = setting("PORT", "3000");
 const PASSWORD = setting("BOT_PASSWORD", "botpass123");
@@ -14,7 +17,7 @@ const NIGHT_TURN = { mafia: 0, doctor: 1, commissar: 2 };
 const NIGHT_TURN_MS = 30_000;
 const PREVIOUS_ACTION = { mafia: null, doctor: "KILL", commissar: "HEAL" };
 
-const [roomArg, countArg, humansArg] = process.argv.slice(2);
+const [roomArg, countArg, humansArg] = process.argv.slice(2).filter((arg) => !arg.startsWith("--"));
 const isNewRoom = roomArg === "new";
 const count = Number(countArg ?? 3);
 const humans = Number(humansArg ?? 1);
@@ -23,6 +26,7 @@ let roomId = isNewRoom ? null : roomArg;
 if (!roomArg || (!isNewRoom && !/^\d+$/.test(roomArg)) || !Number.isInteger(count) || count < 1) {
   console.log("Новая комната с ботами:   npm run bots -- new 3");
   console.log("Боты в вашу комнату:      npm run bots -- 12 3");
+  console.log("Для сайта на Vercel:      npm run bots -- 12 3 --online");
   process.exit(1);
 }
 
@@ -463,7 +467,7 @@ if (bots.length === 0 || !roomId) {
   process.exit(1);
 }
 
-const phoneLink = `http://${lanHost()}:${SITE_PORT}/room/${roomId}`;
+const phoneLink = IS_ONLINE ? `${ONLINE_SITE_URL}/room/${roomId}` : `http://${lanHost()}:${SITE_PORT}/room/${roomId}`;
 console.log("\n==============================================");
 console.log(` Ссылка для телефона: ${phoneLink}`);
 console.log("==============================================\n");
