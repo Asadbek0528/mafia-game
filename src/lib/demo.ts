@@ -1,4 +1,4 @@
-import type { GameResult, OnlineUser, RoomFull, RoomShort } from "./api";
+import type { GameResult, RoomFull, RoomShort } from "./api";
 import { countRoles, DEFAULT_TIMES } from "./roles";
 
 export const DEMO_ROOMS: RoomShort[] = [
@@ -6,14 +6,6 @@ export const DEMO_ROOMS: RoomShort[] = [
   { id: "51207", name: "Тёмный город", players: 8, max_players: 10, age: 18, status: "playing" },
   { id: "66012", name: "Банды", players: 5, max_players: 10, age: 12, status: "waiting" },
   { id: "90455", name: "Без правил", players: 9, max_players: 10, age: 18, status: "playing" },
-];
-
-export const DEMO_ONLINE: OnlineUser[] = [
-  { username: "zxc_maks", status: "playing" },
-  { username: "darkness", status: "lobby" },
-  { username: "kyrgyz_boy", status: "lobby" },
-  { username: "fox", status: "playing" },
-  { username: "anime_lover", status: "lobby" },
 ];
 
 export const DEMO_HISTORY: GameResult[] = [

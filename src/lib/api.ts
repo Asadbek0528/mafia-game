@@ -5,6 +5,8 @@ const API_URL = "/backend";
 const REQUEST_TIMEOUT_MS = 15000;
 const SERVER_DOWN_TEXT =
   "Backend не отвечает или упал. Проверьте, что сервер запущен (адрес — BACKEND_URL в .env.local).";
+const SERVER_ERROR_TEXT = (path: string) =>
+  `Backend вернул ошибку 500 на ${path.split("?")[0]} — сбой на сервере (смотреть логи backend) или сервер недоступен.`;
 
 const ENDPOINTS = {
   register: "/auth/register",
@@ -187,11 +189,6 @@ export type MyStats = {
   byRole: Record<RoleKey, RoleStats>;
 };
 
-export type OnlineUser = {
-  username: string;
-  status: "playing" | "lobby";
-};
-
 type BackendRoom = {
   id: number;
   room_name: string;
@@ -337,7 +334,7 @@ async function request<T>(
 
   if (!response.ok) {
     if (response.status === 500 && typeof data === "string") {
-      throw new ApiError(SERVER_DOWN_TEXT, 0);
+      throw new ApiError(SERVER_ERROR_TEXT(path), 500);
     }
     throw new ApiError(getErrorText(data, response.status), response.status);
   }
@@ -808,10 +805,6 @@ export const api = {
       .filter((user) => user.username.toLowerCase().includes(text))
       .slice(0, 10)
       .map((user) => ({ id: user.id, username: user.username, profileImage: user.profile_image ?? null }));
-  },
-
-  async getOnlineUsers(): Promise<OnlineUser[]> {
-    return [];
   },
 
   async getHistory(userId?: number): Promise<GameResult[]> {
