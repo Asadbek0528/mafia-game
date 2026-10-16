@@ -39,14 +39,11 @@ type SocialApi = {
   isReady: boolean;
   myId: number | null;
   friends: FriendInfo[];
-  incoming: FriendRequest[];
-  outgoing: FriendRequest[];
   notices: SocialNotice[];
   dismiss: (key: string) => void;
   sendRequest: (id: number, username: string) => void;
   accept: (id: number) => void;
   decline: (id: number) => void;
-  cancel: (id: number) => void;
   remove: (id: number) => void;
   invite: (id: number, roomId: string, roomName: string) => void;
 };
@@ -55,14 +52,11 @@ const EMPTY: SocialApi = {
   isReady: false,
   myId: null,
   friends: [],
-  incoming: [],
-  outgoing: [],
   notices: [],
   dismiss: () => {},
   sendRequest: () => {},
   accept: () => {},
   decline: () => {},
-  cancel: () => {},
   remove: () => {},
   invite: () => {},
 };
@@ -290,8 +284,6 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
       isReady: myId !== null && isListLoaded,
       myId,
       friends,
-      incoming: [],
-      outgoing: [],
       notices,
       dismiss,
       sendRequest: (id) => {
@@ -301,9 +293,6 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
         addFriend(id);
       },
       decline: (id) => dismiss(`request-${id}`),
-      cancel: (id) => {
-        removeFriend(id);
-      },
       remove: (id) => {
         removeFriend(id);
       },

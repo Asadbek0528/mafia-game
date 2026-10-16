@@ -21,12 +21,6 @@ export default function FriendsPanel() {
         </span>
       </div>
 
-      {social.incoming.length > 0 && (
-        <Link href="/friends" className="friends-panel-request friends-panel-request-link">
-          Новые заявки в друзья: <b>{social.incoming.length}</b>
-        </Link>
-      )}
-
       <ul className="friends-panel-list">
         {social.friends.length === 0 && <li className="friends-panel-empty">Друзей пока нет — найдите их по ID.</li>}
         {shown.map((friend) => (

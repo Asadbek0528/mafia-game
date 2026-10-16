@@ -256,7 +256,7 @@ export default function RoomPage() {
       goToGame(gameId);
     } catch (error) {
       setIsStarting(false);
-      showToast(`Не удалось начать игру: ${(error as Error).message}`, "error");
+      showToast(`Не удалось начать игру. ${(error as Error).message}`, "error");
     }
   }
 

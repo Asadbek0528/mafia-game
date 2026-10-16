@@ -56,7 +56,7 @@ export default function CreateRoomModal({
           `demo_room_${demoId}`,
           JSON.stringify({ name: roomName, maxPlayers }),
         );
-        showToast("API комнат пока не отвечает — открываю демо.");
+        showToast("Сервер сейчас недоступен — пока можно сыграть тренировочную партию с ботами.");
         router.push(`/room/${demoId}`);
       } else {
         showToast((error as Error).message, "error");

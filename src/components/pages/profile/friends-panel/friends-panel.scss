@@ -8,17 +8,6 @@
   color: var(--color-text-muted);
 }
 
-.friends-panel-search {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px;
-
-  .input {
-    min-width: 0;
-    font-size: 16px;
-  }
-}
-
 .friends-panel-list {
   display: grid;
   gap: 6px;
@@ -30,12 +19,6 @@
 .friends-panel-empty {
   font-size: 14px;
   color: var(--color-text-muted);
-}
-
-.friends-panel-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
 }
 
 .friends-panel-item {
@@ -95,60 +78,3 @@
   background: var(--color-green);
 }
 
-.friends-panel-subtitle {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-muted);
-}
-
-.friends-panel-requests {
-  display: grid;
-  gap: 6px;
-}
-
-.friends-panel-request {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  background: #1a0a0c;
-  border: 1px solid var(--color-line-red);
-  border-radius: var(--radius);
-}
-
-.friends-panel-id {
-  font-family: var(--font-title);
-  font-size: 13px;
-  letter-spacing: 0.06em;
-  color: var(--color-text-muted);
-}
-
-.friends-panel-remove {
-  width: 34px;
-  height: 34px;
-  font-size: 20px;
-  color: #8b7878;
-  background: none;
-  border: 1px solid transparent;
-  border-radius: var(--radius-small);
-  cursor: pointer;
-
-  &:hover {
-    color: #ffffff;
-    border-color: var(--color-line);
-  }
-}
-
-.friends-panel-request-link {
-  font-size: 14px;
-  color: var(--color-text);
-
-  b {
-    margin-left: 4px;
-    color: var(--color-red);
-  }
-
-  &:hover {
-    border-color: var(--color-red);
-  }
-}

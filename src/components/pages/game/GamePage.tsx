@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { showToast } from "@/components/pages/widgets/toast/Toast";
-import { api, type GamePlayer, type GameState, type NightActionInfo, type RoleKey, type VoteInfo } from "@/lib/api";
+import { api, ApiError, type GamePlayer, type GameState, type NightActionInfo, type RoleKey, type VoteInfo } from "@/lib/api";
 import { rememberPageAfterLogin, useCurrentUser } from "@/lib/auth";
 import { advanceDemoGame, createDemoGame } from "@/lib/demo-game";
 import { DEFAULT_TIMES, getRole, NIGHT_TURN_SECONDS, NIGHT_TURNS } from "@/lib/roles";
@@ -235,6 +235,7 @@ export default function GamePage() {
   const [revealed, setRevealed] = useState<RevealedRoles>({});
   const game = useMemo(() => withTeam(rawGame, team, revealed), [rawGame, team, revealed]);
   const [loadError, setLoadError] = useState("");
+  const [isNotFound, setIsNotFound] = useState(false);
   const [isRoleOpen, setIsRoleOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [isSent, setIsSent] = useState(false);
@@ -291,6 +292,7 @@ export default function GamePage() {
       setLoadError("");
     } catch (error) {
       setFailCount((old) => old + 1);
+      if (error instanceof ApiError && error.status === 404) setIsNotFound(true);
       throw error;
     }
   }, [gameId]);
@@ -307,12 +309,12 @@ export default function GamePage() {
   }, [user, isDemo, gameId, loadGame]);
 
   useEffect(() => {
-    if (isDemo || game || !user) return;
+    if (isDemo || game || !user || isNotFound) return;
     const timer = setInterval(() => {
       loadGame().catch((error: Error) => setLoadError(error.message));
     }, 2000);
     return () => clearInterval(timer);
-  }, [isDemo, game, user, loadGame]);
+  }, [isDemo, game, user, isNotFound, loadGame]);
 
   const isRunning = game !== null && game.winner === null;
 
@@ -677,6 +679,20 @@ export default function GamePage() {
     } catch (error) {
       showToast((error as Error).message, "error");
     }
+  }
+
+  if (!game && isNotFound) {
+    return (
+      <div className="game-page game-page-night">
+        <div className="game-page-connecting" role="status">
+          <p className="game-page-connecting-title">Игра не найдена</p>
+          <p className="game-page-connecting-error">Возможно, её уже удалили или ссылка неверная.</p>
+          <button type="button" className="btn btn-dark btn-small" onClick={() => router.push("/")}>
+            В меню
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (!game) {

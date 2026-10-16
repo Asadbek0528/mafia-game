@@ -24,8 +24,13 @@ src/
 │   ├── (home)/page.tsx         ← адрес /
 │   ├── register/page.tsx       ← адрес /register
 │   ├── profile/page.tsx        ← адрес /profile
+│   ├── profile/edit/page.tsx   ← адрес /profile/edit
 │   ├── roles/page.tsx          ← адрес /roles
-│   └── room/[id]/page.tsx      ← адрес /room/83491
+│   ├── friends/page.tsx        ← адрес /friends
+│   ├── player/[id]/page.tsx    ← адрес /player/31294965 (чужой профиль)
+│   ├── auth/google/callback/   ← возврат после входа через Google
+│   ├── room/[id]/page.tsx      ← адрес /room/83491
+│   └── game/[id]/page.tsx      ← адрес /game/12
 │
 ├── components/
 │   ├── layout/                 ← части, общие для сайта
@@ -37,7 +42,7 @@ src/
 │       │   ├── HomePage.tsx + home-page.scss
 │       │   ├── hero/               Hero.tsx + hero.scss
 │       │   ├── rooms-table/        RoomsTable.tsx + rooms-table.scss
-│       │   ├── online-players/     OnlinePlayers.tsx + online-players.scss
+│       │   ├── online-players/     OnlinePlayers.tsx («Друзья в сети»)
 │       │   └── create-room-modal/  CreateRoomModal.tsx + create-room-modal.scss
 │       ├── register/
 │       │   ├── RegisterPage.tsx + register-page.scss
@@ -46,6 +51,7 @@ src/
 │       ├── room/
 │       │   ├── RoomPage.tsx + room-page.scss   ← вся логика комнаты здесь
 │       │   ├── room-header/  players-list/  room-settings/  invite-box/
+│       │   ├── invite-friends/  close-room-dialog/
 │       ├── game/                   ← САМА ИГРА (адрес /game/12)
 │       │   ├── GamePage.tsx + game-page.scss   ← вся логика игры здесь
 │       │   ├── role-reveal/    RoleReveal.tsx (карточка крутится и показывает роль)
@@ -53,18 +59,28 @@ src/
 │       │   ├── game-header/    GameHeader.tsx (карточка фазы: День 1, таймер, шаги Ночь → День → Голосование)
 │       │   ├── target-picker/  TargetPicker.tsx (панель «Игроки»: карточки, роли, «Убит (Ночь 1)», выбор цели)
 │       │   ├── game-chat/      GameChat.tsx (один чат: сообщения погибших видят только погибшие)
-│       │   ├── game-log/       GameLog.tsx (события: «ночью убит ...»)
+│       │   ├── phase-transition/ PhaseTransition.tsx (анимация смены фазы на весь экран)
+│       │   ├── effect-overlay/ EffectOverlay.tsx (кровь, «спасён», штамп комиссара)
+│       │   ├── voting-end/     VotingEnd.tsx (3-2-1, «Голосование окончено», кого выгнали)
 │       │   ├── dead-banner/    DeadBanner.tsx («Вы погибли»)
 │       │   └── game-over/      GameOver.tsx (победа мафии / жителей)
-│       ├── profile/  ProfilePage.tsx
+│       ├── profile/  ProfilePage.tsx (+ friends-panel/, profile-stats/)
+│       ├── profile-edit/  ProfileEditPage.tsx
+│       ├── player/   PlayerPage.tsx
+│       ├── friends/  FriendsPage.tsx
+│       ├── google-callback/  GoogleCallbackPage.tsx
 │       ├── roles/    RolesPage.tsx
 │       └── widgets/            ← маленькие детали, нужные на разных страницах
-│           ├── avatar/  toast/  role-cards/  profile-card/  game-history/
+│           ├── avatar/  avatar-picker/  toast/  role-cards/  role-modal/
+│           ├── profile-card/  game-history/  social-notices/
 │
 └── lib/                        ← логика без дизайна
     ├── api.ts      ← ВСЕ запросы к backend (пути в ENDPOINTS)
     ├── auth.ts     ← кто вошёл: аккаунт или гость (localStorage)
     ├── roles.ts    ← роли, время фаз, проверка раскладки ролей
+    ├── socket.ts   ← useLiveUpdates: WebSocket с переподключением
+    ├── social.tsx  ← друзья, кто в сети, приглашения в комнату
+    ├── player-id.ts← 8-значный ID игрока
     ├── demo.ts     ← демо-данные, пока backend не готов (потом удалить)
     └── demo-game.ts← игра с ботами без сервера (адрес /game/demo-...)
 ```
@@ -104,6 +120,7 @@ src/
 - Все пути — в `src/lib/api.ts` → `ENDPOINTS`.
 - Backend отдаёт данные по-своему (`room_name`, `owner_id`). В `api.ts` они переводятся в вид для страниц (`name`, `owner`). Страницы про формат backend ничего не знают.
 - Если backend не отвечает совсем (нет сети или ошибка 5xx) — показываются демо-данные. Если backend ответил ошибкой (комнаты нет, она полная) — показываем ошибку.
+- Ошибка 500 без текста показывается как «Backend вернул ошибку 500 на /путь…» — значит, упал сам backend, смотреть его логи.
 
 | Что на сайте | Какой endpoint |
 |---|---|
@@ -120,6 +137,7 @@ src/
 | Игра | `GET /game/detail` (с `phase_ends_at` — таймер), `/game-player/list`, `/game-round/list`, `/game-round/detail` |
 | Ночью | `POST /night-action/create` (KILL / HEAL / CHECK; для CHECK сервер возвращает `is_mafia`) |
 | Голосование | `POST /vote/create` |
+| Друзья | `GET /friend/list`, `POST /friend/add`, `DELETE /friend/delete/{id}` |
 | Смена фаз | `POST /game/end-night`, `/start-voting`, `/end-voting` (вызывает браузер создателя, когда наступил `phase_ends_at`) |
 
 **Google:** в настройках backend адрес возврата (redirect_uri) должен быть страницей фронта: `http://localhost:3000/auth/google/callback`.
@@ -149,7 +167,7 @@ src/
 - Свои видят своих: мафия видит мафию, доктор — докторов, комиссар — комиссаров. Мафия не может выбрать мафию.
 - Backend скрывает чужие роли, поэтому «ведущий» — наш WebSocket-сервер: по токену игрока он узнаёт у backend его роль и шлёт своим сигнал `team` (только им). Сигналы `team` и `check-result` от браузеров сервер не пересылает.
 - Доктор не может лечить одного и того же игрока две ночи подряд (`game.previousNightActions`). Себя лечить можно.
-- Вместо ленты «События»: анимация смены фазы на весь экран (`game/phase-transition`) и полоса «небо» с солнцем/луной и таймером (`game/sky-clock`).
+- Вместо ленты «События»: анимация смены фазы на весь экран (`game/phase-transition`) и карточка фазы с таймером (`game/game-header`).
 - Эффекты (`game/effect-overlay`): кровь — «Вас убили» / «Ночью убит X», зелёный плюс — «Доктор спас вас» / «Вы спасли жизнь», штамп «МАФИЯ» / «ЧИСТ» — результат проверки комиссара. Показываются после анимации смены фазы.
 - Комиссар: backend пока не возвращает `is_mafia`. Браузер комиссара после сохранённой проверки шлёт `check`, сервер отвечает `check-result` только ему (роль цели, или «мафия», если цель убивала ночью, или «мирный», если вся мафия уже известна).
 - Токен: обновляется один раз на все запросы и заранее; если сессия кончилась — «Сессия истекла», вход и возврат на ту же страницу.
@@ -176,13 +194,17 @@ src/
 - `/profile` — карточка (ID, карандаш → `/profile/edit`), друзья, статистика, история.
 - `/profile/edit` — редактирование профиля (отдельная страница).
 - `/player/<ID>` — чужой профиль: статистика, история, «Добавить в друзья».
-- `/friends` — страница друзей: «Мои друзья» (профиль, удалить, «В его комнату»), «Заявки» (входящие и отправленные), «Найти» (по ID или нику). В меню — пункт «Друзья» со счётчиком заявок.
+- `/friends` — страница друзей: «Мои друзья» (профиль, удалить, «В его комнату») и «Найти» (по ID или нику).
+- Главная — блок «Друзья в сети» (`home/online-players`): друзья онлайн, их статус и кнопка «Зайти», если друг в комнате.
 - ID игрока (8 цифр) — `src/lib/player-id.ts`: обратимо перемешанный id пользователя из базы. В базе ничего хранить не нужно.
-- Друзья, онлайн-статус и приглашения в комнату — через наш WebSocket-сервер (`scripts/social.mjs`, на сайте `src/lib/social.tsx`). У backend нет API друзей.
+- Список друзей хранится на backend (`/friend/list`, `/friend/add`, `/friend/delete/{id}`). Онлайн-статус и приглашения в комнату — через наш WebSocket-сервер (`scripts/social.mjs`, на сайте `src/lib/social.tsx`):
   - канал `/ws/user/<id>?token=...`; токен проверяется запросом к backend, чужой id не подделать;
-  - список друзей хранится на backend (`/friend/list`, `/friend/add`, `/friend/delete/{id}`); WebSocket-сервер только показывает, кто в сети, и передаёт приглашения в комнату;
+  - WebSocket-сервер только показывает, кто в сети, и передаёт приглашения в комнату;
   - статус: «В сети» / «В комнате» / «В игре» / «Не в сети» — по открытой странице;
   - в комнате кнопка «Пригласить друга» → у друга всплывает приглашение с кнопкой «Зайти».
+- **Дружба на backend — в одну сторону, без заявок.** `A` добавил `B` → `B` есть у `A`, но `A` нет у `B`. Удаление тоже только у себя.
+  - Если `B` в сети, ему всплывает «A добавил(а) вас в друзья» → «Добавить в ответ» (тоже `/friend/add`) или «Скрыть» (только закрывает окно). Если `B` не в сети — он не узнает: у backend нет списка «кто добавил меня».
+  - Заявок (входящие/отправленные, принять/отклонить) пока нет — ждём от backend `/friend/request`, `/friend/requests`, `/friend/accept/{id}`, `/friend/decline/{id}` и взаимное удаление. Когда появятся — добавить вкладку «Заявки» и счётчик в меню.
 - Статистика и история считаются по законченным играм (`api.getUserStats`), потому что `/statistic/{id}` у backend пока всегда 0.
 
 ## Проверка с телефона

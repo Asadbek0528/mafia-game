@@ -3,10 +3,18 @@ import { countRoles, DEFAULT_TIMES } from "./roles";
 
 const API_URL = "/backend";
 const REQUEST_TIMEOUT_MS = 15000;
-const SERVER_DOWN_TEXT =
-  "Backend не отвечает или упал. Проверьте, что сервер запущен (адрес — BACKEND_URL в .env.local).";
-const SERVER_ERROR_TEXT = (path: string) =>
-  `Backend вернул ошибку 500 на ${path.split("?")[0]} — сбой на сервере (смотреть логи backend) или сервер недоступен.`;
+const SERVER_DOWN_TEXT = "Сервер временно недоступен. Попробуйте чуть позже.";
+const UNKNOWN_ERROR_TEXT = "Что-то пошло не так. Попробуйте ещё раз.";
+
+const BACKEND_TEXTS: Record<string, string> = {
+  "incorrect username or password": "Неверный логин или пароль.",
+  "not authenticated": "Войдите в аккаунт.",
+  "room not found": "Комната не найдена — возможно, её уже закрыли.",
+  "user not found": "Игрок не найден.",
+  "friend not found": "Этого игрока нет у вас в друзьях.",
+  "user is already your friend": "Этот игрок уже у вас в друзьях.",
+  "you cannot add yourself": "Нельзя добавить в друзья самого себя.",
+};
 
 const ENDPOINTS = {
   register: "/auth/register",
@@ -257,6 +265,8 @@ export function isServerDown(error: unknown): boolean {
 type RequestOptions = {
   method?: "GET" | "POST" | "PUT" | "DELETE";
   body?: object;
+  // Не писать ошибку в консоль — вызывающий код сам обрабатывает сбой
+  quiet?: boolean;
 };
 
 const AUTH_PATHS = [ENDPOINTS.login, ENDPOINTS.register, ENDPOINTS.refresh, ENDPOINTS.logout];
@@ -310,7 +320,8 @@ async function request<T>(
       body: options.body ? JSON.stringify(options.body) : undefined,
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
-  } catch {
+  } catch (error) {
+    console.error(`[backend] ${options.method ?? "GET"} ${path} — нет ответа`, error);
     throw new ApiError(SERVER_DOWN_TEXT, 0);
   }
 
@@ -333,9 +344,7 @@ async function request<T>(
   }
 
   if (!response.ok) {
-    if (response.status === 500 && typeof data === "string") {
-      throw new ApiError(SERVER_ERROR_TEXT(path), 500);
-    }
+    if (!options.quiet) console.error(`[backend] ${options.method ?? "GET"} ${path} → ${response.status}`, data);
     throw new ApiError(getErrorText(data, response.status), response.status);
   }
 
@@ -343,15 +352,18 @@ async function request<T>(
 }
 
 function getErrorText(data: unknown, status: number): string {
-  const detail = (data as { detail?: unknown } | null)?.detail;
+  if (status >= 500) return SERVER_DOWN_TEXT;
 
-  if (typeof detail === "string") return detail;
-  if (Array.isArray(detail))
-    return detail.map((item: { msg?: string }) => item.msg).join("\n");
+  const detail = (data as { detail?: unknown } | null)?.detail;
+  if (typeof detail === "string") {
+    const known = BACKEND_TEXTS[detail.trim().toLowerCase()];
+    if (known) return known;
+    if (/[а-яё]/i.test(detail)) return detail;
+  }
   if (status === 401) return "Неверный логин или пароль.";
   if (status === 404) return "Не найдено.";
-  if (status >= 500) return "Ошибка на сервере. Сообщите backend-команде.";
-  return `Ошибка ${status}`;
+  if (status === 422) return "Проверьте, правильно ли заполнены поля.";
+  return UNKNOWN_ERROR_TEXT;
 }
 
 function parseServerDate(value: string | null | undefined): number | null {
@@ -440,6 +452,8 @@ async function getElimination(player: BackendGamePlayer) {
   }
 }
 const myGamesCache = new Map<string, MyGame | null>();
+const USER_GAMES_REUSE_MS = 10_000;
+const userGamesLoads = new Map<number, { at: number; promise: Promise<MyGame[]> }>();
 
 async function hadAnyMoves(gameId: number): Promise<boolean> {
   const rounds = await request<BackendRoundShort[]>(ENDPOINTS.gameRounds(String(gameId)));
@@ -624,6 +638,15 @@ export const api = {
   },
 
   async getUserGames(userId: number): Promise<MyGame[]> {
+    const recent = userGamesLoads.get(userId);
+    if (recent && Date.now() - recent.at < USER_GAMES_REUSE_MS) return recent.promise;
+    const promise = api.loadUserGames(userId);
+    userGamesLoads.set(userId, { at: Date.now(), promise });
+    promise.catch(() => userGamesLoads.delete(userId));
+    return promise;
+  },
+
+  async loadUserGames(userId: number): Promise<MyGame[]> {
     const myId = userId;
     const games = await request<BackendGame[]>(ENDPOINTS.gameList);
     const finished = games
@@ -631,13 +654,32 @@ export const api = {
       .sort((a, b) => b.id - a.id)
       .slice(0, 40);
 
+    // Если /game-player/list у backend падает (5xx) на нескольких играх подряд, не шлём ещё 40 одинаковых запросов.
+    // Одна сломанная игра (500 только на ней) не должна прятать всю историю — её просто пропускаем.
+    const probes = finished.filter((game) => !myGamesCache.has(`${myId}:${game.id}`)).slice(0, 3);
+    const brokenGames: number[] = [];
+    for (const game of probes) {
+      try {
+        await request<BackendGamePlayer[]>(ENDPOINTS.gamePlayers(String(game.id)), { quiet: true });
+        break;
+      } catch (error) {
+        if (!isServerDown(error)) break;
+        brokenGames.push(game.id);
+      }
+    }
+    if (probes.length > 0 && brokenGames.length === probes.length) {
+      console.warn("[backend] /game-player/list отвечает ошибкой — история игр временно недоступна");
+      return [];
+    }
+    for (const gameId of brokenGames) myGamesCache.set(`${myId}:${gameId}`, null);
+
     const results = await Promise.all(
       finished.map(async (game): Promise<MyGame | null> => {
         const cacheKey = `${myId}:${game.id}`;
         if (myGamesCache.has(cacheKey)) return myGamesCache.get(cacheKey) ?? null;
 
         try {
-          const players = await request<BackendGamePlayer[]>(ENDPOINTS.gamePlayers(String(game.id)));
+          const players = await request<BackendGamePlayer[]>(ENDPOINTS.gamePlayers(String(game.id)), { quiet: true });
           const me = players.find((player) => player.user_id === myId);
           if (!me || !me.role || !(await hadAnyMoves(game.id))) {
             myGamesCache.set(cacheKey, null);

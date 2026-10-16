@@ -20,6 +20,8 @@ const TEAM_ROLES = ["mafia", "doctor", "commissar"];
 const SERVER_ONLY_TYPES = ["team", "check-result"];
 const CHAT_LIMIT = 150;
 const CHAT_KEEP_MS = 3 * 60 * 60 * 1000;
+const LOBBY_CHANNEL = "/ws/lobby";
+const LOBBY_DELAY_MS = 400;
 
 const server = new WebSocketServer({ port: PORT, host: "0.0.0.0" });
 
@@ -42,6 +44,16 @@ function broadcast(channel, message, except) {
   for (const socket of members) {
     if (socket !== except && socket.readyState === socket.OPEN) socket.send(text);
   }
+}
+
+let lobbyTimer = null;
+
+function lobbyChanged() {
+  if (lobbyTimer || !channels.get(LOBBY_CHANNEL)?.size) return;
+  lobbyTimer = setTimeout(() => {
+    lobbyTimer = null;
+    broadcast(LOBBY_CHANNEL, { type: "rooms" });
+  }, LOBBY_DELAY_MS);
 }
 
 function roomIdFromChannel(channel) {
@@ -152,6 +164,7 @@ async function removeRoom(roomId, token) {
   } catch {
     await backend(`/room/update/${roomId}`, token, "PUT", { status: "FINISHED" });
   }
+  lobbyChanged();
 }
 
 function rememberChat(channel, message) {
@@ -354,8 +367,23 @@ server.on("connection", (socket, request) => {
     handleUserSocket(socket, Number(userMatch[1]), token);
     return;
   }
+  if (channel === LOBBY_CHANNEL) {
+    if (!channels.has(channel)) channels.set(channel, new Set());
+    const lobby = channels.get(channel);
+    lobby.add(socket);
+    socket.isAlive = true;
+    socket.on("pong", () => {
+      socket.isAlive = true;
+    });
+    socket.on("close", () => lobby.delete(socket));
+    socket.send(JSON.stringify({ type: "lobby" }));
+    return;
+  }
+
+  const isRoomChannel = roomIdFromChannel(channel) !== null;
   if (token) channelTokens.set(channel, token);
   touchGame(channel);
+  lobbyChanged();
 
   const gameId = gameIdFromChannel(channel);
   if (gameId && token) {
@@ -414,6 +442,7 @@ server.on("connection", (socket, request) => {
       return;
     }
     if (data?.type === "chat") rememberChat(channel, data.message);
+    if (isRoomChannel) lobbyChanged();
     broadcast(channel, text, socket);
   });
 
@@ -426,6 +455,7 @@ server.on("connection", (socket, request) => {
     }
     members.delete(socket);
     if (members.size === 0) channels.delete(channel);
+    lobbyChanged();
   });
 });
 

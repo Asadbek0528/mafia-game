@@ -4,8 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { useSocial } from "@/lib/social";
-
 import "./header.scss";
 
 const MENU = [
@@ -52,7 +50,6 @@ const PAGES_WITHOUT_MENU = ["/register", "/room", "/game", "/auth"];
 
 export default function Header() {
   const pathname = usePathname();
-  const social = useSocial();
 
   const hideMenu = PAGES_WITHOUT_MENU.some((page) => pathname.startsWith(page));
   if (hideMenu) {
@@ -80,9 +77,6 @@ export default function Header() {
                 {item.icon}
               </svg>
               <span>{item.title}</span>
-              {item.href === "/friends" && social.incoming.length > 0 && (
-                <b className="header-badge">{social.incoming.length}</b>
-              )}
             </Link>
           );
         })}

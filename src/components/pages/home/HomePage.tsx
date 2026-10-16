@@ -2,21 +2,24 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import Footer from "@/components/layout/footer/Footer";
 import GameHistory from "@/components/pages/widgets/game-history/GameHistory";
 import ProfileCard from "@/components/pages/widgets/profile-card/ProfileCard";
 import RoleCards from "@/components/pages/widgets/role-cards/RoleCards";
-import { api, loadOrDemo, type RoomShort } from "@/lib/api";
+import { api, type RoomShort } from "@/lib/api";
 import { useCurrentUser } from "@/lib/auth";
 import { DEMO_ROOMS } from "@/lib/demo";
+import { useLiveUpdates, WS_PATHS } from "@/lib/socket";
 
 import CreateRoomModal from "./create-room-modal/CreateRoomModal";
 import Hero from "./hero/Hero";
 import OnlinePlayers from "./online-players/OnlinePlayers";
 import RoomsTable from "./rooms-table/RoomsTable";
 import "./home-page.scss";
+
+const ROOMS_POLL_MS = 5000;
 
 export default function HomePage() {
   const router = useRouter();
@@ -32,9 +35,49 @@ export default function HomePage() {
     }
   }, [isLoaded, user, router]);
 
-  useEffect(() => {
-    loadOrDemo(api.getRooms, DEMO_ROOMS).then(setRooms);
+  const roomsLoad = useRef<{ isLoading: boolean; again: boolean }>({ isLoading: false, again: false });
+  const loadRooms = useCallback(async () => {
+    const state = roomsLoad.current;
+    if (state.isLoading) {
+      state.again = true;
+      return;
+    }
+    state.isLoading = true;
+    do {
+      state.again = false;
+      const fresh = await api.getRooms().catch(() => null);
+      setRooms((old) => fresh ?? old ?? DEMO_ROOMS);
+    } while (state.again);
+    state.isLoading = false;
   }, []);
+
+  const [hasLobby, setHasLobby] = useState(false);
+  const { isLive } = useLiveUpdates(WS_PATHS.lobby, (data) => {
+    const type = (data as { type?: string } | null)?.type;
+    if (type === "lobby") setHasLobby(true);
+    if (type === "rooms") loadRooms();
+  });
+  const isLobbyLive = isLive && hasLobby;
+
+  useEffect(() => {
+    if (!isLive) setHasLobby(false);
+  }, [isLive]);
+
+  useEffect(() => {
+    loadRooms();
+  }, [loadRooms, isLobbyLive]);
+
+  useEffect(() => {
+    const refreshIfVisible = () => {
+      if (!document.hidden) loadRooms();
+    };
+    const timer = isLobbyLive ? null : setInterval(refreshIfVisible, ROOMS_POLL_MS);
+    document.addEventListener("visibilitychange", refreshIfVisible);
+    return () => {
+      if (timer) clearInterval(timer);
+      document.removeEventListener("visibilitychange", refreshIfVisible);
+    };
+  }, [isLobbyLive, loadRooms]);
 
   const userId = user?.id;
   useEffect(() => {

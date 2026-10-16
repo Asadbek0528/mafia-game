@@ -9,6 +9,7 @@ const GAME_PATH = process.env.NEXT_PUBLIC_WS_GAME_PATH?.trim() || "/ws/game/{id}
 const MAX_RETRY_MS = 8000;
 
 export const WS_PATHS = {
+  lobby: "/ws/lobby",
   room: (roomId: string) => ROOM_PATH.replace("{id}", roomId),
   game: (gameId: string) => GAME_PATH.replace("{id}", gameId),
 };
