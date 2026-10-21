@@ -17,4 +17,4 @@ export function setting(name, fallback) {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
 }
 
-export const BACKEND_URL = setting("BACKEND_URL", "http://3.25.132.230").replace(/\/$/, "");
+export const BACKEND_URL = setting("BACKEND_URL", "http://3.27.38.24").replace(/\/$/, "");
