@@ -31,11 +31,120 @@
 .create-room-label {
   font-size: 13px;
   color: var(--color-text-muted);
+
+  b {
+    color: var(--color-text);
+  }
 }
 
 .create-room-range {
   width: 100%;
-  accent-color: var(--color-red);
+  height: 22px;
+  margin: 0;
+  background: none;
+  cursor: pointer;
+  appearance: none;
+
+  &::-webkit-slider-runnable-track {
+    height: 6px;
+    background: linear-gradient(90deg, var(--color-red) var(--fill, 50%), rgba(255, 255, 255, 0.08) var(--fill, 50%));
+    border-radius: 99px;
+  }
+
+  &::-moz-range-track {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 99px;
+  }
+
+  &::-moz-range-progress {
+    height: 6px;
+    background: var(--color-red);
+    border-radius: 99px;
+  }
+
+  &::-webkit-slider-thumb {
+    width: 20px;
+    height: 20px;
+    margin-top: -7px;
+    background: #ffffff;
+    border: 4px solid var(--color-red);
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px rgba(224, 32, 43, 0.18);
+    appearance: none;
+  }
+
+  &::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    background: #ffffff;
+    border: 4px solid var(--color-red);
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px rgba(224, 32, 43, 0.18);
+  }
+
+  &:focus-visible {
+    outline: none;
+
+    &::-webkit-slider-thumb {
+      box-shadow: 0 0 0 6px rgba(224, 32, 43, 0.35);
+    }
+
+    &::-moz-range-thumb {
+      box-shadow: 0 0 0 6px rgba(224, 32, 43, 0.35);
+    }
+  }
+}
+
+.create-room-range-limits {
+  display: flex;
+  justify-content: space-between;
+  margin-top: -4px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.create-room-roles-box {
+  display: grid;
+  gap: 8px;
+  margin-top: -4px;
+}
+
+.create-room-roles-label {
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+}
+
+.create-room-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.create-room-role {
+  padding: 4px 10px;
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-line-soft);
+  border-radius: 999px;
+
+  b {
+    color: var(--color-text);
+  }
+}
+
+.create-room-role-mafia {
+  color: #ffb3b8;
+  background: rgba(224, 32, 43, 0.12);
+  border-color: rgba(224, 32, 43, 0.35);
+
+  b {
+    color: #ffffff;
+  }
 }
 
 .create-room-ages {

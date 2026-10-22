@@ -6,7 +6,6 @@ export type Role = {
   plural: string;
   image: string;
   about: string;
-  nightTask: string;
   team: "mafia" | "town";
   tagline: string;
   story: string;
@@ -22,13 +21,12 @@ export const ROLES: Role[] = [
     plural: "Мафия",
     image: "/img/roles-v3/mafia.webp",
     about: "Ночью вместе выбирает жертву. Днём притворяется жителем.",
-    nightTask: "Выберите жертву",
     team: "mafia",
     tagline: "Ты ночью убиваешь. Твоя цель — не дать им выжить.",
     story:
       "Днём он улыбается соседям, пьёт кофе в том же баре и громче всех возмущается очередной смертью. Но когда город засыпает, он надевает шляпу и выходит на улицу. У мафии нет друзей — есть только те, кто пока полезен. Каждое утро кто-то не просыпается, и каждый раз мафия делает вид, что потрясена не меньше других.",
     abilities: [
-      "Каждую ночь выбирает одного игрока — если доктор его не спасёт, утром он погибнет.",
+      "Каждую ночь мафия выбирает одну жертву на всех — если доктор её не спасёт, утром она погибнет.",
       "Знает, кто остальные мафиози, — остальные игроки не знают, кто мафия.",
       "Днём ведёт себя как обычный житель: обвиняет, защищается, обманывает и голосует вместе со всеми.",
     ],
@@ -45,14 +43,12 @@ export const ROLES: Role[] = [
     plural: "Доктор",
     image: "/img/roles-v3/doctor.webp",
     about: "Каждую ночь лечит одного игрока. Если мафия выбрала его — он выживет.",
-    nightTask: "Кого вылечить этой ночью?",
     team: "town",
     tagline: "Ты спасаешь жизни. Но твоя помощь — только одному.",
     story:
       "В маленькой клинике на окраине свет горит до утра. Доктор знает: этой ночью кто-то снова придёт с ножом, и он может спасти только одного. Он никогда не говорит, кого выбрал, — мафия не должна узнать, кто стоит между ней и её жертвой. Иногда он угадывает. И тогда утром город просыпается целым.",
     abilities: [
-      "Каждую ночь лечит одного игрока, в том числе себя.",
-      "Нельзя лечить одного и того же игрока две ночи подряд.",
+      "Каждую ночь лечит одного игрока, в том числе себя. Если докторов двое — лечат одного на двоих.",
       "Если мафия выбрала того же игрока — он выживет, а утром все узнают, что доктор спас жертву.",
     ],
     goal: "Помочь городу найти и выгнать всю мафию.",
@@ -68,13 +64,12 @@ export const ROLES: Role[] = [
     plural: "Комиссар",
     image: "/img/roles-v3/commissar.webp",
     about: "Каждую ночь проверяет одного игрока и узнаёт, мафия он или нет.",
-    nightTask: "Кого проверить этой ночью?",
     team: "town",
     tagline: "Ты ищешь правду. Твоя задача — найти мафию.",
     story:
       "На стене его кабинета — фотографии всех жителей, соединённые красными нитями. Комиссар не спит ночами: он проверяет по одному подозреваемому и узнаёт правду. Но правда опасна. Если мафия поймёт, кто задаёт вопросы, комиссар станет следующим. Поэтому днём он говорит осторожно — и ведёт город к правильному ответу.",
     abilities: [
-      "Каждую ночь проверяет одного игрока и сразу узнаёт: мафия он или нет.",
+      "Каждую ночь проверяет одного игрока и сразу узнаёт: мафия он или нет. Если комиссаров двое — проверка одна на двоих.",
       "Результат видит только комиссар — остальные узнают, только если он расскажет.",
       "Никого не может убить — только проверяет.",
     ],
@@ -91,7 +86,6 @@ export const ROLES: Role[] = [
     plural: "Жители",
     image: "/img/roles-v3/citizen.webp",
     about: "Ночью спит. Днём ищет мафию в чате и голосует.",
-    nightTask: "Город спит. Дождитесь утра.",
     team: "town",
     tagline: "Ты просто живёшь. Но твой голос может решить всё.",
     story:
@@ -128,10 +122,13 @@ export const NIGHT_TURNS: { role: RoleKey; title: string }[] = [
 ];
 
 export const MIN_PLAYERS = 4;
+export const MAX_PLAYERS = 16;
 
+// Рекомендуемый баланс: мафии примерно четверть стола, по одному доктору и комиссару.
+// 4 → 1/1/0, 6 → 2/1/1, 8 → 2/1/1, 10 → 3/1/1, 12 → 3/1/1, 14 → 4/1/1, 16 → 4/1/1
 export function countRoles(players: number): RoleCounts {
   return {
-    mafia: Math.max(1, Math.floor(players / 3.5)),
+    mafia: Math.max(1, Math.round(players / 4)),
     doctor: players >= 4 ? 1 : 0,
     commissar: players >= 5 ? 1 : 0,
   };
@@ -141,12 +138,29 @@ export function countCivilians(players: number, roles: RoleCounts): number {
   return players - roles.mafia - roles.doctor - roles.commissar;
 }
 
+// Сколько каждой роли создатель может поставить сам. Строгих правил нет —
+// только мафии меньше половины стола. «Честный баланс» (countRoles) — лишь рекомендация.
 export function getRoleLimits(players: number) {
   return {
     mafia: { min: 1, max: Math.max(1, Math.ceil(players / 2) - 1) },
-    doctor: { min: 0, max: 2 },
-    commissar: { min: 0, max: 2 },
+    doctor: { min: 0, max: 3 },
+    commissar: { min: 0, max: 3 },
   };
+}
+
+// Подгоняем роли под новое число игроков: всё, что выше лимита, срезаем
+export function fitRoles(players: number, roles: RoleCounts): RoleCounts {
+  const limits = getRoleLimits(players);
+  const fitted = {
+    mafia: Math.min(Math.max(roles.mafia, limits.mafia.min), limits.mafia.max),
+    doctor: Math.min(roles.doctor, limits.doctor.max),
+    commissar: Math.min(roles.commissar, limits.commissar.max),
+  };
+  return checkRoles(players, fitted) === "" ? fitted : countRoles(players);
+}
+
+export function sameRoles(a: RoleCounts, b: RoleCounts): boolean {
+  return a.mafia === b.mafia && a.doctor === b.doctor && a.commissar === b.commissar;
 }
 
 export function checkRoles(players: number, roles: RoleCounts): string {

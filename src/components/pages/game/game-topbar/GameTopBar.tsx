@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
+import SoundControl from "../sound-control/SoundControl";
 import "./game-topbar.scss";
 
 export type GameConnection = "live" | "slow" | "offline" | "demo";
@@ -111,9 +112,11 @@ export default function GameTopBar(props: GameTopBarProps) {
         {aliveCount}/{totalCount}
       </p>
 
+      <SoundControl />
+
       <p className={`game-topbar-pill game-topbar-connection game-topbar-connection-${connection}`} role="status" title={CONNECTION_TITLE[connection]}>
         <span aria-hidden="true" />
-        {CONNECTION_TEXT[connection]}
+        <b className="game-topbar-connection-text">{CONNECTION_TEXT[connection]}</b>
       </p>
     </header>
   );

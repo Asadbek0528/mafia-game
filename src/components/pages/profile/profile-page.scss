@@ -1,6 +1,13 @@
 .profile-page {
+  position: relative;
   max-width: 1100px;
   padding: 18px;
+}
+
+// Содержимое профиля — поверх лужи крови
+.profile-page > :not(.profile-blood) {
+  position: relative;
+  z-index: 1;
 }
 
 .profile-page-title {

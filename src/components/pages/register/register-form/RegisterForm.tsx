@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { showToast } from "@/components/pages/widgets/toast/Toast";
 import { api, type LoginResult } from "@/lib/api";
@@ -56,15 +56,24 @@ function validate(mode: Mode, values: FormValues): FormErrors {
 
 type RegisterFormProps = {
   mode: Mode;
-  onModeChange: (mode: Mode) => void;
   onError: () => void;
 };
 
-export default function RegisterForm({
-  mode,
-  onModeChange,
-  onError,
-}: RegisterFormProps) {
+// Надёжность пароля: длина, цифры, разный регистр, символы
+function passwordStrength(password: string): { level: 0 | 1 | 2 | 3; text: string } {
+  if (!password) return { level: 0, text: "" };
+  let score = 0;
+  if (password.length >= 8) score += 1;
+  if (password.length >= 12) score += 1;
+  if (/\d/.test(password)) score += 1;
+  if (/[a-zа-яё]/.test(password) && /[A-ZА-ЯЁ]/.test(password)) score += 1;
+  if (/[^a-zA-Z0-9а-яА-ЯёЁ]/.test(password)) score += 1;
+  if (password.length < 6 || score <= 1) return { level: 1, text: "Слабый пароль" };
+  if (score <= 3) return { level: 2, text: "Нормальный пароль" };
+  return { level: 3, text: "Надёжный пароль" };
+}
+
+export default function RegisterForm({ mode, onError }: RegisterFormProps) {
   const router = useRouter();
 
   const [values, setValues] = useState<FormValues>({
@@ -76,6 +85,13 @@ export default function RegisterForm({
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<FormErrors>(NO_ERRORS);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Сменили «Регистрация / Вход» — старые ошибки больше не относятся к форме
+  useEffect(() => {
+    setErrors(NO_ERRORS);
+  }, [mode]);
+
+  const strength = mode === "register" ? passwordStrength(values.password) : null;
 
   function setField(name: keyof FormValues, value: string) {
     setValues({ ...values, [name]: value });
@@ -169,6 +185,8 @@ export default function RegisterForm({
             <input
               id="username"
               className={inputClass("username")}
+              aria-invalid={Boolean(errors.username)}
+              aria-describedby={errors.username ? "username-error" : undefined}
               type="text"
               autoComplete="username"
               placeholder="например, darkness"
@@ -178,7 +196,7 @@ export default function RegisterForm({
             />
           </div>
           {errors.username && (
-            <p className="register-error">{errors.username}</p>
+            <p id="username-error" className="register-error" role="alert">{errors.username}</p>
           )}
         </div>
 
@@ -201,6 +219,8 @@ export default function RegisterForm({
               <input
                 id="email"
                 className={inputClass("email")}
+              aria-invalid={Boolean(errors.email)}
+              aria-describedby={errors.email ? "email-error" : undefined}
                 type="email"
                 autoComplete="email"
                 placeholder="you@mail.com"
@@ -208,7 +228,7 @@ export default function RegisterForm({
                 onChange={(event) => setField("email", event.target.value)}
               />
             </div>
-            {errors.email && <p className="register-error">{errors.email}</p>}
+            {errors.email && <p id="email-error" className="register-error" role="alert">{errors.email}</p>}
           </div>
         )}
 
@@ -231,6 +251,8 @@ export default function RegisterForm({
               <input
                 id="age"
                 className={inputClass("age")}
+              aria-invalid={Boolean(errors.age)}
+              aria-describedby={errors.age ? "age-error" : undefined}
                 type="number"
                 inputMode="numeric"
                 min={6}
@@ -240,7 +262,7 @@ export default function RegisterForm({
                 onChange={(event) => setField("age", event.target.value)}
               />
             </div>
-            {errors.age && <p className="register-error">{errors.age}</p>}
+            {errors.age && <p id="age-error" className="register-error" role="alert">{errors.age}</p>}
           </div>
         )}
 
@@ -262,11 +284,13 @@ export default function RegisterForm({
             <input
               id="password"
               className={inputClass("password")}
+              aria-invalid={Boolean(errors.password)}
+              aria-describedby={errors.password ? "password-error" : undefined}
               type={showPassword ? "text" : "password"}
               autoComplete={
                 mode === "register" ? "new-password" : "current-password"
               }
-              placeholder="минимум 6 символов"
+              placeholder={mode === "register" ? "минимум 6 символов" : "ваш пароль"}
               value={values.password}
               onChange={(event) => setField("password", event.target.value)}
             />
@@ -274,21 +298,36 @@ export default function RegisterForm({
               type="button"
               className="register-eye"
               onClick={() => setShowPassword(!showPassword)}
-              aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
+              aria-label="Показать пароль"
+              title={showPassword ? "Скрыть пароль" : "Показать пароль"}
+              aria-pressed={showPassword}
             >
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.8"
+                strokeLinecap="round"
+                aria-hidden="true"
               >
                 <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
                 <circle cx="12" cy="12" r="3" />
+                {showPassword && <path d="M4 4l16 16" />}
               </svg>
             </button>
           </div>
           {errors.password && (
-            <p className="register-error">{errors.password}</p>
+            <p id="password-error" className="register-error" role="alert">{errors.password}</p>
+          )}
+          {!errors.password && strength && strength.level > 0 && (
+            <p className={`register-strength register-strength-${strength.level}`} aria-live="polite">
+              <span className="register-strength-bar" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+              </span>
+              {strength.text}
+            </p>
           )}
         </div>
 
@@ -300,7 +339,7 @@ export default function RegisterForm({
           {isLoading ? (
             <span className="register-spinner" />
           ) : mode === "register" ? (
-            "Зайти в игру"
+            "Создать аккаунт"
           ) : (
             "Войти"
           )}
@@ -319,22 +358,7 @@ export default function RegisterForm({
         </button>
       </form>
 
-      <p className="register-switch">
-        {mode === "register" ? "Уже есть аккаунт? " : "Нет аккаунта? "}
-        <button
-          type="button"
-          className="register-switch-button"
-          onClick={() => {
-            setErrors(NO_ERRORS);
-            onModeChange(mode === "register" ? "login" : "register");
-          }}
-        >
-          {mode === "register" ? "Войти" : "Зарегистрироваться"}
-        </button>
-      </p>
-
-      <p className="register-guest">
-        Не хочешь регистрироваться?{" "}
+      <div className="register-guest">
         <Link
           href="/"
           onClick={(event) => {
@@ -342,11 +366,17 @@ export default function RegisterForm({
             loginAsGuest();
             router.push(takePageAfterLogin());
           }}
-          className="register-guest-link"
+          className="register-guest-button"
         >
-          Зайти как гость
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M3 9.5c3-1.3 6-1.1 9 .8 3-1.9 6-2.1 9-.8-.4 3.9-2.4 5.9-5 5.9-1.6 0-2.8-1-4-2.4-1.2 1.4-2.4 2.4-4 2.4-2.6 0-4.6-2-5-5.9Z" />
+            <circle cx="8" cy="11.2" r="1.1" />
+            <circle cx="16" cy="11.2" r="1.1" />
+          </svg>
+          Играть как гость
         </Link>
-      </p>
+        <p className="register-guest-hint">Без аккаунта не сохранятся статистика, друзья и покупки.</p>
+      </div>
     </>
   );
 }

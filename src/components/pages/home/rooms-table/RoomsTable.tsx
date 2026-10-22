@@ -10,91 +10,111 @@ type RoomsTableProps = {
 
 export default function RoomsTable({ rooms, onCreateRoom }: RoomsTableProps) {
   return (
-    <section className="panel" id="rooms">
+    <section className="panel rooms" id="rooms">
       <div className="panel-top">
-        <h2 className="panel-title">Доступные комнаты</h2>
-        <button className="btn-link" onClick={onCreateRoom}>
-          + Создать
-        </button>
+        <h2 className="panel-title">
+          Комнаты
+          {rooms && rooms.length > 0 && <span className="rooms-count">{rooms.length}</span>}
+        </h2>
+        {rooms && rooms.length > 0 && (
+          <button className="btn btn-dark btn-small" onClick={onCreateRoom}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Создать
+          </button>
+        )}
       </div>
 
-      {rooms === null && <p className="rooms-message">Загружаем комнаты…</p>}
+      {rooms === null && (
+        <ul className="rooms-grid" aria-busy="true">
+          {[0, 1, 2].map((item) => (
+            <li key={item} className="rooms-card rooms-card-skeleton" />
+          ))}
+        </ul>
+      )}
 
       {rooms?.length === 0 && (
-        <p className="rooms-message">Свободных комнат нет. Создайте свою — друзья зайдут по ссылке.</p>
+        <div className="rooms-empty">
+          <span className="rooms-empty-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 21h18M5 21V8l7-5 7 5v13M10 21v-6h4v6" />
+            </svg>
+          </span>
+          <p className="rooms-empty-title">Комнат пока нет</p>
+          <p>Создайте свою и позовите друзей — игра начнётся, когда все будут готовы.</p>
+          <button className="btn btn-red btn-small" onClick={onCreateRoom}>
+            Создать комнату
+          </button>
+        </div>
       )}
 
       {rooms && rooms.length > 0 && (
-        <table className="rooms-table">
-          <thead>
-            <tr>
-              <th>Название</th>
-              <th>Игроки</th>
-              <th>Возраст</th>
-              <th>Статус</th>
-              <th>
-                <span className="sr-only">Действие</span>
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {rooms.map((room) => (
-              <RoomRow key={room.id} room={room} />
-            ))}
-          </tbody>
-        </table>
+        <ul className="rooms-grid">
+          {rooms.map((room) => (
+            <RoomCard key={room.id} room={room} />
+          ))}
+        </ul>
       )}
     </section>
   );
 }
 
-function RoomRow({ room }: { room: RoomShort }) {
+function RoomCard({ room }: { room: RoomShort }) {
   const isPlaying = room.status === "playing";
   const isFull = room.players >= room.max_players;
   const canJoin = !isPlaying && !isFull;
+  const fill = Math.min(100, Math.round((room.players / Math.max(1, room.max_players)) * 100));
 
   let buttonText = "Войти";
-  if (isPlaying) buttonText = "Идёт";
-  else if (isFull) buttonText = "Заполнена";
+  if (isPlaying) buttonText = "Игра уже идёт";
+  else if (isFull) buttonText = "Мест нет";
+
+  let badgeClass = "rooms-badge";
+  let badgeText = "Набор";
+  if (isPlaying) {
+    badgeClass = "rooms-badge rooms-badge-live";
+    badgeText = "В игре";
+  } else if (isFull) {
+    badgeClass = "rooms-badge rooms-badge-full";
+    badgeText = "Заполнена";
+  }
 
   return (
-    <tr>
-      <td>
-        <span className="rooms-name">
-          <span className="rooms-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2c-3 0-5 1.6-5 4.5 0 .7.1 1.3.3 1.9C5.3 9 4 10.6 4 12.5 4 16 7.6 22 12 22s8-6 8-9.5c0-1.9-1.3-3.5-3.3-4.1.2-.6.3-1.2.3-1.9C17 3.6 15 2 12 2Z" />
-            </svg>
+    <li className={canJoin ? "rooms-card" : "rooms-card rooms-card-closed"}>
+      <div className="rooms-card-top">
+        <p className="rooms-card-name">{room.name}</p>
+        <span className={badgeClass}>{badgeText}</span>
+      </div>
+
+      <div className="rooms-card-meta">
+        <span className="rooms-card-players">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <circle cx="9" cy="8" r="3.5" />
+            <path d="M2 20c0-3.5 3-6 7-6s7 2.5 7 6z" />
+            <circle cx="17" cy="9" r="2.8" />
+            <path d="M16.6 13.3c3 .3 5.4 2.4 5.4 5.2V20h-4.4c0-2.5-.4-4.8-1-6.7z" />
+          </svg>
+          <span>
+            <b>{room.players}</b>/{room.max_players}
           </span>
-          {room.name}
         </span>
-      </td>
+        <span className="rooms-card-age">{room.age > 0 ? `${room.age}+` : "0+"}</span>
+      </div>
 
-      <td className={isFull ? "rooms-full" : ""}>
-        {room.players}/{room.max_players}
-      </td>
+      <span className="rooms-card-bar" aria-hidden="true">
+        <span style={{ width: `${fill}%` }} />
+      </span>
 
-      <td>{room.age > 0 ? `${room.age}+` : "Для всех"}</td>
-
-      <td>
-        <span className="rooms-status">
-          <span className={isPlaying ? "status-dot" : "status-dot status-dot-yellow"} />
-          {isPlaying ? "Идёт игра" : "Ожидание"}
-        </span>
-      </td>
-
-      <td>
-        {canJoin ? (
-          <Link href={`/room/${room.id}`} className="btn btn-red btn-small">
-            {buttonText}
-          </Link>
-        ) : (
-          <button className="btn btn-red btn-small" disabled>
-            {buttonText}
-          </button>
-        )}
-      </td>
-    </tr>
+      {canJoin ? (
+        <Link href={`/room/${room.id}`} className="btn btn-red btn-small btn-full">
+          {buttonText}
+        </Link>
+      ) : (
+        <button className="btn btn-dark btn-small btn-full" disabled>
+          {buttonText}
+        </button>
+      )}
+    </li>
   );
 }

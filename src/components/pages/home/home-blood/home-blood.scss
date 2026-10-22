@@ -1,0 +1,56 @@
+// Поля по бокам от контента главной (контент — до 1280px по центру, слева меню 104px)
+.home-blood {
+  --home-blood-side: calc((100vw - 104px - 1280px) / 2 + 60px);
+
+  position: fixed;
+  inset: 0 0 0 104px;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+// У ролика чёрный фон: через screen остаётся только кровь, яркий красный приглушаем до цвета настоящей крови
+.home-blood-video {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--home-blood-side);
+  height: 100%;
+  object-fit: cover;
+  object-position: 40% top;
+  opacity: 0;
+  filter: brightness(0.48) saturate(1.2) contrast(1.4);
+  mix-blend-mode: screen;
+  transition: opacity 0.8s ease;
+}
+
+// Края растворяются: к контенту и к низу экрана
+.home-blood-left,
+.home-blood-right {
+  mask-image: linear-gradient(90deg, #000000 70%, transparent 100%), linear-gradient(180deg, #000000 60%, transparent 100%);
+  mask-composite: intersect;
+  -webkit-mask-image: linear-gradient(90deg, #000000 70%, transparent 100%), linear-gradient(180deg, #000000 60%, transparent 100%);
+  -webkit-mask-composite: source-in;
+}
+
+.home-blood-left {
+  left: 0;
+}
+
+// Справа то же видео, но зеркально — стороны не повторяют друг друга
+.home-blood-right {
+  right: 0;
+  transform: scaleX(-1);
+}
+
+.home-blood-playing {
+  opacity: 0.9;
+}
+
+// Адаптив
+
+@media (max-width: 1599px) {
+  .home-blood {
+    display: none;
+  }
+}

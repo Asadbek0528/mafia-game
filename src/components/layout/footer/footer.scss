@@ -1,5 +1,6 @@
 .footer {
   display: flex;
+  grid-column: 1 / -1;
   align-items: center;
   justify-content: center;
   gap: 14px;
@@ -7,13 +8,18 @@
 }
 
 .footer-line {
-  width: 80px;
+  flex: 0 1 80px;
   height: 1px;
-  background: #3a1216;
+  background: linear-gradient(90deg, transparent, #3a1216);
+
+  &:last-child {
+    background: linear-gradient(270deg, transparent, #3a1216);
+  }
 }
 
 .footer-text {
   font-size: 12px;
   letter-spacing: 0.08em;
-  color: #8a2a30;
+  white-space: nowrap;
+  color: #c95860;
 }

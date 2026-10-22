@@ -45,11 +45,19 @@ export default function GameChat({ messages, myName, canWrite, scope, hint, forc
     if (forceOpen) setIsOpen(true);
   }, [forceOpen]);
 
+  // Новое сообщение (своё или чужое) — чат сам прокручивается вниз, к нему
+  const isFirstScroll = useRef(true);
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      isFirstScroll.current = true;
+      return;
+    }
     setSeenCount(messages.length);
     const list = listRef.current;
-    if (list) list.scrollTop = list.scrollHeight;
+    if (!list) return;
+    const behavior = isFirstScroll.current ? "auto" : "smooth";
+    isFirstScroll.current = false;
+    requestAnimationFrame(() => list.scrollTo({ top: list.scrollHeight, behavior }));
   }, [messages.length, isOpen]);
 
   const unread = isOpen ? 0 : Math.max(0, messages.length - seenCount);
@@ -63,7 +71,7 @@ export default function GameChat({ messages, myName, canWrite, scope, hint, forc
   }
 
   return (
-    <section className="game-chat">
+    <section className={isOpen ? "game-chat game-chat-open" : "game-chat"}>
       <h2 className="game-chat-title">
         <button
           type="button"
@@ -87,7 +95,7 @@ export default function GameChat({ messages, myName, canWrite, scope, hint, forc
       {isOpen && (
         <>
       <ul ref={listRef} className="game-chat-list">
-        {messages.length === 0 && <li className="game-chat-empty">Сообщений пока нет.</li>}
+        {messages.length === 0 && <li className="game-chat-empty">Сообщений пока нет — начните обсуждение первым.</li>}
         {messages.map((message) => {
           let className = "game-chat-message";
           if (message.name === myName) className += " game-chat-message-mine";

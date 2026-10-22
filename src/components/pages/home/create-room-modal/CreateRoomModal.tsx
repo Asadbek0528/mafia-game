@@ -5,12 +5,15 @@ import { useEffect, useRef, useState } from "react";
 
 import { showToast } from "@/components/pages/widgets/toast/Toast";
 import { api, ApiError } from "@/lib/api";
+import { countRoles, MAX_PLAYERS, MIN_PLAYERS } from "@/lib/roles";
 import "./create-room-modal.scss";
 
 type CreateRoomModalProps = {
   isOpen: boolean;
   onClose: () => void;
 };
+
+const DEFAULT_NAME = "Моя комната";
 
 const AGE_OPTIONS = [
   { value: 0, label: "Для всех" },
@@ -41,7 +44,7 @@ export default function CreateRoomModal({
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    const roomName = name.trim() || "Моя комната";
+    const roomName = name.trim() || DEFAULT_NAME;
 
     setIsLoading(true);
     try {
@@ -71,6 +74,10 @@ export default function CreateRoomModal({
       ref={dialogRef}
       className="create-room"
       onClose={onClose}
+      // Клик по затемнённому фону вокруг окна закрывает его
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
       aria-labelledby="create-room-title"
     >
       <form className="create-room-form" onSubmit={handleSubmit}>
@@ -83,7 +90,7 @@ export default function CreateRoomModal({
           <input
             className="input"
             maxLength={30}
-            placeholder="Ночная история"
+            placeholder={DEFAULT_NAME}
             value={name}
             onChange={(event) => setName(event.target.value)}
           />
@@ -96,16 +103,23 @@ export default function CreateRoomModal({
           <input
             className="create-room-range"
             type="range"
-            min={4}
-            max={16}
+            min={MIN_PLAYERS}
+            max={MAX_PLAYERS}
             value={maxPlayers}
+            style={{ "--fill": `${((maxPlayers - MIN_PLAYERS) / (MAX_PLAYERS - MIN_PLAYERS)) * 100}%` } as React.CSSProperties}
             onChange={(event) => setMaxPlayers(Number(event.target.value))}
           />
+          <span className="create-room-range-limits" aria-hidden="true">
+            <span>{MIN_PLAYERS}</span>
+            <span>{MAX_PLAYERS}</span>
+          </span>
         </label>
+
+        <RolesPreview players={maxPlayers} />
 
         <div className="create-room-field">
           <span className="create-room-label">Возраст игроков</span>
-          <div className="create-room-ages">
+          <div className="create-room-ages" role="group" aria-label="Возраст игроков">
             {AGE_OPTIONS.map((option) => (
               <button
                 key={option.value}
@@ -115,6 +129,7 @@ export default function CreateRoomModal({
                     ? "create-room-age create-room-age-active"
                     : "create-room-age"
                 }
+                aria-pressed={age === option.value}
                 onClick={() => setAge(option.value)}
               >
                 {option.label}
@@ -133,5 +148,30 @@ export default function CreateRoomModal({
         </div>
       </form>
     </dialog>
+  );
+}
+
+// Сразу видно, какие роли получатся при таком числе игроков
+function RolesPreview({ players }: { players: number }) {
+  const roles = countRoles(players);
+  const civilians = players - roles.mafia - roles.doctor - roles.commissar;
+  const items = [
+    { label: "Мафия", count: roles.mafia, tone: "mafia" },
+    { label: "Доктор", count: roles.doctor, tone: "town" },
+    { label: "Комиссар", count: roles.commissar, tone: "town" },
+    { label: "Жители", count: civilians, tone: "town" },
+  ].filter((item) => item.count > 0);
+
+  return (
+    <div className="create-room-roles-box">
+      <p className="create-room-roles-label">Роли по умолчанию — в комнате их можно поменять</p>
+      <ul className="create-room-roles" aria-label="Роли по умолчанию">
+        {items.map((item) => (
+          <li key={item.label} className={item.tone === "mafia" ? "create-room-role create-room-role-mafia" : "create-room-role"}>
+            <b>{item.count}</b> {item.label}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

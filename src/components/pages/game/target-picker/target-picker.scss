@@ -1,4 +1,5 @@
 .target-picker {
+  container: picker / inline-size;
   display: grid;
   gap: 12px;
   padding: 14px;
@@ -89,6 +90,16 @@
   color: #d8cccc;
 }
 
+// Стол и линии нужны только в режиме стола (см. @container ниже), в сетке их нет
+.target-picker-stage {
+  position: relative;
+}
+
+.target-picker-table,
+.target-picker-lines {
+  display: none;
+}
+
 .target-picker-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
@@ -105,6 +116,7 @@
 
 .target-picker-player {
   position: relative;
+  isolation: isolate;
   display: grid;
   align-content: start;
   grid-template-columns: minmax(0, 1fr);
@@ -192,6 +204,12 @@
   border-color: rgba(47, 211, 107, 0.28);
 }
 
+.target-picker-chip-checked {
+  color: #7fd0ff;
+  background: rgba(70, 160, 230, 0.12);
+  border-color: rgba(90, 170, 240, 0.35);
+}
+
 .target-picker-chip-mafia {
   color: #ff5a63;
   background: rgba(224, 32, 43, 0.14);
@@ -240,6 +258,12 @@
   color: #fff;
   background: #1f8a3a;
   border-color: #2fbf57;
+}
+
+.target-picker-voted-skip {
+  color: #d9cccd;
+  background: #3a3032;
+  border-color: #5b4b4d;
 }
 
 .target-picker-player-selectable {
@@ -305,13 +329,28 @@
   }
 }
 
+.target-picker-who li i {
+  font-style: normal;
+  color: var(--color-text-muted);
+}
+
 .target-picker-who-title {
   font-size: 13px;
   font-weight: 700;
   color: var(--color-text-muted);
 }
 
-.target-picker-confirm {
+.target-picker-buttons {
+  display: grid;
+  gap: 10px;
+}
+
+.target-picker-buttons-two {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+}
+
+.target-picker-confirm,
+.target-picker-skip {
   width: 100%;
   min-height: 50px;
   font-size: 16px;
@@ -357,5 +396,181 @@
 @media (max-width: 345px) {
   .target-picker-list {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+// Стол мафии: игроки сидят вокруг овального стола с сукном, над столом висит лампа.
+// Включается, когда панель достаточно широкая (ночью — почти всегда, днём — если чат не отнимает место).
+@container picker (min-width: 620px) {
+  .target-picker > .target-picker-task,
+  .target-picker-who {
+    display: none;
+  }
+
+  .target-picker-stage {
+    aspect-ratio: 16 / 10;
+    min-height: 440px;
+    max-height: 620px;
+    margin: 4px 0;
+  }
+
+  // Сам стол: бордовое сукно, деревянный бортик и латунная полоска
+  .target-picker-table {
+    position: absolute;
+    inset: 19% 17%;
+    display: grid;
+    place-items: center;
+    background:
+      radial-gradient(ellipse 70% 60% at 50% 42%, rgba(255, 200, 140, 0.16), transparent 70%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.35 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23f)'/%3E%3C/svg%3E"),
+      radial-gradient(ellipse at 50% 45%, #6a0b14 0%, #43060c 55%, #220306 100%);
+    border-radius: 50%;
+    box-shadow:
+      0 0 0 9px #2a1209,
+      0 0 0 10px rgba(214, 160, 80, 0.55),
+      0 0 0 14px #160904,
+      0 30px 70px rgba(0, 0, 0, 0.8),
+      inset 0 0 50px rgba(0, 0, 0, 0.7),
+      inset 0 2px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .target-picker-table-center {
+    display: grid;
+    gap: 6px;
+    max-width: 62%;
+    text-align: center;
+  }
+
+  .target-picker-table-title {
+    font-family: var(--font-title);
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.15;
+    color: #ffffff;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+  }
+
+  .target-picker-table-title-quiet {
+    font-size: 18px;
+    color: rgba(255, 235, 225, 0.75);
+  }
+
+  .target-picker-table-text {
+    font-size: 13px;
+    line-height: 1.45;
+    color: #f0dcd8;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+  }
+
+  // Стрелки голосов и указка выбора — над сукном, под карточками игроков
+  .target-picker-lines {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .target-picker-list {
+    position: absolute;
+    inset: 0;
+    display: block;
+  }
+
+  // Каждый игрок — на своём месте вокруг стола
+  .target-picker-item {
+    position: absolute;
+    left: var(--seat-x);
+    top: var(--seat-y);
+    z-index: 2;
+    width: 112px;
+    transform: translate(-50%, -50%);
+  }
+
+  .target-picker-player {
+    background: linear-gradient(180deg, rgba(30, 22, 24, 0.97), rgba(12, 9, 10, 0.97));
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6);
+  }
+
+  // Выбранный игрок подаётся к столу и попадает под свет
+  .target-picker-player-selected {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 1px var(--color-red), 0 0 30px rgba(224, 32, 43, 0.6), 0 10px 24px rgba(0, 0, 0, 0.6);
+  }
+
+  // Выбывший отодвигается от стола
+  .target-picker-player-dead {
+    opacity: 0.55;
+    transform: scale(0.92);
+  }
+
+  // Больше 10 игроков — места поменьше, чтобы все поместились вокруг стола
+  .target-picker-stage-crowded {
+    .target-picker-item {
+      width: 92px;
+    }
+
+    .target-picker-player {
+      gap: 5px;
+      padding: 8px 4px 7px;
+
+      .avatar {
+        width: 44px !important;
+        height: 44px !important;
+        font-size: 18px !important;
+      }
+    }
+
+    .target-picker-name {
+      font-size: 12px;
+    }
+
+    .target-picker-chip,
+    .target-picker-votes {
+      padding: 2px 6px;
+      font-size: 10.5px;
+    }
+  }
+}
+
+.target-picker-arrow {
+  fill: none;
+  stroke: #ff3b45;
+  stroke-width: 2;
+  stroke-dasharray: 6 5;
+  opacity: 0.85;
+  filter: drop-shadow(0 0 3px rgba(255, 59, 69, 0.8));
+  animation: target-picker-flow 0.9s linear infinite;
+}
+
+.target-picker-pointer {
+  stroke: #ff3b45;
+  stroke-width: 2;
+  stroke-dasharray: 4 6;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 4px rgba(255, 59, 69, 0.9));
+  animation: target-picker-flow 0.7s linear infinite;
+}
+
+@keyframes target-picker-flow {
+  to {
+    stroke-dashoffset: -22;
+  }
+}
+
+// Ночью над столом не тёплая лампа, а холодный лунный свет
+.game-page-night .target-picker-table {
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 42%, rgba(150, 175, 255, 0.14), transparent 70%),
+    radial-gradient(ellipse at 50% 45%, #3b0a16 0%, #24060d 55%, #120207 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .target-picker-arrow,
+  .target-picker-pointer {
+    animation: none;
   }
 }

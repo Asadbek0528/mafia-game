@@ -176,6 +176,20 @@ function rememberChat(channel, message) {
   chatHistory.set(channel, history);
 }
 
+// Кто пропустил голосование: { voterId, round } — новые игроки получают список при подключении
+function rememberSkip(channel, data) {
+  const voterId = Number(data.voterId);
+  const round = Number(data.round);
+  if (!Number.isInteger(voterId) || !Number.isInteger(round)) return false;
+  const history = chatHistory.get(channel) ?? { messages: [], touchedAt: 0 };
+  history.skips = (history.skips ?? []).filter((item) => !(item.voterId === voterId && item.round === round));
+  history.skips.push({ voterId, round });
+  if (history.skips.length > CHAT_LIMIT) history.skips.shift();
+  history.touchedAt = Date.now();
+  chatHistory.set(channel, history);
+  return true;
+}
+
 function handleControlMessage(channel, data, socket) {
   const roomId = roomIdFromChannel(channel);
   if (!roomId) return false;
@@ -404,6 +418,9 @@ server.on("connection", (socket, request) => {
   if (history?.messages.length) {
     socket.send(JSON.stringify({ type: "chat-history", messages: history.messages }));
   }
+  if (history?.skips?.length) {
+    socket.send(JSON.stringify({ type: "skips", skips: history.skips }));
+  }
 
   socket.isAlive = true;
   socket.on("pong", () => {
@@ -442,6 +459,7 @@ server.on("connection", (socket, request) => {
       return;
     }
     if (data?.type === "chat") rememberChat(channel, data.message);
+    if (data?.type === "skip" && !rememberSkip(channel, data)) return;
     if (isRoomChannel) lobbyChanged();
     broadcast(channel, text, socket);
   });

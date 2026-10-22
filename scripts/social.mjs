@@ -1,10 +1,75 @@
+import { readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 const STATUSES = ["online", "room", "game"];
 const MAX_WATCH = 500;
+const MAX_REQUESTS = 100;
+const REQUESTS_FILE = join(tmpdir(), "mafia-friend-requests.json");
 
 const sockets = new Map();
 const statuses = new Map();
 const names = new Map();
 const watching = new Map();
+
+// Заявки в друзья: кому → (от кого → { id, username, at }). Хранятся, пока получатель не ответит.
+const requests = new Map();
+// Принятые заявки для тех, кто был не в сети: кому → [{ id, username }]
+const accepted = new Map();
+
+function loadRequests() {
+  try {
+    const saved = JSON.parse(readFileSync(REQUESTS_FILE, "utf8"));
+    for (const [to, list] of saved.requests ?? []) requests.set(Number(to), new Map(list.map((item) => [item.id, item])));
+    for (const [to, list] of saved.accepted ?? []) accepted.set(Number(to), list);
+  } catch {
+    // файла ещё нет — начинаем с пустого списка
+  }
+}
+
+let saveTimer = null;
+function saveRequests() {
+  if (saveTimer) return;
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    const data = {
+      requests: [...requests].map(([to, list]) => [to, [...list.values()]]),
+      accepted: [...accepted],
+    };
+    try {
+      writeFileSync(REQUESTS_FILE, JSON.stringify(data));
+    } catch {
+      // не страшно: заявки останутся в памяти
+    }
+  }, 500);
+}
+
+loadRequests();
+
+function incomingOf(id) {
+  return [...(requests.get(id)?.values() ?? [])].sort((a, b) => b.at - a.at);
+}
+
+function outgoingOf(id) {
+  const list = [];
+  for (const [to, from] of requests) {
+    const item = from.get(id);
+    if (item) list.push({ id: to, username: nameOf(to), at: item.at });
+  }
+  return list;
+}
+
+function pushRequests(id) {
+  send(id, { type: "requests", incoming: incomingOf(id), outgoing: outgoingOf(id) });
+}
+
+function removeRequest(to, from) {
+  const list = requests.get(to);
+  if (!list?.delete(from)) return false;
+  if (list.size === 0) requests.delete(to);
+  saveRequests();
+  return true;
+}
 
 const isOnline = (id) => (sockets.get(id)?.size ?? 0) > 0;
 const nameOf = (id) => names.get(id) ?? `Игрок ${id}`;
@@ -43,6 +108,14 @@ export function onUserConnect(id, socket) {
   sockets.get(id).add(socket);
   pushPresence(id);
   pushToWatchers(id);
+  pushRequests(id);
+
+  const waiting = accepted.get(id);
+  if (waiting?.length) {
+    for (const from of waiting) send(id, { type: "friend-accepted", from });
+    accepted.delete(id);
+    saveRequests();
+  }
 }
 
 export function onUserClose(id, socket) {
@@ -77,6 +150,63 @@ export function onUserMessage(id, message) {
       const status = STATUSES.includes(message.status) ? message.status : "online";
       statuses.set(id, { status, roomId: message.roomId ? String(message.roomId) : null });
       pushToWatchers(id);
+      break;
+    }
+
+    case "friend-request": {
+      if (!other || other === id) break;
+      if (typeof message.username === "string" && message.username.trim()) {
+        names.set(other, message.username.trim().slice(0, 40));
+      }
+      // Встречная заявка уже есть — значит оба хотят дружить
+      if (requests.get(id)?.has(other)) {
+        removeRequest(id, other);
+        send(id, { type: "friend-mutual", from: { id: other, username: nameOf(other) } });
+        pushRequests(id);
+        pushRequests(other);
+        break;
+      }
+      if (!requests.has(other)) requests.set(other, new Map());
+      const list = requests.get(other);
+      if (!list.has(id) && list.size >= MAX_REQUESTS) break;
+      list.set(id, { id, username: nameOf(id), at: Date.now() });
+      saveRequests();
+      send(other, { type: "friend-request", from: { id, username: nameOf(id) } });
+      pushRequests(other);
+      pushRequests(id);
+      break;
+    }
+
+    case "friend-accept": {
+      if (!other || !removeRequest(id, other)) {
+        pushRequests(id);
+        break;
+      }
+      const from = { id, username: nameOf(id) };
+      if (isOnline(other)) {
+        send(other, { type: "friend-accepted", from });
+      } else {
+        accepted.set(other, [...(accepted.get(other) ?? []).filter((item) => item.id !== id), from]);
+        saveRequests();
+      }
+      pushRequests(id);
+      pushRequests(other);
+      break;
+    }
+
+    case "friend-decline": {
+      if (!other) break;
+      removeRequest(id, other);
+      pushRequests(id);
+      pushRequests(other);
+      break;
+    }
+
+    case "friend-cancel": {
+      if (!other) break;
+      removeRequest(other, id);
+      pushRequests(id);
+      pushRequests(other);
       break;
     }
 

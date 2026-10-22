@@ -1,5 +1,8 @@
 import Avatar from "@/components/pages/widgets/avatar/Avatar";
+import PlayerBackground from "@/components/pages/widgets/player-background/PlayerBackground";
 import type { RoomPlayer } from "@/lib/api";
+import { useShop } from "@/lib/shop";
+import { useSkins } from "@/lib/skins";
 import "./players-list.scss";
 
 type PlayersListProps = {
@@ -11,10 +14,17 @@ type PlayersListProps = {
 
 export default function PlayersList({ players, owner, me, maxPlayers }: PlayersListProps) {
   const emptySlots = Math.max(0, maxPlayers - players.length);
+  const myBackground = useShop().state.equipped;
+  const skins = useSkins();
 
   return (
     <section className="panel players-list">
-      <h2 className="panel-title players-list-title">Игроки</h2>
+      <h2 className="panel-title players-list-title">
+        Игроки
+        <span className="players-list-count">
+          {players.length}/{maxPlayers}
+        </span>
+      </h2>
 
       <ul className="players-list-items">
         {players.map((player) => (
@@ -22,16 +32,18 @@ export default function PlayersList({ players, owner, me, maxPlayers }: PlayersL
             key={player.username}
             className={player.username === me ? "players-list-item players-list-item-me" : "players-list-item"}
           >
+            <PlayerBackground id={player.username === me ? myBackground : (skins.get(player.username) ?? null)} />
             <Avatar name={player.username} size={42} />
 
             <div className="players-list-info">
               <p className="players-list-name">
-                {player.username}
+                <span className="players-list-name-text">{player.username}</span>
                 {player.username === owner && (
-                  <svg className="players-list-crown" viewBox="0 0 24 24" fill="currentColor" aria-label="Создатель">
+                  <svg className="players-list-crown" viewBox="0 0 24 24" fill="currentColor" role="img" aria-label="Создатель">
                     <path d="M3 7l4 4 5-7 5 7 4-4-2 12H5z" />
                   </svg>
                 )}
+                {player.username === me && <span className="players-list-me">Вы</span>}
               </p>
 
               {player.ready === undefined && <p className="players-list-in-room">В комнате</p>}
@@ -44,7 +56,7 @@ export default function PlayersList({ players, owner, me, maxPlayers }: PlayersL
 
               {player.ready === false && (
                 <p className="players-list-not-ready">
-                  <span className="status-dot status-dot-red" /> Не готов
+                  <span className="status-dot players-list-dot-off" /> Не готов
                 </p>
               )}
             </div>
@@ -54,10 +66,12 @@ export default function PlayersList({ players, owner, me, maxPlayers }: PlayersL
         {Array.from({ length: emptySlots }).map((_, index) => (
           <li key={`empty-${index}`} className="players-list-item players-list-item-empty">
             <Avatar name="" size={42} empty />
-            Свободное место
+            <span>Свободное место</span>
           </li>
         ))}
       </ul>
+
+      {emptySlots > 0 && <p className="players-list-free">Свободных мест: {emptySlots}</p>}
     </section>
   );
 }

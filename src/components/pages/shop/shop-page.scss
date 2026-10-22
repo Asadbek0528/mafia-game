@@ -1,0 +1,236 @@
+.shop-page {
+  display: grid;
+  gap: 18px;
+  max-width: 1100px;
+  padding: 18px;
+}
+
+.shop-page-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.shop-page-title {
+  font-size: 32px;
+  line-height: 1.1;
+}
+
+.shop-page-balance {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: linear-gradient(180deg, rgba(227, 165, 49, 0.14), rgba(227, 165, 49, 0.05));
+  border: 1px solid rgba(227, 165, 49, 0.4);
+  border-radius: 14px;
+
+  .coin-icon {
+    width: 26px;
+    height: 26px;
+  }
+
+  b {
+    font-family: var(--font-title);
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1;
+    color: #ffd877;
+  }
+
+  span {
+    font-size: 13px;
+    color: var(--color-text-muted);
+  }
+}
+
+// Щит — главный товар: крупная карточка в синих тонах
+.shop-page-shield {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 26px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 50% 90% at 12% 50%, rgba(56, 189, 255, 0.2), transparent 70%),
+    linear-gradient(180deg, rgba(12, 18, 30, 0.95), rgba(6, 8, 14, 0.96));
+  border-color: rgba(56, 189, 255, 0.35);
+}
+
+.shop-page-shield-art {
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.shop-page-shield-info {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+.shop-page-tag {
+  padding: 3px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8fdcff;
+  background: rgba(56, 189, 255, 0.12);
+  border-radius: 999px;
+}
+
+.shop-page-shield-title {
+  font-size: 28px;
+  color: #ffffff;
+}
+
+.shop-page-shield-text {
+  max-width: 560px;
+  font-size: 14px;
+  color: #c9d6e2;
+}
+
+.shop-page-shield-buy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 6px;
+}
+
+.shop-page-owned {
+  font-size: 14px;
+  color: var(--color-text-muted);
+
+  b {
+    font-size: 16px;
+    color: #8fdcff;
+  }
+}
+
+.shop-page-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shop-page-item {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--color-line-soft);
+  border-radius: 16px;
+  transition: border-color 0.2s, transform 0.2s;
+
+  &:hover {
+    border-color: rgba(224, 32, 43, 0.35);
+    transform: translateY(-2px);
+  }
+}
+
+.shop-page-item-equipped {
+  border-color: var(--color-green);
+  box-shadow: 0 0 18px rgba(47, 211, 107, 0.18);
+}
+
+// Превью: так фон будет выглядеть за вашей карточкой
+.shop-page-preview {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: flex-end;
+  height: 130px;
+  padding: 12px;
+  overflow: hidden;
+  background: #070304;
+  border-radius: 12px;
+}
+
+.shop-page-preview-player {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+
+  b {
+    overflow: hidden;
+    font-size: 15px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+  }
+}
+
+.shop-page-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  padding: 2px 9px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #ffffff;
+  background: rgba(47, 211, 107, 0.85);
+  border-radius: 999px;
+}
+
+.shop-page-item-name {
+  font-weight: 700;
+}
+
+.shop-page-item-about {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.shop-page-guest {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 36px 20px;
+  text-align: center;
+}
+
+.shop-page-guest-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+// Адаптив
+
+@media (max-width: 860px) {
+  .shop-page {
+    gap: 14px;
+    padding: 12px;
+  }
+}
+
+@media (max-width: 600px) {
+  .shop-page-shield {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 6px;
+    text-align: center;
+  }
+
+  .shop-page-shield-info,
+  .shop-page-shield-buy {
+    justify-items: center;
+    justify-content: center;
+  }
+
+  .shop-page-balance {
+    width: 100%;
+    justify-content: center;
+  }
+}

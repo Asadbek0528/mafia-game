@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import ProfileStats from "@/components/pages/profile/profile-stats/ProfileStats";
 import Avatar from "@/components/pages/widgets/avatar/Avatar";
+import AchievementsPanel from "@/components/pages/widgets/achievements/AchievementsPanel";
 import GameHistory from "@/components/pages/widgets/game-history/GameHistory";
 import { showToast } from "@/components/pages/widgets/toast/Toast";
 import { api, type PublicUser } from "@/lib/api";
@@ -136,6 +137,7 @@ export default function PlayerPage() {
 
       <div className="player-page-grid">
         <ProfileStats userId={player.id} />
+        <AchievementsPanel userId={player.id} />
         <GameHistory userId={player.id} limit={20} />
       </div>
     </main>

@@ -13,6 +13,7 @@ export default function GoogleCallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const code = searchParams.get("code");
+  const state = searchParams.get("state");
 
   const [error, setError] = useState("");
   const isStarted = useRef(false);
@@ -27,7 +28,7 @@ export default function GoogleCallbackPage() {
     }
 
     api
-      .finishGoogleLogin(code)
+      .finishGoogleLogin(code, state)
       .then((result) => {
         if (!result.accessToken) throw new Error("Сервер не выдал токен.");
 
@@ -40,7 +41,7 @@ export default function GoogleCallbackPage() {
         router.replace(takePageAfterLogin());
       })
       .catch((reason: Error) => setError(reason.message));
-  }, [code, router]);
+  }, [code, state, router]);
 
   return (
     <main className="google-callback">

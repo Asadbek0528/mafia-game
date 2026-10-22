@@ -17,6 +17,8 @@
 
 .game-page-content {
   display: grid;
+  // Без этого широкий ребёнок (шапка, таблица) растягивал страницу шире экрана телефона
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   max-width: 1100px;
   margin: 0 auto;
@@ -40,6 +42,8 @@
 }
 
 .game-page-side {
+  position: sticky;
+  top: 18px;
   display: grid;
   align-content: start;
   gap: 14px;
@@ -168,14 +172,37 @@
   animation: game-page-todo-pulse 1.6s ease-in-out infinite;
 }
 
+// Результат проверки комиссара: подпись сверху, имя и вердикт крупно, цвет — по вердикту
 .game-page-check {
-  padding: 14px;
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 12px 14px;
   font-size: 18px;
   font-weight: 700;
   text-align: center;
-  background: rgba(20, 5, 6, 0.9);
-  border: 1px solid var(--color-red);
+  background: rgba(20, 12, 14, 0.92);
+  border: 1px solid #3a2a2d;
   border-radius: 14px;
+
+  span {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+  }
+}
+
+.game-page-check-mafia {
+  color: #ff5a63;
+  background: linear-gradient(180deg, rgba(70, 6, 12, 0.92), rgba(24, 4, 6, 0.92));
+  border-color: var(--color-red);
+  box-shadow: 0 0 22px rgba(224, 32, 43, 0.35);
+}
+
+.game-page-check-town {
+  color: #43e07f;
+  background: linear-gradient(180deg, rgba(10, 50, 26, 0.9), rgba(6, 20, 12, 0.92));
+  border-color: rgba(47, 211, 107, 0.55);
 }
 
 .game-page-connecting {
@@ -222,12 +249,40 @@
   .game-page-grid {
     grid-template-columns: 1fr;
   }
+
+  .game-page-side {
+    position: static;
+  }
+
+  // Место под закреплённый внизу чат
+  .game-page:has(.game-chat) {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 @media (max-width: 600px) {
   .game-page {
     padding: 10px 10px 16px;
     background-attachment: scroll;
+  }
+
+  // Ведущий на телефоне — компактная строка, а не крупный баннер
+  .game-page-host,
+  .game-page-last-word,
+  .game-page-todo {
+    padding: 8px 12px;
+    font-size: 14px;
+    border-radius: 12px;
+  }
+
+  .game-page-turns {
+    gap: 4px;
+  }
+
+  .game-page-turn {
+    min-height: 32px;
+    padding: 0 4px;
+    border-radius: 10px;
   }
 
   .game-page-turn {

@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import Footer from "@/components/layout/footer/Footer";
-import GameHistory from "@/components/pages/widgets/game-history/GameHistory";
-import ProfileCard from "@/components/pages/widgets/profile-card/ProfileCard";
 import RoleCards from "@/components/pages/widgets/role-cards/RoleCards";
 import { api, type RoomShort } from "@/lib/api";
 import { useCurrentUser } from "@/lib/auth";
@@ -15,11 +13,21 @@ import { useLiveUpdates, WS_PATHS } from "@/lib/socket";
 
 import CreateRoomModal from "./create-room-modal/CreateRoomModal";
 import Hero from "./hero/Hero";
-import OnlinePlayers from "./online-players/OnlinePlayers";
+import HomeBlood from "./home-blood/HomeBlood";
 import RoomsTable from "./rooms-table/RoomsTable";
 import "./home-page.scss";
 
 const ROOMS_POLL_MS = 5000;
+const ROOMS_STORAGE_KEY = "mafia_rooms_v1";
+
+function readSavedRooms(): RoomShort[] | null {
+  try {
+    const saved = sessionStorage.getItem(ROOMS_STORAGE_KEY);
+    return saved ? (JSON.parse(saved) as RoomShort[]) : null;
+  } catch {
+    return null;
+  }
+}
 
 export default function HomePage() {
   const router = useRouter();
@@ -47,6 +55,13 @@ export default function HomePage() {
       state.again = false;
       const fresh = await api.getRooms().catch(() => null);
       setRooms((old) => fresh ?? old ?? DEMO_ROOMS);
+      if (fresh) {
+        try {
+          sessionStorage.setItem(ROOMS_STORAGE_KEY, JSON.stringify(fresh));
+        } catch {
+          // без хранилища просто не покажем список мгновенно
+        }
+      }
     } while (state.again);
     state.isLoading = false;
   }, []);
@@ -62,6 +77,12 @@ export default function HomePage() {
   useEffect(() => {
     if (!isLive) setHasLobby(false);
   }, [isLive]);
+
+  // Сразу показываем прошлый список комнат, пока грузится свежий
+  useEffect(() => {
+    const saved = readSavedRooms();
+    if (saved) setRooms((old) => old ?? saved);
+  }, []);
 
   useEffect(() => {
     loadRooms();
@@ -114,6 +135,8 @@ export default function HomePage() {
 
   return (
     <div className="home-page">
+      <HomeBlood />
+
       <main className="home-page-main">
         {myGame && (
           <div className="home-page-rejoin" role="status">
@@ -127,7 +150,11 @@ export default function HomePage() {
           </div>
         )}
 
-        <Hero onPlay={handleQuickPlay} onCreateRoom={() => setIsModalOpen(true)} />
+        <Hero
+          openRooms={rooms ? rooms.filter((room) => room.status === "waiting" && room.players < room.max_players).length : null}
+          onPlay={handleQuickPlay}
+          onCreateRoom={() => setIsModalOpen(true)}
+        />
 
         <section className="panel">
           <div className="panel-top">
@@ -137,15 +164,9 @@ export default function HomePage() {
         </section>
 
         <RoomsTable rooms={rooms} onCreateRoom={() => setIsModalOpen(true)} />
-
-        <Footer />
       </main>
 
-      <aside className="home-page-side">
-        <ProfileCard />
-        <OnlinePlayers />
-        <GameHistory />
-      </aside>
+      <Footer />
 
       <CreateRoomModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>

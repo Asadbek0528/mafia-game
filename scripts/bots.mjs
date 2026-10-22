@@ -156,7 +156,7 @@ function notify(path, type = "update", extra = {}) {
 
 function countRoles(players) {
   return {
-    mafia: Math.max(1, Math.floor(players / 3.5)),
+    mafia: Math.max(1, Math.round(players / 4)),
     doctor: players >= 4 ? 1 : 0,
     commissar: players >= 5 ? 1 : 0,
   };
@@ -279,7 +279,11 @@ async function actIfNeeded(bot, gameId, state) {
       }
       const previous = PREVIOUS_ACTION[me.role];
       const isPreviousDone = !previous || actions.some((item) => item.action_type === previous);
-      const turnStart = state.seenAt.get(key) + NIGHT_TURN[me.role] * NIGHT_TURN_MS;
+      // Как на сайте: ход — «ночь ÷ 3 роли», но не дольше 30 секунд (при ночи 60 сек — по 20)
+      const phaseEnd = parseServerDate(game.phase_ends_at);
+      const nightMs = phaseEnd ? Math.max(0, phaseEnd - state.seenAt.get(key)) : PHASE_SECONDS.NIGHT * 1000;
+      const turnMs = Math.min(NIGHT_TURN_MS, Math.floor(nightMs / 3));
+      const turnStart = state.seenAt.get(key) + NIGHT_TURN[me.role] * turnMs;
       if (!isPreviousDone && Date.now() < turnStart) return null;
       const previousRound = rounds.find((item) => item.round_number === game.current_round - 1);
       const previousActions = previousRound

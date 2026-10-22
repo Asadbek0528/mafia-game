@@ -1,0 +1,102 @@
+.room-omen {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  min-height: 330px;
+  overflow: hidden;
+  isolation: isolate;
+  background: #060102;
+  border: 1px solid var(--color-line-red);
+  border-radius: 18px;
+  box-shadow: var(--shadow-panel), 0 0 40px rgba(160, 0, 12, 0.18);
+}
+
+.room-omen-art {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  background: url("/img/sidebar-city.webp") center 30% / cover no-repeat;
+  animation: room-omen-zoom 20s ease-in-out infinite alternate;
+}
+
+@keyframes room-omen-zoom {
+  to {
+    transform: scale(1.08) translateY(-2%);
+  }
+}
+
+// Кровавый дождь: косые полосы бегут сверху вниз
+.room-omen-rain {
+  position: absolute;
+  inset: -20% 0 0;
+  z-index: -2;
+  background-image:
+    repeating-linear-gradient(100deg, transparent 0 22px, rgba(255, 80, 90, 0.18) 22px 23px, transparent 23px 57px),
+    repeating-linear-gradient(100deg, transparent 0 37px, rgba(255, 120, 120, 0.1) 37px 38px, transparent 38px 91px);
+  background-size: 100% 140px, 100% 220px;
+  mix-blend-mode: screen;
+  animation: room-omen-rain 0.9s linear infinite;
+}
+
+@keyframes room-omen-rain {
+  to {
+    background-position: -24px 140px, -38px 220px;
+  }
+}
+
+// Фонарь мигает, как будто вот-вот погаснет
+.room-omen-lamp {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 70% 45% at 50% 20%, rgba(255, 60, 70, 0.25), transparent 70%),
+    linear-gradient(180deg, rgba(6, 1, 2, 0.15) 0%, rgba(6, 1, 2, 0.35) 45%, #060102 92%);
+  animation: room-omen-flicker 6s infinite steps(1);
+}
+
+@keyframes room-omen-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  71% {
+    opacity: 0.55;
+  }
+  72% {
+    opacity: 1;
+  }
+  74% {
+    opacity: 0.4;
+  }
+  76% {
+    opacity: 1;
+  }
+}
+
+.room-omen-text {
+  padding: 20px;
+}
+
+.room-omen-title {
+  font-family: var(--font-horror);
+  font-size: 30px;
+  line-height: 1.05;
+  color: var(--color-red);
+  text-shadow: 0 0 24px rgba(224, 32, 43, 0.55), 0 3px 0 #2a0004;
+}
+
+.room-omen-subtitle {
+  margin-top: 8px;
+  font-size: 13.5px;
+  color: #cdbcbd;
+}
+
+// Адаптив
+
+// В две колонки и на телефоне места под карточку нет — убираем
+@media (max-width: 1100px) {
+  .room-omen {
+    display: none;
+  }
+}

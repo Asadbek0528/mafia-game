@@ -1,12 +1,69 @@
 .room-header {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 14px;
+  min-height: 96px;
   padding: 14px 18px;
-  background: linear-gradient(90deg, #150809, #070303);
+  overflow: hidden;
+  isolation: isolate;
+  background: #070303;
   border: 1px solid var(--color-line-red);
   border-radius: var(--radius-big);
+  box-shadow: var(--shadow-panel), 0 0 40px rgba(160, 0, 12, 0.15);
+
+  // Тонкая красная линия снизу, по ней медленно пробегает свет
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(224, 32, 43, 0.25) 20%, #ff3b45 50%, rgba(224, 32, 43, 0.25) 80%, transparent);
+    background-size: 200% 100%;
+    box-shadow: 0 0 14px rgba(224, 32, 43, 0.7);
+    animation: room-header-line 6s linear infinite;
+  }
+}
+
+@keyframes room-header-line {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+// Мафиози в шляпе справа, к тексту слева растворяется в темноте
+.room-header-art {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    linear-gradient(90deg, #070303 0%, rgba(7, 3, 3, 0.96) 35%, rgba(7, 3, 3, 0.55) 65%, rgba(7, 3, 3, 0.2) 100%),
+    radial-gradient(ellipse 40% 120% at 80% 50%, rgba(200, 10, 25, 0.35), transparent 70%),
+    url("/img/hero.webp") right 35% / 55% auto no-repeat;
+  animation: room-header-breathe 14s ease-in-out infinite alternate;
+}
+
+@keyframes room-header-breathe {
+  to {
+    background-position: 0 0, 0 0, right 40%;
+  }
+}
+
+.room-header-count,
+.room-header-copy {
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.8);
+}
+
+.room-header-copy {
+  background: rgba(10, 4, 5, 0.7);
+  backdrop-filter: blur(6px);
 }
 
 .room-header-back {

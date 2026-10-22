@@ -1,6 +1,6 @@
 .register-form {
   display: grid;
-  gap: 14px;
+  gap: 12px;
   text-align: left;
 }
 
@@ -16,11 +16,43 @@
 
 .register-input-box {
   position: relative;
+
+  // В фокусе снизу поля «прорезается» алая линия — от центра к краям
+  &::after {
+    content: "";
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #ff3b45 20%, #ff3b45 80%, transparent);
+    border-radius: 2px;
+    box-shadow: 0 0 10px rgba(255, 59, 69, 0.8);
+    transform: scaleX(0);
+    transition: transform 0.35s cubic-bezier(0.3, 0.9, 0.3, 1);
+    pointer-events: none;
+  }
+
+  &:focus-within::after {
+    transform: scaleX(1);
+  }
+
+  &:focus-within .register-input-icon {
+    color: #ff4a53;
+    filter: drop-shadow(0 0 4px rgba(255, 59, 69, 0.6));
+  }
 }
 
 .register-input-box .register-input {
   padding-left: 44px;
   padding-right: 44px;
+  appearance: textfield;
+
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    margin: 0;
+    appearance: none;
+  }
 }
 
 .register-input-icon {
@@ -32,6 +64,7 @@
   color: #6d5656;
   transform: translateY(-50%);
   pointer-events: none;
+  transition: color 0.2s, filter 0.2s;
 }
 
 .register-eye {
@@ -66,7 +99,7 @@
 
 .register-submit {
   min-height: 50px;
-  margin-top: 6px;
+  margin-top: 4px;
   font-size: 16px;
 }
 
@@ -90,7 +123,7 @@
   align-items: center;
   gap: 12px;
   font-size: 13px;
-  color: #6f5a5a;
+  color: var(--color-text-muted);
 
   &::before,
   &::after {
@@ -101,40 +134,105 @@
   }
 }
 
+// Низ карточки: самый быстрый способ попасть в игру — отдельной зоной, а не мелким текстом
 .register-guest {
-  margin-top: 8px;
-  font-size: 14px;
-  color: var(--color-text-muted);
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin: 18px -30px 0;
+  padding: 16px 30px 22px;
+  background: rgba(0, 0, 0, 0.35);
+  border-top: 1px dashed rgba(224, 32, 43, 0.25);
+  border-radius: 0 0 19px 19px;
 }
 
-.register-guest-link {
+.register-guest-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 46px;
   font-weight: 600;
-  color: var(--color-red);
+  color: var(--color-text);
   text-decoration: none;
-  white-space: nowrap;
-  border-bottom: 1px dashed currentColor;
+  background: transparent;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+
+  svg {
+    width: 22px;
+    height: 22px;
+    color: var(--color-red);
+  }
 
   &:hover {
-    color: #ff4a53;
+    color: #ffffff;
+    background: rgba(224, 32, 43, 0.08);
+    border-color: rgba(224, 32, 43, 0.55);
   }
 }
 
-.register-switch {
-  margin-top: 18px;
-  font-size: 14px;
+// Боковые отступы — чтобы текст не налезал на перевёрнутый индекс карты в углу
+.register-guest-hint {
+  padding: 0 44px;
+  font-size: 12.5px;
+  line-height: 1.4;
   color: var(--color-text-muted);
 }
 
-.register-switch-button {
-  padding: 0;
-  font-weight: 600;
-  color: var(--color-text);
-  background: none;
-  border: 0;
-  border-bottom: 1px solid currentColor;
-  cursor: pointer;
+// Надёжность пароля: три деления, цвет по уровню
+.register-strength {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+}
 
-  &:hover {
-    color: var(--color-red);
+.register-strength-bar {
+  display: inline-grid;
+  grid-template-columns: repeat(3, 22px);
+  gap: 3px;
+
+  i {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    transition: background 0.25s;
+  }
+}
+
+.register-strength-1 {
+  color: #ff6b72;
+
+  i:nth-child(1) {
+    background: #ff3b45;
+  }
+}
+
+.register-strength-2 {
+  color: var(--color-yellow);
+
+  i:nth-child(-n + 2) {
+    background: var(--color-yellow);
+  }
+}
+
+.register-strength-3 {
+  color: var(--color-green);
+
+  i {
+    background: var(--color-green);
+  }
+}
+
+// Адаптив
+
+@media (max-width: 480px) {
+  .register-guest {
+    margin: 20px -18px 0;
+    padding: 16px 18px 22px;
   }
 }

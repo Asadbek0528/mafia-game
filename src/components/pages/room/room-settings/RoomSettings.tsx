@@ -1,7 +1,7 @@
 import Image from "next/image";
 
 import type { RoleCounts, RoomFull } from "@/lib/api";
-import { checkRoles, countCivilians, countRoles, getRoleLimits, MIN_PLAYERS, ROLES } from "@/lib/roles";
+import { checkRoles, countCivilians, countRoles, fitRoles, getRoleLimits, MAX_PLAYERS, MIN_PLAYERS, ROLES, sameRoles } from "@/lib/roles";
 import "./room-settings.scss";
 
 type RoomSettingsProps = {
@@ -21,28 +21,22 @@ export default function RoomSettings(props: RoomSettingsProps) {
   const civilians = countCivilians(room.max_players, room.roles);
 
   const rolesError = checkRoles(room.max_players, room.roles);
+  const recommended = countRoles(room.max_players);
+  const isRecommended = sameRoles(room.roles, recommended);
 
   const everyoneReady = !room.readySupported || room.players.every((player) => player.ready || player.username === room.owner);
   const rolesErrorNow = checkRoles(playersCount, room.roles);
   const canStart = playersCount >= MIN_PLAYERS && rolesErrorNow === "" && everyoneReady;
 
-  let hint = "";
-  if (isOwner) {
-    if (playersCount < MIN_PLAYERS) hint = `Нужно минимум ${MIN_PLAYERS} игрока — сейчас ${playersCount}.`;
-    else if (rolesErrorNow) hint = `Игроков пока ${playersCount}: ${rolesErrorNow}`;
-    else if (!everyoneReady) hint = "Ждём, пока все нажмут «Готов».";
-    else hint = "Всё готово. Можно начинать.";
-  } else if (room.readySupported) {
-    hint = isMeReady ? "Ждём создателя комнаты." : "Нажмите, когда будете готовы.";
-  } else {
-    hint = "Ждём, когда создатель начнёт игру.";
-  }
+  // Без лишнего текста: причина, почему нельзя начать, — прямо на кнопке
+  let startText = "Начать игру";
+  if (playersCount < MIN_PLAYERS) startText = `Нужно ещё ${MIN_PLAYERS - playersCount}`;
+  else if (rolesErrorNow) startText = "Мало игроков для ролей";
+  else if (!everyoneReady) startText = "Ждём готовности";
 
   function changeMaxPlayers(value: number) {
-    let roles = room.roles;
-    if (checkRoles(value, roles) !== "") {
-      roles = countRoles(value);
-    }
+    // Если роли были «как рекомендуем» — пересчитываем под новое число, иначе только срезаем лишнее
+    const roles = isRecommended ? countRoles(value) : fitRoles(value, room.roles);
     onChange({ max_players: value, roles });
   }
 
@@ -52,14 +46,13 @@ export default function RoomSettings(props: RoomSettingsProps) {
 
   return (
     <section className="panel room-settings">
-      <h2 className="panel-title room-settings-title">Настройки игры</h2>
-      {!isOwner && <p className="room-settings-note">Настройки меняет только создатель комнаты.</p>}
+      <h2 className="panel-title room-settings-title">Настройки</h2>
 
       <SettingRow
         label="Количество игроков"
         value={room.max_players}
         min={Math.max(MIN_PLAYERS, playersCount)}
-        max={16}
+        max={MAX_PLAYERS}
         step={1}
         canEdit={isOwner}
         onChange={changeMaxPlayers}
@@ -81,7 +74,8 @@ export default function RoomSettings(props: RoomSettingsProps) {
                 <Stepper
                   value={count}
                   min={limit.min}
-                  max={limit.max}
+                  // Больше нельзя только если не останется жителей на эту роль
+                  max={Math.min(limit.max, count + Math.max(0, civilians))}
                   onChange={(value) => changeRole(role.key as keyof RoleCounts, value)}
                 />
               ) : (
@@ -94,6 +88,18 @@ export default function RoomSettings(props: RoomSettingsProps) {
         })}
       </ul>
       {rolesError && <p className="room-settings-error">{rolesError}</p>}
+
+      <p className="room-settings-balance">
+        {isRecommended ? "Честный баланс" : "Рекомендуем"} на {room.max_players}:{" "}
+        <b>
+          {recommended.mafia} {mafiaWord(recommended.mafia)} · {recommended.doctor} доктор · {recommended.commissar} комиссар
+        </b>
+        {isOwner && !isRecommended && (
+          <button type="button" className="btn-link room-settings-balance-reset" onClick={() => onChange({ roles: recommended })}>
+            Вернуть
+          </button>
+        )}
+      </p>
 
       <SettingRow
         label="Время дня"
@@ -119,7 +125,7 @@ export default function RoomSettings(props: RoomSettingsProps) {
 
       {isOwner && (
         <button className="btn btn-red btn-full room-settings-main-button" disabled={!canStart} onClick={onStart}>
-          Начать игру
+          {startText}
         </button>
       )}
 
@@ -132,9 +138,20 @@ export default function RoomSettings(props: RoomSettingsProps) {
         </button>
       )}
 
-      <p className="room-settings-hint">{hint}</p>
+      {!isOwner && !room.readySupported && (
+        <p className="room-settings-waiting">
+          <span className="room-settings-waiting-dot" aria-hidden="true" />
+          Ждём создателя
+        </p>
+      )}
     </section>
   );
+}
+
+function mafiaWord(count: number): string {
+  if (count === 1) return "мафия";
+  if (count >= 2 && count <= 4) return "мафии";
+  return "мафий";
 }
 
 type StepperProps = {

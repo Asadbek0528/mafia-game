@@ -33,8 +33,62 @@
   background: radial-gradient(ellipse at center, rgba(20, 90, 50, 0.4), rgba(0, 0, 0, 0.9));
 }
 
+// Щит: всё вокруг заливает ярко-синим, щит раскрывается на 360°
+.effect-overlay-shield {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(56, 189, 255, 0.4), rgba(10, 40, 90, 0.45) 35%, transparent 75%),
+    rgba(1, 5, 16, 0.9);
+  box-shadow: inset 0 0 180px 60px rgba(56, 189, 255, 0.5);
+}
+
+.effect-overlay-orb {
+  display: grid;
+  place-items: center;
+  margin-bottom: 10px;
+}
+
+.effect-overlay-shield .effect-overlay-title {
+  color: #b6eeff;
+  text-shadow: 0 0 24px rgba(56, 189, 255, 0.9);
+}
+
 .effect-overlay-info {
   background: radial-gradient(ellipse at center, rgba(40, 20, 20, 0.6), rgba(0, 0, 0, 0.9));
+}
+
+// Видео брызг: чёрный фон ролика исчезает через screen, остаётся только кровь
+.effect-overlay-splash {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  filter: brightness(0.62) saturate(1.25) contrast(1.3);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  transform: scale(1.15);
+  transition: opacity 0.15s;
+}
+
+.effect-overlay-splash-playing {
+  opacity: 1;
+  animation: effect-overlay-splash-hit 0.5s cubic-bezier(0.2, 1, 0.3, 1);
+}
+
+// Удар: кадр резко «прилетает» на экран
+@keyframes effect-overlay-splash-hit {
+  from {
+    transform: scale(1.35);
+  }
+  to {
+    transform: scale(1.15);
+  }
+}
+
+// Когда идёт видео, нарисованные подтёки не нужны
+.effect-overlay-splash-playing ~ .effect-overlay-drips {
+  display: none;
 }
 
 .effect-overlay-drips {
@@ -118,9 +172,15 @@
   text-shadow: 0 0 24px rgba(0, 0, 0, 0.9);
 }
 
+// Поверх брызг текст должен читаться: белый с красным свечением на тёмной подложке
+.effect-overlay-blood .effect-overlay-text {
+  padding: 18px 28px;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.82) 30%, rgba(0, 0, 0, 0.5) 60%, transparent 75%);
+}
+
 .effect-overlay-blood .effect-overlay-title {
-  color: #ff2a36;
-  text-shadow: 0 0 30px rgba(255, 0, 20, 0.6);
+  color: #ffffff;
+  text-shadow: 0 0 18px rgba(255, 0, 20, 0.9), 0 2px 0 #4a0006;
 }
 
 .effect-overlay-heal .effect-overlay-title {

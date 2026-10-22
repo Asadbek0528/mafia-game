@@ -1,0 +1,252 @@
+.room-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 45% at 50% 0%, rgba(120, 0, 10, 0.35), transparent 70%),
+    radial-gradient(ellipse 60% 60% at 50% 110%, rgba(80, 0, 8, 0.45), transparent 70%),
+    #030001;
+}
+
+// Ночной город по краям: тонируем в кровавый цвет и растворяем к центру
+.room-backdrop-art {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: min(46vw, 640px);
+  background-repeat: no-repeat;
+  background-size: cover;
+  opacity: 0.85;
+}
+
+.room-backdrop-art-left {
+  left: 0;
+  // Чёрно-белую улицу умножаем на красный: белая луна становится кровавой, а не жёлтой
+  background-image: linear-gradient(#d61a28, #d61a28), url("/img/street.webp");
+  background-position: center top;
+  background-blend-mode: multiply;
+  filter: brightness(0.85) contrast(1.2);
+  mask-image: linear-gradient(90deg, #000000 30%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, #000000 30%, transparent 100%);
+  animation: room-backdrop-breathe 22s ease-in-out infinite alternate;
+}
+
+.room-backdrop-art-right {
+  right: 0;
+  background-image: url("/img/sidebar-city.webp");
+  background-position: center bottom;
+  filter: brightness(0.85) contrast(1.1);
+  mask-image: linear-gradient(270deg, #000000 30%, transparent 100%);
+  -webkit-mask-image: linear-gradient(270deg, #000000 30%, transparent 100%);
+  animation: room-backdrop-breathe 26s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes room-backdrop-breathe {
+  to {
+    transform: scale(1.06);
+  }
+}
+
+// Туман медленно ползёт по низу экрана
+.room-backdrop-fog {
+  position: absolute;
+  left: -50%;
+  width: 200%;
+  height: 60%;
+  bottom: -10%;
+  background:
+    radial-gradient(ellipse 18% 40% at 15% 60%, rgba(150, 40, 50, 0.22), transparent 70%),
+    radial-gradient(ellipse 22% 45% at 45% 70%, rgba(120, 30, 40, 0.2), transparent 70%),
+    radial-gradient(ellipse 16% 35% at 70% 55%, rgba(160, 50, 60, 0.18), transparent 70%),
+    radial-gradient(ellipse 20% 40% at 92% 65%, rgba(120, 30, 40, 0.2), transparent 70%);
+  filter: blur(30px);
+}
+
+.room-backdrop-fog-back {
+  animation: room-backdrop-fog 70s linear infinite;
+}
+
+.room-backdrop-fog-front {
+  bottom: -25%;
+  opacity: 0.8;
+  animation: room-backdrop-fog 45s linear infinite reverse;
+}
+
+@keyframes room-backdrop-fog {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(25%);
+  }
+}
+
+// Шёпот: едва заметные надписи, то проступают, то исчезают
+.room-backdrop-whisper {
+  position: absolute;
+  margin: 0;
+  font-family: var(--font-horror);
+  font-size: clamp(20px, 2.4vw, 34px);
+  color: #8a0d17;
+  white-space: nowrap;
+  opacity: 0;
+  animation: room-backdrop-whisper 14s ease-in-out infinite;
+}
+
+.room-backdrop-whisper-1 {
+  top: 58%;
+  left: 3%;
+  transform: rotate(-8deg);
+}
+
+.room-backdrop-whisper-2 {
+  top: 72%;
+  right: 4%;
+  transform: rotate(6deg);
+  animation-delay: 5s;
+}
+
+.room-backdrop-whisper-3 {
+  bottom: 6%;
+  left: 38%;
+  transform: rotate(-3deg);
+  animation-delay: 10s;
+}
+
+@keyframes room-backdrop-whisper {
+  0%,
+  100% {
+    opacity: 0;
+    filter: blur(6px);
+  }
+  40%,
+  60% {
+    opacity: 0.7;
+    filter: blur(0.5px);
+  }
+}
+
+// Ширина как у экрана, высота по пропорциям; капли падают ниже рамки svg
+.room-backdrop-blood {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: max(100%, 900px);
+  height: auto;
+  overflow: visible;
+  transform: translateX(-50%);
+}
+
+// Настоящая кровь по краям: поля между краем экрана и панелями комнаты (до 1280px по центру)
+.room-backdrop-video {
+  --room-stream: calc((100vw - 1280px) / 2 + 80px);
+}
+
+.room-backdrop-stream {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--room-stream);
+  height: 100%;
+  object-fit: cover;
+  object-position: 40% top;
+  opacity: 0;
+  filter: brightness(0.5) saturate(1.2) contrast(1.4);
+  mix-blend-mode: screen;
+  mask-image: linear-gradient(90deg, #000000 60%, transparent 100%), linear-gradient(180deg, #000000 55%, transparent 100%);
+  mask-composite: intersect;
+  -webkit-mask-image: linear-gradient(90deg, #000000 60%, transparent 100%), linear-gradient(180deg, #000000 55%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  transition: opacity 0.8s ease;
+}
+
+.room-backdrop-stream-left {
+  left: 0;
+}
+
+.room-backdrop-stream-right {
+  right: 0;
+  transform: scaleX(-1);
+}
+
+.room-backdrop-stream-playing {
+  opacity: 0.9;
+}
+
+// Пошла настоящая кровь — нарисованные подтёки убираем
+.room-backdrop-video-on ~ .room-backdrop-blood {
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+
+// Редкая вспышка, как молния за окном
+.room-backdrop-flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 30% 0%, rgba(255, 200, 200, 0.16), rgba(160, 0, 12, 0.08) 50%, transparent 80%);
+  opacity: 0;
+  animation: room-backdrop-flash 13s infinite;
+}
+
+@keyframes room-backdrop-flash {
+  0%,
+  89%,
+  100% {
+    opacity: 0;
+  }
+  90% {
+    opacity: 1;
+  }
+  91% {
+    opacity: 0.15;
+  }
+  92.5% {
+    opacity: 0.85;
+  }
+  95% {
+    opacity: 0;
+  }
+}
+
+// Зерно старой плёнки
+.room-backdrop-grain {
+  position: absolute;
+  inset: -50%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.06;
+  animation: room-backdrop-grain 0.8s steps(4) infinite;
+}
+
+@keyframes room-backdrop-grain {
+  25% {
+    transform: translate(-3%, 2%);
+  }
+  50% {
+    transform: translate(2%, -3%);
+  }
+  75% {
+    transform: translate(-2%, -1%);
+  }
+}
+
+.room-backdrop-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+}
+
+// Адаптив
+
+@media (max-width: 760px) {
+  .room-backdrop-art {
+    width: 70vw;
+    opacity: 0.55;
+  }
+
+  .room-backdrop-whisper-2,
+  .room-backdrop-whisper-3 {
+    display: none;
+  }
+}

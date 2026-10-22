@@ -1,5 +1,17 @@
 .players-list-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   margin-bottom: 14px;
+}
+
+.players-list-count {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--color-text-muted);
 }
 
 .players-list-items {
@@ -11,6 +23,8 @@
 }
 
 .players-list-item {
+  position: relative;
+  isolation: isolate;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -44,7 +58,25 @@
   font-weight: 600;
 }
 
+.players-list-name-text {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.players-list-me {
+  flex: none;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--color-red-dark);
+  border-radius: 999px;
+}
+
 .players-list-crown {
+  flex: none;
   width: 15px;
   height: 15px;
   color: var(--color-yellow);
@@ -68,12 +100,38 @@
 }
 
 .players-list-not-ready {
-  color: #ff5a62;
+  color: var(--color-text-muted);
+}
+
+.players-list-dot-off {
+  background: none;
+  box-shadow: inset 0 0 0 1.5px var(--color-text-muted);
+}
+
+.players-list-free {
+  display: none;
+  margin-top: 10px;
+  font-size: 13px;
+  text-align: center;
+  color: var(--color-text-muted);
 }
 
 @keyframes players-list-join {
   from {
     opacity: 0;
     transform: translateX(-8px);
+  }
+}
+
+// Адаптив
+
+// На телефоне пустые слоты съедают пол-экрана — вместо них одна строка
+@media (max-width: 760px) {
+  .players-list-item-empty {
+    display: none;
+  }
+
+  .players-list-free {
+    display: block;
   }
 }

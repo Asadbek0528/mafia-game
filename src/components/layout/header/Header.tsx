@@ -4,33 +4,40 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { useSocial } from "@/lib/social";
+
 import "./header.scss";
 
 const MENU = [
   {
     href: "/",
     title: "Главная",
-    icon: <path d="M12 3 2 11h3v9h5v-6h4v6h5v-9h3z" />,
-  },
-  {
-    href: "/#rooms",
-    title: "Играть",
-    icon: <path d="M7 4v16l13-8z" />,
-  },
-  {
-    href: "/roles",
-    title: "Роли",
-    icon: <path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm6 5-3 5 3 5 3-5z" />,
+    icon: (
+      <>
+        <path d="M3 10.5 12 3l9 7.5" />
+        <path d="M5 9v11h5v-6h4v6h5V9" />
+      </>
+    ),
   },
   {
     href: "/friends",
     title: "Друзья",
     icon: (
       <>
-        <circle cx="9" cy="8" r="3.6" />
-        <path d="M2 20c0-3.6 3.1-6 7-6s7 2.4 7 6z" />
-        <circle cx="17" cy="9" r="2.8" />
-        <path d="M16.5 13.2c3 .3 5.5 2.4 5.5 5.3V20h-4.5c0-2.6-.4-4.9-1-6.8z" />
+        <circle cx="9" cy="8" r="3.5" />
+        <path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5" />
+        <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.8c1.7.8 2.7 2.6 3 5.2" />
+      </>
+    ),
+  },
+  {
+    href: "/shop",
+    title: "Магазин",
+    icon: (
+      <>
+        <path d="M3 4h2.2l2.3 11.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1L21 8H6.3" />
+        <circle cx="9.5" cy="20" r="1.4" />
+        <circle cx="17" cy="20" r="1.4" />
       </>
     ),
   },
@@ -39,8 +46,8 @@ const MENU = [
     title: "Профиль",
     icon: (
       <>
-        <circle cx="12" cy="8" r="4.5" />
-        <path d="M3 21c0-4.5 4-7 9-7s9 2.5 9 7z" />
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 21c.8-4.2 4-6.5 8-6.5s7.2 2.3 8 6.5" />
       </>
     ),
   },
@@ -48,47 +55,56 @@ const MENU = [
 
 const PAGES_WITHOUT_MENU = ["/register", "/room", "/game", "/auth"];
 
+function isActive(pathname: string, href: string): boolean {
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export default function Header() {
   const pathname = usePathname();
+  const social = useSocial();
 
-  const hideMenu = PAGES_WITHOUT_MENU.some((page) => pathname.startsWith(page));
-  if (hideMenu) {
+  if (PAGES_WITHOUT_MENU.some((page) => pathname.startsWith(page))) {
     return null;
   }
+
+  const requests = social.incoming.length;
 
   return (
     <aside className="header">
       <Link href="/" className="header-logo" aria-label="На главную">
-        <Image src="/img/logo.webp" alt="Mafia Community" width={120} height={120} priority />
+        <Image src="/img/logo.webp" alt="Mafia Community" width={88} height={88} priority />
       </Link>
 
       <nav className="header-menu" aria-label="Меню">
         {MENU.map((item) => {
-          const isActive = pathname === item.href;
+          const active = isActive(pathname, item.href);
+          const badge = item.href === "/friends" && requests > 0 ? requests : 0;
 
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={isActive ? "header-link header-link-active" : "header-link"}
-              aria-current={isActive ? "page" : undefined}
+              className={active ? "header-link header-link-active" : "header-link"}
+              aria-current={active ? "page" : undefined}
             >
-              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                {item.icon}
-              </svg>
-              <span>{item.title}</span>
+              <span className="header-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  {item.icon}
+                </svg>
+                {badge > 0 && (
+                  <b className="header-badge" aria-label={`Заявок в друзья: ${badge}`}>
+                    {badge}
+                  </b>
+                )}
+              </span>
+              <span className="header-title">{item.title}</span>
             </Link>
           );
         })}
       </nav>
 
-      <div className="header-city" aria-hidden="true">
-        <p className="header-city-text">
-          Следи за тенью.
-          <br />
-          Она может быть мафией.
-        </p>
-      </div>
+      <div className="header-city" aria-hidden="true" />
     </aside>
   );
 }

@@ -1,48 +1,99 @@
 .friends-page {
   display: grid;
-  gap: 16px;
-  max-width: 900px;
+  gap: 18px;
+  max-width: 920px;
   padding: 18px;
 }
 
 .friends-page-top {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: 8px;
+  gap: 14px;
 }
 
 .friends-page-title {
   font-size: 32px;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
 }
 
 .friends-page-summary {
+  margin-top: 4px;
   color: var(--color-text-muted);
+
+  b {
+    color: var(--color-text);
+  }
+}
+
+.friends-page-online {
+  color: var(--color-green);
+}
+
+.friends-page-myid {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-line-soft);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+
+  span {
+    font-size: 12px;
+    color: var(--color-text-muted);
+  }
+
+  b {
+    font-family: var(--font-title);
+    font-size: 17px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+    color: var(--color-text-muted);
+  }
+
+  &:hover {
+    background: rgba(224, 32, 43, 0.08);
+    border-color: rgba(224, 32, 43, 0.35);
+  }
 }
 
 .friends-page-tabs {
-  display: flex;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
   padding: 4px;
-  background: #0d0606;
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-big);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-line-soft);
+  border-radius: 16px;
 }
 
 .friends-page-tab {
   display: inline-flex;
-  flex: 1;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-height: 42px;
+  gap: 8px;
+  min-height: 44px;
   font-weight: 600;
   color: var(--color-text-muted);
   background: none;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
+  border: 0;
+  border-radius: 12px;
   cursor: pointer;
+  transition: color 0.2s, background 0.2s;
 
   &:hover {
     color: var(--color-text);
@@ -51,14 +102,24 @@
 
 .friends-page-tab-active {
   color: #ffffff;
-  background: linear-gradient(90deg, rgba(190, 20, 30, 0.55), rgba(120, 10, 16, 0.2));
-  border-color: rgba(224, 32, 43, 0.35);
+  background: linear-gradient(180deg, #c8141f, #820911);
+  box-shadow: 0 6px 18px rgba(160, 10, 20, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+
+  &:hover {
+    color: #ffffff;
+  }
+
+  .friends-page-badge {
+    color: var(--color-red);
+    background: #ffffff;
+  }
 }
 
 .friends-page-badge {
   min-width: 20px;
   padding: 0 6px;
   font-size: 12px;
+  font-weight: 700;
   line-height: 20px;
   color: #ffffff;
   background: var(--color-red);
@@ -75,67 +136,60 @@
 
 .friends-page-card {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-}
+  gap: 14px;
+  padding: 12px 14px;
+  background: linear-gradient(180deg, rgba(24, 12, 13, 0.92), rgba(12, 6, 7, 0.94));
+  border: 1px solid var(--color-line-soft);
+  border-radius: 16px;
+  transition: border-color 0.2s;
 
-.friends-page-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  padding: 10px;
-  background: #110707;
-  border: 1px solid #241112;
-  border-radius: var(--radius);
+  &:hover {
+    border-color: rgba(255, 255, 255, 0.12);
+  }
 }
 
 .friends-page-avatar {
   position: relative;
   display: inline-flex;
+  flex: none;
 }
 
 .friends-page-dot {
   position: absolute;
   right: 0;
-  bottom: 0;
+  bottom: 1px;
   width: 13px;
   height: 13px;
   background: #5a4a4a;
-  border: 2px solid #110707;
+  border: 2.5px solid #110708;
   border-radius: 50%;
 }
 
 .friends-page-dot-online {
   background: var(--color-green);
+  box-shadow: 0 0 8px rgba(47, 211, 107, 0.6);
 }
 
 .friends-page-info {
   display: grid;
   flex: 1;
-  gap: 2px;
-  min-width: 140px;
-}
+  gap: 1px;
+  min-width: 0;
+  text-decoration: none;
 
-.friends-page-name {
-  display: grid;
-  flex: 1;
-  min-width: 120px;
-  overflow: hidden;
-  font-size: 16px;
-  font-weight: 700;
-  text-overflow: ellipsis;
-
-  small {
-    font-size: 12px;
-    font-weight: 400;
-    color: var(--color-text-muted);
+  &:hover .friends-page-name {
+    color: #ff5a63;
   }
 }
 
-.friends-page-link:hover {
-  color: var(--color-red);
+.friends-page-name {
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  transition: color 0.2s;
 }
 
 .friends-page-status {
@@ -149,40 +203,99 @@
 
 .friends-page-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex: none;
   align-items: center;
   gap: 8px;
 }
 
-.friends-page-remove {
-  color: #ff9ea4;
-  border-color: var(--color-line-red);
+.friends-page-icon-button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: var(--color-text-muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-line-soft);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    color: #ff7a82;
+    background: rgba(224, 32, 43, 0.1);
+    border-color: rgba(224, 32, 43, 0.4);
+  }
 }
 
-.friends-page-waiting {
+.friends-page-pending,
+.friends-page-done {
   font-size: 13px;
   color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.friends-page-done {
+  color: var(--color-green);
 }
 
 .friends-page-empty {
   display: grid;
-  justify-items: start;
-  gap: 12px;
+  justify-items: center;
+  gap: 8px;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.friends-page-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  margin-bottom: 6px;
+  color: var(--color-red);
+  background: rgba(224, 32, 43, 0.1);
+  border-radius: 18px;
+
+  svg {
+    width: 30px;
+    height: 30px;
+  }
+}
+
+.friends-page-empty-title {
+  font-family: var(--font-title);
+  font-size: 22px;
+}
+
+.friends-page-empty-text {
+  max-width: 320px;
+  margin-bottom: 8px;
   color: var(--color-text-muted);
 }
 
 .friends-page-requests {
   display: grid;
-  gap: 14px;
+  gap: 22px;
 }
 
 .friends-page-subtitle {
   margin-bottom: 10px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
 }
 
 .friends-page-search {
   display: grid;
-  gap: 12px;
+  gap: 18px;
 }
 
 .friends-page-search-form {
@@ -190,18 +303,210 @@
   grid-template-columns: 1fr auto;
   gap: 8px;
 
+  .btn {
+    min-width: 110px;
+  }
+}
+
+.friends-page-search-field {
+  position: relative;
+
+  svg {
+    position: absolute;
+    top: 50%;
+    left: 14px;
+    width: 18px;
+    height: 18px;
+    color: var(--color-text-muted);
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
   .input {
     min-width: 0;
+    padding-left: 42px;
     font-size: 16px;
+  }
+}
+
+.friends-page-results {
+  margin-top: 14px;
+
+  .friends-page-card {
+    background: rgba(255, 255, 255, 0.025);
+  }
+}
+
+.friends-page-nothing {
+  margin-top: 14px;
+  color: var(--color-text-muted);
+}
+
+.friends-page-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.friends-page-player {
+  display: grid;
+  gap: 12px;
+  padding: 16px 12px 12px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--color-line-soft);
+  border-radius: 16px;
+  transition: border-color 0.2s, transform 0.2s;
+
+  &:hover {
+    border-color: rgba(224, 32, 43, 0.35);
+    transform: translateY(-2px);
+  }
+
+  .btn {
+    width: 100%;
+  }
+}
+
+.friends-page-player-skeleton {
+  justify-items: center;
+  align-content: start;
+  gap: 8px;
+  height: 172px;
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0.02) 30%, rgba(224, 32, 43, 0.07) 50%, rgba(255, 255, 255, 0.02) 70%);
+  background-size: 200% 100%;
+  animation: friends-shimmer 1.2s infinite;
+}
+
+// Заготовка карточки: аватар, имя, ID и кнопка мигают, пока ищем игроков
+.friends-page-skeleton-avatar,
+.friends-page-skeleton-line,
+.friends-page-skeleton-button {
+  display: block;
+  background: rgba(255, 255, 255, 0.07);
+  animation: friends-skeleton-pulse 1.2s ease-in-out infinite;
+}
+
+.friends-page-skeleton-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+}
+
+.friends-page-skeleton-line {
+  width: 60%;
+  height: 12px;
+  border-radius: 6px;
+}
+
+.friends-page-skeleton-line-short {
+  width: 45%;
+  height: 9px;
+}
+
+.friends-page-skeleton-button {
+  width: 100%;
+  height: 30px;
+  margin-top: 4px;
+  border-radius: var(--radius-small);
+  background: rgba(224, 32, 43, 0.16);
+}
+
+@keyframes friends-skeleton-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes friends-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+// Новые игроки появляются по одному после загрузки
+.friends-page-player-in {
+  animation: friends-player-in 0.4s ease-out both;
+}
+
+@keyframes friends-player-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+}
+
+.friends-page-player-link {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 0;
+  text-decoration: none;
+
+  .avatar {
+    margin-bottom: 8px;
+    box-shadow: 0 0 0 2px #0d0708, 0 0 0 3px rgba(255, 255, 255, 0.1);
+  }
+
+  .friends-page-name {
+    max-width: 100%;
+  }
+
+  &:hover .friends-page-name {
+    color: #ff5a63;
+  }
+}
+
+.friends-page-spin {
+  animation: friends-spin 0.8s linear infinite;
+}
+
+@keyframes friends-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
 @media (max-width: 600px) {
   .friends-page {
+    gap: 14px;
     padding: 12px;
   }
 
-  .friends-page-actions {
+  .friends-page-myid {
     width: 100%;
+    justify-content: space-between;
+  }
+
+  .friends-page-card {
+    flex-wrap: wrap;
+    padding: 12px;
+  }
+
+  .friends-page-card .friends-page-actions {
+    width: 100%;
+
+    .btn {
+      flex: 1;
+    }
+  }
+
+  .friends-page-card:has(.friends-page-icon-button) {
+    flex-wrap: nowrap;
+
+    .friends-page-actions {
+      width: auto;
+    }
+  }
+
+  .friends-page-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .friends-page-search-form .btn {
+    min-width: 0;
   }
 }

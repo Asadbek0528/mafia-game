@@ -92,6 +92,7 @@
   border: 1px solid #33181b;
   border-radius: 14px;
   backdrop-filter: blur(4px);
+  transition: border-color 0.3s, box-shadow 0.3s;
 
   span {
     font-size: 12px;
@@ -106,18 +107,27 @@
     font-size: 26px;
     font-weight: 800;
     line-height: 1.05;
-    color: #ff3b45;
+    color: var(--color-text);
     font-variant-numeric: tabular-nums;
+    transition: color 0.3s;
   }
 
   svg {
     width: 22px;
     height: 22px;
+    color: var(--color-red);
   }
 }
 
-.game-header-timer-hurry b {
-  animation: game-header-blink 1s ease-in-out infinite;
+// Красный цвет только когда время правда кончается — иначе он ничего не значит
+.game-header-timer-hurry {
+  border-color: var(--color-red);
+  box-shadow: 0 0 18px var(--color-red-glow);
+
+  b {
+    color: #ff3b45;
+    animation: game-header-blink 1s ease-in-out infinite;
+  }
 }
 
 @keyframes game-header-blink {

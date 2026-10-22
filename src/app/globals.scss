@@ -1,9 +1,11 @@
 :root {
-  --color-black: #000000;
-  --color-panel: #0c0707;
-  --color-panel-light: #140a0a;
+  --color-black: #050203;
+  --color-panel: #0d0708;
+  --color-panel-light: #150b0c;
+  --color-surface: rgba(255, 255, 255, 0.03);
 
-  --color-line: #2b1214;
+  --color-line: #2a1416;
+  --color-line-soft: rgba(255, 255, 255, 0.07);
   --color-line-red: #5a1117;
 
   --color-red-dark: #a3111a;
@@ -24,7 +26,8 @@
   --radius: 10px;
   --radius-big: 16px;
 
-  --mobile-menu-height: 72px;
+  --mobile-menu-height: 64px;
+  --shadow-panel: 0 18px 50px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 
   box-sizing: border-box;
   padding-top: env(safe-area-inset-top, 0px);
@@ -49,8 +52,23 @@ body {
   font-size: 15px;
   line-height: 1.5;
   color: var(--color-text);
-  background: var(--color-black);
+  background:
+    radial-gradient(90% 60% at 70% -10%, rgba(120, 8, 18, 0.18), transparent 60%),
+    radial-gradient(60% 50% at 0% 100%, rgba(90, 6, 14, 0.12), transparent 60%),
+    var(--color-black);
+  background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  color: #ffffff;
+  background: rgba(224, 32, 43, 0.55);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3a1a1d transparent;
 }
 
 h1,
@@ -116,12 +134,17 @@ input {
   min-height: 46px;
   padding: 0 22px;
   border: 1px solid transparent;
-  border-radius: var(--radius);
+  border-radius: 12px;
   font-size: 15px;
   font-weight: 600;
   text-decoration: none;
+  white-space: nowrap;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.12s;
+
+  &:active:not(:disabled) {
+    transform: translateY(1px) scale(0.99);
+  }
 
   &:disabled {
     opacity: 0.5;
@@ -137,21 +160,23 @@ input {
 
 .btn-red {
   color: #ffffff;
-  background: linear-gradient(180deg, #c5161f, #85090f);
-  border-color: #d3212a;
+  background: linear-gradient(180deg, #d81c27, #8d0a12);
+  border-color: rgba(255, 90, 100, 0.35);
+  box-shadow: 0 8px 22px rgba(160, 10, 20, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.18);
 
   &:hover:not(:disabled) {
-    box-shadow: 0 0 24px 2px var(--color-red-glow);
+    background: linear-gradient(180deg, #ea2430, #9c0c15);
+    box-shadow: 0 10px 30px rgba(224, 32, 43, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.22);
   }
 }
 
 .btn-dark {
-  background: #120a0a;
-  border-color: var(--color-line);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--color-line-soft);
 
   &:hover:not(:disabled) {
-    background: #1a0c0d;
-    border-color: var(--color-line-red);
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.14);
   }
 }
 
@@ -189,13 +214,17 @@ input {
   width: 100%;
   min-height: 48px;
   padding: 0 14px;
-  background: rgba(10, 4, 4, 0.85);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-line-soft);
+  border-radius: 12px;
   transition: border-color 0.2s, box-shadow 0.2s;
 
   &::placeholder {
-    color: #5f4c4c;
+    color: #6d5c5d;
+  }
+
+  &:hover:not(:focus) {
+    border-color: rgba(255, 255, 255, 0.12);
   }
 
   &:focus {
@@ -211,10 +240,11 @@ input {
 
 .panel {
   min-width: 0;
-  padding: 18px;
-  background: linear-gradient(180deg, var(--color-panel-light), var(--color-panel));
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-big);
+  padding: 20px;
+  background: linear-gradient(180deg, rgba(24, 12, 13, 0.92), rgba(12, 6, 7, 0.94));
+  border: 1px solid var(--color-line-soft);
+  border-radius: 18px;
+  box-shadow: var(--shadow-panel);
 }
 
 .panel-top {
@@ -226,7 +256,9 @@ input {
 }
 
 .panel-title {
-  font-size: 19px;
+  font-size: 18px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .status-dot {

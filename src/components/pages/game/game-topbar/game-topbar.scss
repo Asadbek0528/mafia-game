@@ -119,6 +119,10 @@
 }
 
 .game-topbar-connection {
+  b {
+    font-weight: inherit;
+  }
+
   span {
     width: 8px;
     height: 8px;
@@ -153,7 +157,8 @@
   }
 }
 
-@media (max-width: 380px) {
+// Телефон: всё в одну строку без прокрутки вбок — связь становится цветной точкой, надпись MAFIA меньше
+@media (max-width: 520px) {
   .game-topbar {
     gap: 6px;
   }
@@ -166,9 +171,25 @@
     padding: 0 9px;
     font-size: 12px;
   }
+
+  .game-topbar-connection {
+    justify-content: center;
+    width: 34px;
+    padding: 0;
+
+    // Текст остаётся для скринридера и в подсказке
+    .game-topbar-connection-text {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+  }
 }
 
-@media (max-width: 345px) {
+@media (max-width: 370px) {
   .game-topbar-logo span {
     display: none;
   }

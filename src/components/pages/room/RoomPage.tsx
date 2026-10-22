@@ -9,9 +9,12 @@ import { getToken, rememberPageAfterLogin, useCurrentUser } from "@/lib/auth";
 import { getDemoRoom } from "@/lib/demo";
 import { saveDemoSetup } from "@/lib/demo-game";
 import { countRoles, DEFAULT_TIMES } from "@/lib/roles";
+import { announceSkin, rememberSkin } from "@/lib/skins";
 import { useLiveUpdates, WS_PATHS } from "@/lib/socket";
 
 import CloseRoomDialog from "./close-room-dialog/CloseRoomDialog";
+import RoomBackdrop from "./room-backdrop/RoomBackdrop";
+import RoomOmen from "./room-omen/RoomOmen";
 import InviteBox from "./invite-box/InviteBox";
 import PlayersList from "./players-list/PlayersList";
 import RoomHeader from "./room-header/RoomHeader";
@@ -149,6 +152,12 @@ export default function RoomPage() {
   const hasRoom = room !== null;
   const { isLive, notify } = useLiveUpdates(!isDemo && hasRoom ? WS_PATHS.room(roomId) : null, (data) => {
     const type = (data as { type?: string } | null)?.type;
+    // Фоны игроков: запоминаем чужие, новичку сообщаем свой
+    if (type === "skin") {
+      rememberSkin(data);
+      return;
+    }
+    if (type === "hello") announceSkin(notify);
     if (type === "room-closed") {
       leaveClosedRoom("Создатель закрыл комнату.");
       return;
@@ -160,6 +169,15 @@ export default function RoomPage() {
     }
     loadRoom().catch(() => {});
   });
+
+  // Свой фон — всем в комнате: при подключении и когда сменили фон в магазине
+  useEffect(() => {
+    if (!isLive) return;
+    announceSkin(notify);
+    const onChange = () => announceSkin(notify);
+    window.addEventListener("mafia-shop-change", onChange);
+    return () => window.removeEventListener("mafia-shop-change", onChange);
+  }, [isLive, notify]);
 
   useEffect(() => {
     if (isDemo || !hasRoom) return;
@@ -294,6 +312,7 @@ export default function RoomPage() {
 
   return (
     <div className="room-page">
+      <RoomBackdrop />
       <RoomHeader room={room} onLeave={handleLeave} />
 
       <div className="room-page-grid">
@@ -308,11 +327,15 @@ export default function RoomPage() {
           onStart={handleStart}
         />
 
-        <InviteBox roomId={room.id} roomName={room.name} />
+        <div className="room-page-side">
+          <InviteBox roomId={room.id} roomName={room.name} />
+          <RoomOmen />
+        </div>
       </div>
 
       <CloseRoomDialog
         isOpen={isCloseOpen}
+        roomName={room.name}
         playersCount={room.players.length}
         isClosing={isClosing}
         onClose={handleCloseRoom}

@@ -1,0 +1,110 @@
+// Родителю нужны position: relative и isolation: isolate — тогда фон ляжет над его заливкой, но под содержимым
+.player-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+
+  // Затемнение снизу, чтобы текст поверх фона читался
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(5, 2, 3, 0.15), rgba(5, 2, 3, 0.7));
+  }
+}
+
+.player-bg-blood-moon {
+  background:
+    radial-gradient(circle at 82% 22%, #ff4a4a 0, #c0101c 7%, rgba(160, 0, 12, 0.55) 13%, transparent 30%),
+    radial-gradient(ellipse 120% 70% at 50% 120%, #3a0006, transparent 60%),
+    linear-gradient(180deg, #1a0204, #060102);
+}
+
+.player-bg-fog {
+  background: linear-gradient(180deg, #120c0e, #050203);
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -20% -60%;
+    background:
+      radial-gradient(ellipse 22% 35% at 20% 60%, rgba(200, 170, 175, 0.22), transparent 70%),
+      radial-gradient(ellipse 25% 40% at 55% 75%, rgba(170, 140, 145, 0.2), transparent 70%),
+      radial-gradient(ellipse 20% 30% at 85% 55%, rgba(200, 170, 175, 0.18), transparent 70%);
+    filter: blur(14px);
+    animation: player-bg-fog 18s linear infinite alternate;
+  }
+}
+
+@keyframes player-bg-fog {
+  to {
+    transform: translateX(22%);
+  }
+}
+
+.player-bg-ice-night {
+  background:
+    radial-gradient(1.5px 1.5px at 12% 20%, #ffffff, transparent),
+    radial-gradient(1px 1px at 30% 65%, #cfe6ff, transparent),
+    radial-gradient(1.5px 1.5px at 55% 30%, #ffffff, transparent),
+    radial-gradient(1px 1px at 72% 75%, #cfe6ff, transparent),
+    radial-gradient(1.5px 1.5px at 88% 15%, #ffffff, transparent),
+    radial-gradient(1px 1px at 45% 85%, #ffffff, transparent),
+    radial-gradient(ellipse 90% 70% at 70% 0%, rgba(60, 130, 255, 0.45), transparent 70%),
+    linear-gradient(180deg, #08142e, #03060f);
+  animation: player-bg-twinkle 4s ease-in-out infinite;
+}
+
+@keyframes player-bg-twinkle {
+  50% {
+    filter: brightness(1.25);
+  }
+}
+
+.player-bg-neon-noir {
+  background:
+    linear-gradient(115deg, transparent 38%, rgba(255, 40, 160, 0.55) 39%, transparent 41%),
+    linear-gradient(115deg, transparent 58%, rgba(40, 220, 255, 0.45) 59%, transparent 61%),
+    radial-gradient(ellipse 70% 60% at 85% 20%, rgba(255, 40, 160, 0.35), transparent 70%),
+    radial-gradient(ellipse 60% 60% at 10% 90%, rgba(40, 220, 255, 0.25), transparent 70%),
+    linear-gradient(180deg, #14061a, #05020a);
+  animation: player-bg-neon 3.2s steps(1) infinite;
+}
+
+@keyframes player-bg-neon {
+  0%,
+  100% {
+    filter: none;
+  }
+  47% {
+    filter: brightness(0.7);
+  }
+  49% {
+    filter: none;
+  }
+}
+
+.player-bg-night-city {
+  background: url("/img/sidebar-city.webp") center 35% / cover no-repeat;
+}
+
+.player-bg-don-gold {
+  background:
+    linear-gradient(110deg, transparent 30%, rgba(255, 220, 140, 0.35) 45%, transparent 60%),
+    radial-gradient(ellipse 80% 60% at 80% 10%, rgba(214, 160, 50, 0.45), transparent 70%),
+    linear-gradient(160deg, #1d1406, #060402 60%);
+  background-size: 250% 100%, 100% 100%, 100% 100%;
+  animation: player-bg-shine 4.5s ease-in-out infinite;
+}
+
+@keyframes player-bg-shine {
+  from {
+    background-position: 120% 0, 0 0, 0 0;
+  }
+  to {
+    background-position: -120% 0, 0 0, 0 0;
+  }
+}

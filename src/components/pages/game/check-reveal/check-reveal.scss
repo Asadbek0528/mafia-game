@@ -1,0 +1,97 @@
+.check-reveal {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(3, 4, 12, 0.82);
+  backdrop-filter: blur(6px);
+  animation: check-reveal-fade 0.25s ease-out;
+}
+
+@keyframes check-reveal-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.check-reveal-card {
+  --check-color: #43e07f;
+  --check-glow: rgba(47, 211, 107, 0.35);
+
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  width: min(100%, 340px);
+  padding: 26px 22px 22px;
+  text-align: center;
+  background: linear-gradient(180deg, #121624, #0a0c14);
+  border: 1px solid rgba(120, 140, 220, 0.3);
+  border-radius: 22px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7), 0 0 60px var(--check-glow);
+  animation: check-reveal-flip 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+
+  .avatar {
+    margin: 6px 0 2px;
+    box-shadow: 0 0 0 3px #0a0c14, 0 0 0 5px var(--check-color);
+  }
+
+  .btn {
+    margin-top: 10px;
+  }
+}
+
+.check-reveal-card-mafia {
+  --check-color: #ff3b45;
+  --check-glow: rgba(224, 32, 43, 0.45);
+
+  background: linear-gradient(180deg, #2a0a0e, #120406);
+  border-color: rgba(224, 32, 43, 0.45);
+}
+
+@keyframes check-reveal-flip {
+  from {
+    opacity: 0;
+    transform: perspective(800px) rotateY(80deg) scale(0.9);
+  }
+}
+
+.check-reveal-label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #a9b3d6;
+}
+
+.check-reveal-name {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.check-reveal-stamp {
+  padding: 4px 18px;
+  font-family: var(--font-horror);
+  font-size: 34px;
+  line-height: 1.2;
+  color: var(--check-color);
+  border: 3px solid var(--check-color);
+  border-radius: 8px;
+  text-shadow: 0 0 20px var(--check-glow);
+  transform: rotate(-6deg);
+  animation: check-reveal-stamp 0.4s 0.45s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+
+@keyframes check-reveal-stamp {
+  from {
+    opacity: 0;
+    transform: rotate(-6deg) scale(2.2);
+  }
+}
+
+.check-reveal-text {
+  max-width: 260px;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}

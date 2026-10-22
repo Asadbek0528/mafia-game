@@ -1,46 +1,162 @@
 .close-room {
   width: min(92vw, 420px);
   padding: 0;
+  overflow: hidden;
   color: var(--color-text);
-  background: linear-gradient(180deg, #150809, #070303);
+  background:
+    radial-gradient(ellipse 90% 55% at 50% 0%, rgba(170, 0, 15, 0.28), transparent 70%),
+    linear-gradient(180deg, #140708, #070303);
   border: 1px solid var(--color-line-red);
-  border-radius: var(--radius-big);
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8), 0 0 40px rgba(160, 0, 12, 0.2);
+  border-radius: 20px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.85), 0 0 60px rgba(160, 0, 12, 0.25);
+
+  &[open] {
+    animation: close-room-in 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  }
 
   &::backdrop {
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(3px);
+    background: radial-gradient(ellipse at center, rgba(40, 0, 4, 0.7), rgba(0, 0, 0, 0.88));
+    backdrop-filter: blur(4px);
+  }
+}
+
+@keyframes close-room-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
   }
 }
 
 .close-room-body {
   display: grid;
-  gap: 14px;
-  padding: 24px;
+  justify-items: center;
+  gap: 10px;
+  padding: 28px 24px 22px;
+  text-align: center;
+}
+
+// Кольцо обратного отсчёта: плавно убывает, в центре — секунды
+.close-room-countdown {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 92px;
+  height: 92px;
+  margin-bottom: 6px;
+
+  svg {
+    position: absolute;
+    inset: 0;
+    transform: rotate(-90deg);
+  }
+}
+
+.close-room-countdown-track {
+  fill: rgba(224, 32, 43, 0.06);
+  stroke: rgba(255, 255, 255, 0.07);
+  stroke-width: 6;
+}
+
+.close-room-countdown-ring {
+  fill: none;
+  stroke: var(--color-red);
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-dasharray: 276.5;
+  stroke-dashoffset: 0;
+  filter: drop-shadow(0 0 6px rgba(224, 32, 43, 0.7));
+  animation: close-room-drain linear forwards;
+}
+
+@keyframes close-room-drain {
+  to {
+    stroke-dashoffset: 276.5;
+  }
+}
+
+.close-room-seconds {
+  display: grid;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--color-text-muted);
+
+  b {
+    font-family: var(--font-title);
+    font-size: 30px;
+    font-weight: 600;
+    color: #ffffff;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// Последние секунды: кольцо и цифры пульсируют
+.close-room-countdown-hurry {
+  animation: close-room-pulse 1s ease-in-out infinite;
+
+  .close-room-seconds b {
+    color: #ff4a53;
+  }
+}
+
+@keyframes close-room-pulse {
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+.close-room-spinner {
+  width: 34px;
+  height: 34px;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: close-room-spin 0.7s linear infinite;
+}
+
+@keyframes close-room-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .close-room-title {
-  font-size: 24px;
+  font-size: 26px;
 }
 
 .close-room-text {
-  color: var(--color-text-muted);
+  max-width: 330px;
+  font-size: 15px;
   line-height: 1.5;
+  color: #cbbcbd;
+
+  b {
+    color: #ffffff;
+  }
 }
 
-.close-room-timer {
-  padding: 10px 12px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-red);
-  text-align: center;
-  background: rgba(224, 32, 43, 0.08);
-  border: 1px solid var(--color-line-red);
-  border-radius: var(--radius);
+.close-room-hint {
+  max-width: 320px;
+  font-size: 12.5px;
+  color: var(--color-text-muted);
 }
 
 .close-room-buttons {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.close-room-delete svg {
+  width: 17px;
+  height: 17px;
+}
+
+// Адаптив
+
+@media (max-width: 400px) {
+  .close-room-buttons {
+    grid-template-columns: 1fr;
+  }
 }

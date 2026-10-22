@@ -1,8 +1,18 @@
+// Профиль, друзья и история игр — на странице «Профиль», главная целиком под игру
 .home-page {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
+  max-width: 1280px;
+  margin: 0 auto;
   padding: 18px;
+}
+
+// Контент главной — поверх видео с кровью
+.home-page > :not(.home-blood, dialog) {
+  position: relative;
+  z-index: 1;
 }
 
 .home-page-main {
@@ -10,12 +20,6 @@
   gap: 18px;
   align-content: start;
   min-width: 0;
-}
-
-.home-page-side {
-  display: grid;
-  gap: 18px;
-  align-content: start;
 }
 
 .home-page-rejoin {
@@ -48,31 +52,13 @@
   }
 }
 
-@media (min-width: 1800px) {
-  .home-page {
-    grid-template-columns: minmax(0, 1fr) 440px;
-  }
-}
-
-@media (max-width: 1280px) {
-  .home-page {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .home-page-side {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    align-items: start;
-  }
-}
-
 @media (max-width: 860px) {
   .home-page {
     gap: 14px;
     padding: 12px;
   }
 
-  .home-page-main,
-  .home-page-side {
+  .home-page-main {
     gap: 14px;
   }
 }

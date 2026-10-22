@@ -1,0 +1,88 @@
+// Медальон: чеканная монета с гравировкой. Металл зависит от достижения, закрытое — тёмное железо с замком
+.achievement-medal {
+  --metal-light: #ffe7a3;
+  --metal: #d29a2c;
+  --metal-dark: #6b4310;
+
+  position: relative;
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  color: var(--metal-dark);
+  background:
+    radial-gradient(circle at 32% 26%, var(--metal-light), var(--metal) 45%, var(--metal-dark) 100%);
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 3px rgba(255, 255, 255, 0.18),
+    inset 0 0 0 6px rgba(0, 0, 0, 0.18),
+    inset 0 -6px 12px rgba(0, 0, 0, 0.35),
+    0 6px 18px rgba(0, 0, 0, 0.5);
+
+  svg {
+    width: 52%;
+    height: 52%;
+    filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.35));
+  }
+}
+
+.achievement-medal-blood {
+  --metal-light: #ff8a90;
+  --metal: #c0101c;
+  --metal-dark: #3d0006;
+
+  color: #2a0004;
+  box-shadow:
+    inset 0 0 0 3px rgba(255, 255, 255, 0.15),
+    inset 0 0 0 6px rgba(0, 0, 0, 0.2),
+    inset 0 -6px 12px rgba(0, 0, 0, 0.4),
+    0 6px 18px rgba(0, 0, 0, 0.5),
+    0 0 22px rgba(224, 32, 43, 0.35);
+}
+
+.achievement-medal-silver {
+  --metal-light: #ffffff;
+  --metal: #a9b4c2;
+  --metal-dark: #3f4752;
+
+  color: #2a3038;
+}
+
+.achievement-medal-gold {
+  box-shadow:
+    inset 0 0 0 3px rgba(255, 255, 255, 0.2),
+    inset 0 0 0 6px rgba(0, 0, 0, 0.15),
+    inset 0 -6px 12px rgba(0, 0, 0, 0.35),
+    0 6px 18px rgba(0, 0, 0, 0.5),
+    0 0 22px rgba(227, 165, 49, 0.3);
+}
+
+.achievement-medal-locked {
+  --metal-light: #4a3c3e;
+  --metal: #241a1c;
+  --metal-dark: #0c0708;
+
+  color: #5a4a4c;
+
+  svg {
+    filter: none;
+  }
+}
+
+.achievement-medal-lock {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  place-items: center;
+  width: 34%;
+  height: 34%;
+  color: #cbbcbd;
+  background: #140c0d;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+
+  svg {
+    width: 55%;
+    height: 55%;
+  }
+}

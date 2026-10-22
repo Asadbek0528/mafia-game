@@ -4,12 +4,18 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { showToast } from "@/components/pages/widgets/toast/Toast";
-import { api, ApiError, type GamePlayer, type GameState, type NightActionInfo, type RoleKey, type VoteInfo } from "@/lib/api";
+import { api, ApiError, TeamActedError, type GamePlayer, type GameState, type NightActionInfo, type RoleKey, type VoteInfo } from "@/lib/api";
 import { rememberPageAfterLogin, useCurrentUser } from "@/lib/auth";
 import { advanceDemoGame, createDemoGame } from "@/lib/demo-game";
 import { DEFAULT_TIMES, getRole, NIGHT_TURN_SECONDS, NIGHT_TURNS } from "@/lib/roles";
+import { useShop } from "@/lib/shop";
+import { type Ambience, play, resetTick, setAmbience, unlockSoundOnGesture, type SoundName } from "@/lib/sound";
+import { announceSkin, rememberSkin } from "@/lib/skins";
 import { useLiveUpdates, WS_PATHS } from "@/lib/socket";
 
+import AchievementUnlocked from "@/components/pages/widgets/achievements/AchievementUnlocked";
+
+import CheckReveal, { type CheckRevealInfo } from "./check-reveal/CheckReveal";
 import DeadBanner from "./dead-banner/DeadBanner";
 import EffectOverlay, { type GameEffect } from "./effect-overlay/EffectOverlay";
 import GameHeader from "./game-header/GameHeader";
@@ -30,6 +36,9 @@ const BACKUP_DELAY_S = 9;
 const BACKUP_STEP_S = 3;
 const NIGHT_END_GRACE_MS = 2000;
 const LAST_WORD_S = 30;
+
+const PHASE_SOUND: Record<GameState["phase"], SoundName> = { NIGHT: "night", DAY: "morning", VOTING: "gavel" };
+const EFFECT_SOUND: Partial<Record<GameEffect["kind"], SoundName>> = { blood: "kill", heal: "heal", shield: "shield", mafia: "kill", clean: "heal" };
 
 const NIGHT_ACTION: Partial<Record<RoleKey, "KILL" | "HEAL" | "CHECK">> = {
   mafia: "KILL",
@@ -77,19 +86,36 @@ type NightRoles = Partial<Record<RoleKey, boolean>>;
 
 const TEAM_ROLES: RoleKey[] = ["mafia", "doctor", "commissar"];
 
+// Когда этот браузер впервые увидел ночной ход. Время сервера (created_at) не годится:
+// часы телефона и сервера расходятся, и очередь «застревала» на уже сходившей роли
+const firstSeenAction = new Map<string, number>();
+
 function getNightTurn(game: GameState, phaseEnd: number, now: number, myRole: RoleKey | null, nightRoles: NightRoles | null): NightTurnState {
-  const turnMs = NIGHT_TURN_SECONDS * 1000;
-  const nightStart = phaseEnd - game.nightTime * 1000;
+  const nightMs = game.nightTime * 1000;
+  const nightStart = phaseEnd - nightMs;
   const hasHiddenRoles = game.players.some((player) => player.isAlive && player.role === null);
 
-  let cursor = nightStart;
-  const turns: TurnInfo[] = NIGHT_TURNS.map((turn) => {
+  const presence = NIGHT_TURNS.map((turn) => {
     const knownAlive = game.players.some((player) => player.isAlive && player.role === turn.role);
-    const present = knownAlive || (nightRoles?.[turn.role] ?? hasHiddenRoles);
+    return knownAlive || (nightRoles?.[turn.role] ?? hasHiddenRoles);
+  });
+  // Все роли должны успеть за ночь: при ночи в 60 секунд ход — 20 секунд, а не 30
+  const presentCount = Math.max(1, presence.filter(Boolean).length);
+  const turnMs = Math.min(NIGHT_TURN_SECONDS * 1000, Math.floor(nightMs / presentCount));
+
+  let cursor = nightStart;
+  const turns: TurnInfo[] = NIGHT_TURNS.map((turn, index) => {
+    const present = presence[index];
     const type = NIGHT_ACTION[turn.role];
     const first = game.nightActions.filter((action) => action.type === type).sort((a, b) => a.at - b.at)[0];
     let turnEnd = present ? cursor + turnMs : cursor;
-    if (present && first) turnEnd = Math.min(turnEnd, Math.max(cursor, first.at));
+    if (present && first) {
+      const key = `${game.id}-${game.round}-${type}`;
+      if (!firstSeenAction.has(key)) firstSeenAction.set(key, now);
+      // Ход закончился, когда его сделали: по часам сервера, но не позже, чем этот браузер его увидел
+      const doneAt = Math.min(firstSeenAction.get(key) ?? now, Math.max(first.at, cursor));
+      turnEnd = Math.min(turnEnd, Math.max(cursor, doneAt));
+    }
     const info = { role: turn.role, start: cursor, end: turnEnd, done: Boolean(first), present };
     cursor = turnEnd;
     return info;
@@ -116,6 +142,16 @@ function phaseStartEffect(game: GameState, me: GamePlayer | undefined): GameEffe
     }
     if (last.savedByDoctor) {
       return { key, kind: "heal", title: "Доктор спас жертву", text: "Этой ночью никто не погиб." };
+    }
+    const shieldedId = last.shieldedPlayerId ?? null;
+    if (shieldedId !== null && shieldedId === me?.id) {
+      return { key, kind: "shield", title: "Щит сработал!", text: "Ночью мафия пришла за вами — щит отразил удар. Вы живы." };
+    }
+    if (shieldedId !== null && me?.role === "mafia") {
+      return { key, kind: "shield", title: "Удар отражён", text: `${nameOf(shieldedId)} был под защитой щита.` };
+    }
+    if (shieldedId !== null) {
+      return { key, kind: "shield", title: "Этой ночью никто не погиб", text: "Чей-то щит отразил удар мафии." };
     }
     if (last.killedPlayerId !== null && last.killedPlayerId === me?.id) {
       return { key, kind: "blood", title: "Вас убили этой ночью", text: "Теперь вы наблюдатель: видите все роли и пишете в чат погибших." };
@@ -186,6 +222,26 @@ type Team = { role: RoleKey; ids: number[] };
 
 type RevealedRoles = Record<number, RoleKey>;
 
+type SkipInfo = { voterId: number; round: number };
+
+// Личная память игрока на этом устройстве: кого проверял комиссар
+function readMemory<T>(gameId: string, key: string, fallback: T): T {
+  try {
+    const saved = localStorage.getItem(`mafia_${key}_${gameId}`);
+    return saved ? (JSON.parse(saved) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeMemory(gameId: string, key: string, value: unknown) {
+  try {
+    localStorage.setItem(`mafia_${key}_${gameId}`, JSON.stringify(value));
+  } catch {
+    // нет доступа к хранилищу — просто не запомним
+  }
+}
+
 const ROLE_KEYS: RoleKey[] = ["mafia", "doctor", "commissar", "civilian"];
 
 function withTeam(game: GameState | null, team: Team | null, revealed: RevealedRoles): GameState | null {
@@ -240,6 +296,12 @@ export default function GamePage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [isSent, setIsSent] = useState(false);
   const [checkResult, setCheckResult] = useState("");
+  // Цвет плашки результата проверки: мафия — красный штамп, мирный — зелёный, ожидание — нейтральный
+  const [checkTone, setCheckTone] = useState<"mafia" | "town" | "wait">("wait");
+  const [checks, setChecks] = useState<Record<number, boolean>>({});
+  const [checkReveal, setCheckReveal] = useState<CheckRevealInfo | null>(null);
+  const closeCheckReveal = useCallback(() => setCheckReveal(null), []);
+  const [skips, setSkips] = useState<SkipInfo[]>([]);
   const [transition, setTransition] = useState<PhaseTransitionInfo | null>(null);
   const clearTransition = useCallback(() => setTransition(null), []);
   const [chat, setChat] = useState<ChatMessage[]>([]);
@@ -255,6 +317,19 @@ export default function GamePage() {
   const nightRolesRef = useRef<NightRoles | null>(null);
   const earlyEndFailed = useRef("");
   const [secondsLeft, setSecondsLeft] = useState(0);
+
+  useEffect(() => {
+    setChecks(readMemory(gameId, "checks", {}));
+  }, [gameId]);
+
+  const addSkips = useCallback((list: SkipInfo[]) => {
+    const valid = list.filter((item) => Number.isInteger(item?.voterId) && Number.isInteger(item?.round));
+    if (valid.length === 0) return;
+    setSkips((old) => {
+      const fresh = valid.filter((item) => !old.some((known) => known.voterId === item.voterId && known.round === item.round));
+      return fresh.length ? [...old, ...fresh] : old;
+    });
+  }, []);
 
   const gameRef = useRef<GameState | null>(null);
   const userRef = useRef(user);
@@ -346,6 +421,12 @@ export default function GamePage() {
 
   const { isLive, notify } = useLiveUpdates(!isDemo && hasGame ? WS_PATHS.game(gameId) : null, (data) => {
     const payload = data as { type?: string; message?: ChatMessage; messages?: ChatMessage[] } | null;
+    // Фоны игроков: запоминаем чужие, новичку сообщаем свой
+    if (payload?.type === "skin") {
+      rememberSkin(data);
+      return;
+    }
+    if (payload?.type === "hello") announceSkin(notify);
     if (payload?.type === "room-closed") {
       showToast("Игра закрыта: в ней никого не было.");
       router.push("/");
@@ -353,6 +434,15 @@ export default function GamePage() {
     }
     if (payload?.type === "chat" && payload.message) {
       addChatMessages([payload.message]);
+      return;
+    }
+    const skip = data as { type?: string; voterId?: unknown; round?: unknown; skips?: unknown } | null;
+    if (skip?.type === "skip") {
+      addSkips([{ voterId: Number(skip.voterId), round: Number(skip.round) }]);
+      return;
+    }
+    if (skip?.type === "skips" && Array.isArray(skip.skips)) {
+      addSkips(skip.skips as SkipInfo[]);
       return;
     }
     const secret = data as { type?: string; role?: RoleKey; ids?: unknown; target?: unknown; isMafia?: unknown } | null;
@@ -387,6 +477,15 @@ export default function GamePage() {
     }
     loadGame().catch(() => {});
   });
+
+  // Свой фон — всем в игре: при подключении и когда сменили фон
+  useEffect(() => {
+    if (!isLive) return;
+    announceSkin(notify);
+    const onChange = () => announceSkin(notify);
+    window.addEventListener("mafia-shop-change", onChange);
+    return () => window.removeEventListener("mafia-shop-change", onChange);
+  }, [isLive, notify]);
 
   useEffect(() => {
     if (isDemo || !isRunning) return;
@@ -451,6 +550,7 @@ export default function GamePage() {
     if (isLiveChange && !current.winner) {
       setTimeout(() => {
         setTransition({ key: phaseKey, phase: current.phase, round: current.round });
+        play(PHASE_SOUND[current.phase]);
         const next = phaseStartEffect(current, mine);
         if (next) setTimeout(() => setEffect(next), PHASE_TRANSITION_MS);
       }, delay);
@@ -481,6 +581,33 @@ export default function GamePage() {
 
   const me = game && user ? findMe(game, user.id, user.username) : undefined;
   const meId = me?.id;
+
+  // Щит из магазина: у жителя он включается сам, если мафия выберет его ночью
+  const shop = useShop();
+  const hasShield = shop.state.shields > 0;
+  const hasShieldRef = useRef(hasShield);
+  hasShieldRef.current = hasShield;
+  const myRole = me?.role ?? null;
+  const isMeAlive = me?.isAlive ?? false;
+  const isShieldArmed = shop.state.armedGames.includes(gameId);
+  const armTried = useRef(false);
+  const { markArmed, spendShield } = shop;
+
+  useEffect(() => {
+    if (isDemo || !hasShield || isShieldArmed || armTried.current) return;
+    if (myRole !== "civilian" || !isMeAlive) return;
+    armTried.current = true;
+    api
+      .exchangeProtection()
+      .then(() => markArmed(gameId))
+      .catch((error: Error) => console.warn("[shield] не удалось включить щит:", error.message));
+  }, [isDemo, hasShield, isShieldArmed, myRole, isMeAlive, gameId, markArmed]);
+
+  const lastRound = game?.lastRound ?? null;
+  const shieldedRound = game?.phase === "DAY" && lastRound && meId !== undefined && lastRound.shieldedPlayerId === meId ? lastRound.roundNumber : null;
+  useEffect(() => {
+    if (shieldedRound !== null) spendShield(`${gameId}-${shieldedRound}`);
+  }, [shieldedRound, gameId, spendShield]);
 
   useEffect(() => {
     if (meId === undefined) return;
@@ -520,7 +647,7 @@ export default function GamePage() {
 
       if (isDemo) {
         finishedPhase.current = key;
-        setGame(advanceDemoGame(current, myPlayer, sentTarget.current));
+        setGame(advanceDemoGame(current, myPlayer, sentTarget.current, hasShieldRef.current));
         return;
       }
 
@@ -577,16 +704,19 @@ export default function GamePage() {
     const target = gameRef.current?.players.find((player) => player.id === targetId);
     if (!target) return;
     if (isMafia === null) {
+      setCheckTone("wait");
       setCheckResult(`Проверка ${target.username} отправлена, но ведущий пока не знает его роль.`);
       return;
     }
-    setCheckResult(isMafia ? `${target.username} — мафия! ❌` : `${target.username} — мирный ✅`);
-    setEffect({
-      key: `check-${targetId}-${Date.now()}`,
-      kind: isMafia ? "mafia" : "clean",
-      title: isMafia ? `${target.username} — мафия!` : `${target.username} — мирный`,
-      text: isMafia ? "Убедите город выгнать его днём." : "Этому игроку можно доверять.",
+    setCheckTone(isMafia ? "mafia" : "town");
+    setCheckResult(isMafia ? `${target.username} — мафия` : `${target.username} — мирный житель`);
+    setChecks((old) => {
+      if (old[targetId] === isMafia) return old;
+      const next = { ...old, [targetId]: isMafia };
+      writeMemory(gameId, "checks", next);
+      return next;
     });
+    setCheckReveal({ key: `check-${targetId}-${Date.now()}`, name: target.username, isMafia });
   }
 
   const gameWinner = game?.winner ?? null;
@@ -594,6 +724,42 @@ export default function GamePage() {
     if (!gameWinner) return;
     setHostLine(gameWinner === "MAFIA" ? "🏁 Победила мафия." : "🏁 Победили жители.");
   }, [gameWinner]);
+
+  // Фон фазы: ночью — гул, ветер и далёкий колокол, днём — тихий тревожный аккорд
+  const ambience: Ambience = !game || game.winner !== null ? null : game.phase === "NIGHT" ? "night" : "day";
+  useEffect(() => {
+    setAmbience(ambience);
+    resetTick();
+  }, [ambience, phaseKey]);
+  useEffect(() => () => setAmbience(null), []);
+
+  // Звуки: браузер включает их только после первого клика — тогда же запускаем фон
+  const ambienceRef = useRef(ambience);
+  ambienceRef.current = ambience;
+  useEffect(() => unlockSoundOnGesture(() => setAmbience(ambienceRef.current)), []);
+
+  const myTeamRole = me?.role ?? null;
+  useEffect(() => {
+    if (!gameWinner) return;
+    const isMafiaMe = myTeamRole === "mafia";
+    const iWon = myTeamRole ? (gameWinner === "MAFIA") === isMafiaMe : gameWinner === "CITIZENS";
+    play(iWon ? "win" : "lose");
+  }, [gameWinner, myTeamRole]);
+
+  // Эффект на весь экран — со своим звуком
+  const effectKind = effect?.kind ?? null;
+  const effectKey = effect?.key ?? null;
+  useEffect(() => {
+    if (!effectKind) return;
+    const sound = EFFECT_SOUND[effectKind];
+    if (sound) play(sound);
+  }, [effectKind, effectKey]);
+
+  // Последние 5 секунд фазы — тиканье
+  const isTicking = game !== null && game.winner === null && secondsLeft > 0 && secondsLeft <= 5;
+  useEffect(() => {
+    if (isTicking) play("tick");
+  }, [isTicking, secondsLeft]);
 
   const amDead = me?.isAlive === false;
   const isFinished = game?.winner != null;
@@ -613,6 +779,38 @@ export default function GamePage() {
     setSelectedId(myVote.targetId);
     setIsSent(true);
   }, [myVote, isSent]);
+
+  const mySkip = game !== null && me !== undefined && game.phase === "VOTING" && skips.some((item) => item.voterId === me.id && item.round === game.round);
+  useEffect(() => {
+    if (!mySkip || isSent) return;
+    sentTarget.current = null;
+    setIsSent(true);
+  }, [mySkip, isSent]);
+
+  function handleSkip() {
+    if (!game || !me || isSent || game.phase !== "VOTING") return;
+    const info = { voterId: me.id, round: game.round };
+    addSkips([info]);
+    setSelectedId(null);
+    sentTarget.current = null;
+    setIsSent(true);
+    if (!isDemo) notify("skip", info);
+    showToast("Вы пропустили голосование.", "success");
+  }
+
+  // Ответ ведущего мог потеряться при смене ночи на день — спрашиваем ещё раз днём
+  const askedDayCheck = useRef("");
+  const isCommissarDay = game?.phase === "DAY" && me?.role === "commissar" && me.isAlive;
+  const dayRound = game?.round ?? 0;
+  useEffect(() => {
+    if (!isCommissarDay || !isLive || isDemo) return;
+    const last = readMemory<{ round: number; targetId: number } | null>(gameId, "lastCheck", null);
+    if (!last || last.round !== dayRound || checks[last.targetId] !== undefined) return;
+    const key = `${dayRound}-${last.targetId}`;
+    if (askedDayCheck.current === key) return;
+    askedDayCheck.current = key;
+    notify("check", { target: last.targetId });
+  }, [isCommissarDay, isLive, isDemo, gameId, dayRound, checks, notify]);
 
   const myNightAction = game && me ? game.nightActions.find((action) => action.actorId === me.id) : undefined;
   const askedCheckFor = useRef("");
@@ -653,6 +851,7 @@ export default function GamePage() {
 
       sentTarget.current = selectedId;
       setIsSent(true);
+      play("confirm");
       const nightType = game.phase === "NIGHT" && me.role ? NIGHT_ACTION[me.role] : undefined;
       if (nightType) {
         const action: NightActionInfo = { type: nightType, actorId: me.id, targetId: selectedId, at: Date.now() };
@@ -663,13 +862,16 @@ export default function GamePage() {
       if (isMafia === null && target?.role) isMafia = target.role === "mafia";
 
       if (game.phase === "NIGHT" && me.role === "commissar" && target) {
+        writeMemory(gameId, "lastCheck", { round: game.round, targetId: target.id });
         if (isMafia !== null || isDemo) {
           showCheckResult(target.id, isMafia);
         } else if (isLive) {
           askedCheckFor.current = `${game.round}-${target.id}`;
+          setCheckTone("wait");
           setCheckResult(`Ведущий проверяет ${target.username}…`);
           notify("check", { target: target.id });
         } else {
+          setCheckTone("wait");
           setCheckResult("Проверка сохранена, но нет связи с ведущим. Результат придёт после переподключения.");
         }
       }
@@ -677,6 +879,19 @@ export default function GamePage() {
       if (game.phase === "NIGHT" && me.role === "mafia" && target) showToast(`Жертва выбрана: ${target.username}`, "success");
       if (game.phase === "NIGHT" && me.role === "doctor" && target) showToast(`Этой ночью вы лечите: ${target.username}`, "success");
     } catch (error) {
+      if (error instanceof TeamActedError) {
+        // Напарник успел первым: показываем его выбор и больше не даём выбирать
+        const type = me.role ? NIGHT_ACTION[me.role] : undefined;
+        if (type) {
+          const teamAction: NightActionInfo = { type, actorId: -1, targetId: error.targetId, at: Date.now() };
+          setGame((old) => (old ? { ...old, nightActions: [...old.nightActions, teamAction] } : old));
+        }
+        setSelectedId(null);
+        const name = game.players.find((player) => player.id === error.targetId)?.username ?? "игрока";
+        showToast(`Напарник уже выбрал: ${name}. У команды один ход за ночь.`);
+        if (!isDemo) loadGame().catch(() => {});
+        return;
+      }
       showToast((error as Error).message, "error");
     }
   }
@@ -756,8 +971,16 @@ export default function GamePage() {
       </button>
     ) : undefined;
 
+    const marks: Record<number, { text: string; tone: "mafia" | "town" }> = {};
+    if (me?.role === "commissar") {
+      for (const [id, isMafia] of Object.entries(checks)) {
+        marks[Number(id)] = isMafia ? { text: "Мафия", tone: "mafia" } : { text: "Мирный", tone: "town" };
+      }
+    }
+
     const common = {
       players: game.players,
+      marks,
       headerButton,
       deathLabel: (player: GamePlayer) => getDeathLabel(game, player),
       isUrgent: todo.isAction,
@@ -765,7 +988,10 @@ export default function GamePage() {
       meId: me?.id ?? null,
       isSent,
       showRole: canSeeRole,
-      onSelect: setSelectedId,
+      onSelect: (playerId: number) => {
+        play("select");
+        setSelectedId(playerId);
+      },
       onConfirm: handleConfirm,
     };
 
@@ -778,19 +1004,19 @@ export default function GamePage() {
         : `Все сделали ход. Утро через ${formatSeconds(secondsLeft)}.`;
 
       if (!iCanAct || role === "civilian" || !role) {
+        const shieldNote = role === "civilian" && me?.isAlive && hasShield ? "🛡 У вас щит: если мафия придёт за вами, он сработает сам. " : "";
         return (
           <>
             {turnStrip}
-            <TargetPicker {...common} title="Город спит" subtitle={sleepText} selectableIds={[]} />
+            <TargetPicker {...common} title="Город спит" subtitle={`${shieldNote}${sleepText}`} selectableIds={[]} />
           </>
         );
       }
 
       let selectable = alivePlayers.filter((player) => player.id !== me?.id);
       if (role === "mafia") selectable = selectable.filter((player) => player.role !== "mafia");
-      const lastHealId = game.previousNightActions.find((action) => action.type === "HEAL" && action.actorId === me?.id)?.targetId;
-      const lastHealName = game.players.find((player) => player.id === lastHealId)?.username;
-      if (role === "doctor") selectable = alivePlayers.filter((player) => player.id !== lastHealId);
+      // Доктор, пока жив, может лечить любого живого игрока каждую ночь — и себя тоже
+      if (role === "doctor") selectable = alivePlayers;
 
       const myTurn = night.myIndex;
       const myInfo = myTurn !== null ? night.turns[myTurn] : null;
@@ -801,8 +1027,10 @@ export default function GamePage() {
       const teamTarget = teamAction ? game.players.find((player) => player.id === teamAction.targetId)?.username : null;
 
       const confirmText = role === "mafia" ? "Убить" : role === "doctor" ? "Вылечить" : "Проверить";
-      let subtitle = `Нажмите на игрока, потом «${confirmText}». Осталось ${night.secondsInTurn} сек.`;
-      if (role === "doctor" && lastHealName) subtitle += ` ${lastHealName} вы лечили прошлой ночью — его сегодня нельзя.`;
+      const teamSize = game.players.filter((player) => player.isAlive && player.role === role).length;
+      // Мафия убивает одного на всех, доктора лечат одного, комиссары проверяют одного
+      const teamRule = teamSize > 1 ? `Вас ${teamSize}, но ход у команды один: кто первым нажмёт «${confirmText}», тот и решает. ` : "";
+      let subtitle = `${teamRule}Нажмите на игрока, потом «${confirmText}». Осталось ${night.secondsInTurn} сек.`;
       if (isBefore) subtitle = `Ваш ход скоро. ${sleepText}`;
       if (!isMyTurn && !isBefore && !isSent) subtitle = teamTarget ? `Напарник выбрал: ${teamTarget}. ${sleepText}` : `Ваше время вышло. ${sleepText}`;
       if (isSent) subtitle = `Выбор сделан. ${sleepText}`;
@@ -817,7 +1045,12 @@ export default function GamePage() {
             selectableIds={isMyTurn && !teamAction ? selectable.map((player) => player.id) : []}
             confirmText={isMyTurn || isSent ? confirmText : undefined}
           />
-          {checkResult && <p className="game-page-check">{checkResult}</p>}
+          {checkResult && (
+            <p className={`game-page-check game-page-check-${checkTone}`} role="status">
+              <span>Ваша проверка</span>
+              {checkResult}
+            </p>
+          )}
         </>
       );
     }
@@ -828,22 +1061,29 @@ export default function GamePage() {
 
     const voteCounts: Record<number, number> = {};
     for (const vote of game.votes) voteCounts[vote.targetId] = (voteCounts[vote.targetId] ?? 0) + 1;
-    const votedCount = new Set(game.votes.map((vote) => vote.voterId)).size;
+    const voterIds = new Set(game.votes.map((vote) => vote.voterId));
+    const skipperIds = skips.filter((item) => item.round === game.round && !voterIds.has(item.voterId)).map((item) => item.voterId);
+    const nameOf = (id: number) => game.players.find((player) => player.id === id)?.username ?? "Игрок";
+    const votedCount = voterIds.size + skipperIds.length;
     const progress = `Проголосовали ${votedCount} из ${alivePlayers.length}. Больше всех голосов — выбывает, при равенстве никто не выбывает.`;
 
     return (
       <TargetPicker
         {...common}
         voteCounts={voteCounts}
-        votedIds={[...new Set(game.votes.map((vote) => vote.voterId))]}
-        voteLines={game.votes.map((vote) => ({
-          voter: game.players.find((player) => player.id === vote.voterId)?.username ?? "Игрок",
-          target: game.players.find((player) => player.id === vote.targetId)?.username ?? "Игрок",
-        }))}
+        voteArrows={game.votes.map((vote) => ({ from: vote.voterId, to: vote.targetId }))}
+        votedIds={[...voterIds, ...skipperIds]}
+        skippedIds={skipperIds}
+        voteLines={[
+          ...game.votes.map((vote) => ({ voter: nameOf(vote.voterId), target: nameOf(vote.targetId) })),
+          ...skipperIds.map((id) => ({ voter: nameOf(id), target: null })),
+        ]}
         title="Голосование"
-        subtitle={`${iCanAct ? (isSent ? "Ваш голос учтён." : "Кого выгнать из города?") : "Живые игроки голосуют."} ${progress}`}
+        subtitle={`${iCanAct ? (isSent ? (mySkip ? "Вы пропустили голосование." : "Ваш голос учтён.") : "Кого выгнать из города?") : "Живые игроки голосуют."} ${progress}`}
         selectableIds={iCanAct ? alivePlayers.filter((player) => player.id !== me?.id).map((player) => player.id) : []}
         confirmText={iCanAct ? "Проголосовать" : undefined}
+        sentText={mySkip ? "Вы пропустили ✓" : undefined}
+        onSkip={iCanAct && !isSent ? handleSkip : undefined}
       />
     );
   }
@@ -870,7 +1110,7 @@ export default function GamePage() {
 
     if (game.phase === "DAY") return { text: "", isAction: false };
 
-    if (isSent) return { text: "✓ Голос учтён. Ждём остальных.", isAction: false };
+    if (isSent) return { text: mySkip ? "✓ Вы пропустили голосование. Ждём остальных." : "✓ Голос учтён. Ждём остальных.", isAction: false };
     return { text: `👉 Нажмите на игрока, которого хотите выгнать, потом «Проголосовать». Осталось ${formatSeconds(secondsLeft)}.`, isAction: true };
   }
 
@@ -1022,6 +1262,8 @@ export default function GamePage() {
       />
       <PhaseTransition info={transition} onDone={clearTransition} />
       <EffectOverlay effect={effect} onDone={clearEffect} />
+      <CheckReveal info={checkReveal} onClose={closeCheckReveal} />
+      {isGameOver && !isDemo && <AchievementUnlocked />}
     </div>
   );
 }

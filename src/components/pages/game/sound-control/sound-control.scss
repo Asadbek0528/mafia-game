@@ -1,0 +1,176 @@
+.sound-control {
+  position: relative;
+  flex: none;
+}
+
+.sound-control-button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  color: #ffffff;
+  background: rgba(18, 9, 10, 0.9);
+  border: 1px solid #33181b;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  &:hover,
+  &[aria-expanded="true"] {
+    border-color: var(--color-red);
+  }
+}
+
+.sound-control-button-off {
+  color: var(--color-text-muted);
+}
+
+// Панель: выключатель, два ползунка и проверка
+.sound-control-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  display: grid;
+  gap: 14px;
+  width: 250px;
+  padding: 14px;
+  background: linear-gradient(180deg, #170a0b, #0a0405);
+  border: 1px solid var(--color-line-red);
+  border-radius: 14px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75);
+  animation: sound-control-in 0.18s ease-out;
+}
+
+@keyframes sound-control-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.sound-control-switch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  cursor: pointer;
+
+  input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  i {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 99px;
+    transition: background 0.2s;
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 16px;
+      height: 16px;
+      background: #ffffff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+  }
+
+  input:checked + i {
+    background: var(--color-red);
+
+    &::after {
+      transform: translateX(18px);
+    }
+  }
+
+  input:focus-visible + i {
+    outline: 2px solid var(--color-red);
+    outline-offset: 2px;
+  }
+}
+
+.sound-control-slider {
+  display: grid;
+  gap: 6px;
+
+  span {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--color-text-muted);
+  }
+
+  b {
+    color: var(--color-text);
+  }
+
+  small {
+    font-size: 11.5px;
+    color: var(--color-text-muted);
+  }
+
+  input {
+    width: 100%;
+    height: 20px;
+    margin: 0;
+    background: none;
+    cursor: pointer;
+    appearance: none;
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    &::-webkit-slider-runnable-track {
+      height: 4px;
+      background: linear-gradient(90deg, var(--color-red) var(--fill, 50%), rgba(255, 255, 255, 0.1) var(--fill, 50%));
+      border-radius: 99px;
+    }
+
+    &::-moz-range-track {
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 99px;
+    }
+
+    &::-moz-range-progress {
+      height: 4px;
+      background: var(--color-red);
+      border-radius: 99px;
+    }
+
+    &::-webkit-slider-thumb {
+      width: 16px;
+      height: 16px;
+      margin-top: -6px;
+      background: #ffffff;
+      border: 3px solid var(--color-red);
+      border-radius: 50%;
+      appearance: none;
+    }
+
+    &::-moz-range-thumb {
+      width: 10px;
+      height: 10px;
+      background: #ffffff;
+      border: 3px solid var(--color-red);
+      border-radius: 50%;
+    }
+  }
+}

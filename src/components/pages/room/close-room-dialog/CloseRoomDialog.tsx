@@ -8,15 +8,27 @@ const AUTO_CLOSE_SECONDS = 20;
 
 type CloseRoomDialogProps = {
   isOpen: boolean;
+  roomName: string;
   playersCount: number;
   isClosing: boolean;
   onClose: () => void;
   onStay: () => void;
 };
 
-export default function CloseRoomDialog({ isOpen, playersCount, isClosing, onClose, onStay }: CloseRoomDialogProps) {
+function playersWord(count: number): string {
+  const last = count % 10;
+  const lastTwo = count % 100;
+  if (last === 1 && lastTwo !== 11) return "игрок";
+  if (last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14)) return "игрока";
+  return "игроков";
+}
+
+export default function CloseRoomDialog({ isOpen, roomName, playersCount, isClosing, onClose, onStay }: CloseRoomDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const stayRef = useRef<HTMLButtonElement>(null);
   const [secondsLeft, setSecondsLeft] = useState(AUTO_CLOSE_SECONDS);
+  // Новый ключ на каждое открытие — кольцо отсчёта начинается заново
+  const [openKey, setOpenKey] = useState(0);
 
   const onCloseRef = useRef(onClose);
   useEffect(() => {
@@ -26,7 +38,12 @@ export default function CloseRoomDialog({ isOpen, playersCount, isClosing, onClo
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
-    if (isOpen && !dialog.open) dialog.showModal();
+    if (isOpen && !dialog.open) {
+      dialog.showModal();
+      setOpenKey((key) => key + 1);
+      // Безопасный выбор по умолчанию: Enter не удалит комнату случайно
+      stayRef.current?.focus();
+    }
     if (!isOpen && dialog.open) dialog.close();
   }, [isOpen]);
 
@@ -48,6 +65,7 @@ export default function CloseRoomDialog({ isOpen, playersCount, isClosing, onClo
   }, [isOpen, isClosing]);
 
   const others = Math.max(0, playersCount - 1);
+  const isHurry = secondsLeft <= 5;
 
   return (
     <dialog
@@ -57,27 +75,61 @@ export default function CloseRoomDialog({ isOpen, playersCount, isClosing, onClo
         event.preventDefault();
         onStay();
       }}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !isClosing) onStay();
+      }}
       aria-labelledby="close-room-title"
+      aria-describedby="close-room-text"
     >
       <div className="close-room-body">
+        <div className={isHurry ? "close-room-countdown close-room-countdown-hurry" : "close-room-countdown"} aria-hidden="true">
+          <svg key={openKey} viewBox="0 0 100 100">
+            <circle className="close-room-countdown-track" cx="50" cy="50" r="44" />
+            <circle
+              className="close-room-countdown-ring"
+              cx="50"
+              cy="50"
+              r="44"
+              style={{ animationDuration: `${AUTO_CLOSE_SECONDS}s`, animationPlayState: isClosing ? "paused" : "running" }}
+            />
+          </svg>
+          {isClosing ? (
+            <span className="close-room-spinner" />
+          ) : (
+            <span className="close-room-seconds">
+              <b>{secondsLeft}</b>
+              сек
+            </span>
+          )}
+        </div>
+
         <h2 id="close-room-title" className="close-room-title">
           Закрыть комнату?
         </h2>
 
-        <p className="close-room-text">
-          Вы создатель комнаты. Если уйти, комната удалится
-          {others > 0 ? `, а ${others} ${others === 1 ? "игрок вернётся" : "игроков вернутся"} в меню.` : "."}
+        <p id="close-room-text" className="close-room-text">
+          Вы создатель комнаты «{roomName}». Если уйти, она удалится для всех
+          {others > 0 ? (
+            <>
+              {" "}— <b>{others} {playersWord(others)}</b> вернутся в меню.
+            </>
+          ) : (
+            "."
+          )}
         </p>
 
-        <p className="close-room-timer">
-          {isClosing ? "Удаляем комнату…" : `Удалится автоматически через ${secondsLeft} сек`}
+        <p className="close-room-hint" role="status">
+          {isClosing ? "Удаляем комнату…" : "Если ничего не выбрать, комната удалится сама, когда кончится отсчёт."}
         </p>
 
         <div className="close-room-buttons">
-          <button type="button" className="btn btn-dark" onClick={onStay} disabled={isClosing}>
+          <button ref={stayRef} type="button" className="btn btn-dark" onClick={onStay} disabled={isClosing}>
             Остаться
           </button>
-          <button type="button" className="btn btn-red" onClick={onClose} disabled={isClosing}>
+          <button type="button" className="btn btn-red close-room-delete" onClick={onClose} disabled={isClosing}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" />
+            </svg>
             Удалить комнату
           </button>
         </div>

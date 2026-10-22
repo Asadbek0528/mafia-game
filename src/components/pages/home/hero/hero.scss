@@ -1,48 +1,97 @@
 .hero {
   position: relative;
   display: flex;
-  align-items: center;
-  min-height: 340px;
+  align-items: flex-end;
+  min-height: 360px;
   overflow: hidden;
-  border: 1px solid var(--color-line-red);
-  border-radius: var(--radius-big);
-  background:
-    linear-gradient(90deg, #000000 0%, rgba(0, 0, 0, 0.92) 32%, rgba(0, 0, 0, 0.25) 65%, rgba(0, 0, 0, 0.1) 100%),
-    url("/img/hero.webp") right center / cover no-repeat,
-    #000000;
+  isolation: isolate;
+  background: #050203;
+  border: 1px solid var(--color-line-soft);
+  border-radius: 22px;
+  box-shadow: var(--shadow-panel);
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    background: url("/img/hero.webp") right center / cover no-repeat;
+    transform-origin: right center;
+    animation: hero-drift 18s ease-in-out infinite alternate;
+  }
 
   &::after {
     content: "";
     position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 45%;
-    background: linear-gradient(0deg, rgba(120, 0, 10, 0.35), transparent);
-    pointer-events: none;
+    inset: 0;
+    z-index: -1;
+    background:
+      linear-gradient(90deg, #050203 0%, rgba(5, 2, 3, 0.9) 30%, rgba(5, 2, 3, 0.35) 62%, rgba(5, 2, 3, 0.05) 100%),
+      linear-gradient(0deg, rgba(110, 4, 14, 0.4), transparent 45%);
+  }
+}
+
+// Лёгкое «дыхание» без сильного зума, чтобы рука и шляпа всегда были в кадре
+@keyframes hero-drift {
+  to {
+    transform: scale(1.025);
   }
 }
 
 .hero-content {
-  position: relative;
-  z-index: 1;
-  max-width: 520px;
-  padding: 36px 40px;
+  max-width: 540px;
+  padding: 40px 44px;
+}
+
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #f0d9da;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  backdrop-filter: blur(8px);
+}
+
+.hero-live {
+  width: 7px;
+  height: 7px;
+  background: var(--color-red);
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 rgba(224, 32, 43, 0.7);
+  animation: hero-pulse 1.8s infinite;
+}
+
+@keyframes hero-pulse {
+  70% {
+    box-shadow: 0 0 0 8px rgba(224, 32, 43, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(224, 32, 43, 0);
+  }
 }
 
 .hero-title {
+  margin-top: 14px;
   font-family: var(--font-horror);
-  font-size: clamp(72px, 9vw, 132px);
+  font-size: clamp(76px, 9vw, 136px);
   font-weight: 400;
-  line-height: 0.9;
+  line-height: 0.88;
   color: var(--color-red);
-  text-shadow: 0 0 30px rgba(224, 32, 43, 0.45), 0 4px 0 #3b0005;
+  text-shadow: 0 0 40px rgba(224, 32, 43, 0.45), 0 5px 0 #3b0005;
 }
 
 .hero-subtitle {
-  margin: 12px 0 26px;
+  margin: 14px 0 28px;
   font-size: 17px;
-  color: #d8cccc;
+  letter-spacing: 0.02em;
+  color: #d9cdce;
 }
 
 .hero-buttons {
@@ -52,33 +101,39 @@
 }
 
 .hero-play {
-  min-width: 200px;
-  min-height: 52px;
+  min-width: 190px;
+  min-height: 54px;
   font-size: 16px;
+}
+
+.hero-create {
+  min-height: 54px;
+  backdrop-filter: blur(8px);
 }
 
 @media (max-width: 860px) {
   .hero {
-    align-items: flex-end;
-    min-height: 420px;
-    background:
-      linear-gradient(0deg, #000000 8%, rgba(0, 0, 0, 0.75) 45%, rgba(0, 0, 0, 0.1) 80%),
-      url("/img/hero.webp") 70% top / cover no-repeat,
-      #000000;
+    min-height: 440px;
+
+    &::before {
+      background-position: 68% top;
+    }
+
+    &::after {
+      background:
+        linear-gradient(0deg, #050203 10%, rgba(5, 2, 3, 0.8) 42%, rgba(5, 2, 3, 0.1) 78%),
+        linear-gradient(0deg, rgba(110, 4, 14, 0.35), transparent 45%);
+    }
   }
 
   .hero-content {
     width: 100%;
     max-width: none;
-    padding: 24px 20px;
+    padding: 24px 18px 20px;
     text-align: center;
   }
 
   .hero-buttons {
-    flex-direction: column;
-  }
-
-  .hero-buttons .btn {
-    width: 100%;
+    display: grid;
   }
 }

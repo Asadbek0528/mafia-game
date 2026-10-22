@@ -18,6 +18,8 @@ export default function RoomHeader({ room, onLeave }: RoomHeaderProps) {
 
   return (
     <header className="room-header">
+      <span className="room-header-art" aria-hidden="true" />
+
       <button className="room-header-back" onClick={onLeave} aria-label="Выйти из комнаты">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M15 5l-7 7 7 7" />
@@ -28,9 +30,7 @@ export default function RoomHeader({ room, onLeave }: RoomHeaderProps) {
 
       <div className="room-header-info">
         <h1 className="room-header-title">{room.name}</h1>
-        <p className="room-header-meta">
-          Код <b>#{room.id}</b> · создатель <b>{room.owner || "—"}</b>
-        </p>
+        <p className="room-header-meta">#{room.id}</p>
       </div>
 
       <p className="room-header-count" title="Игроков в комнате">

@@ -69,7 +69,6 @@ export function createDemoGame(gameId: string, myName: string): GameState {
     players,
     lastRound: null,
     nightActions: [],
-    previousNightActions: [],
     votes: [],
     mafiaCount: setup.roles.mafia,
     dayTime: setup.dayTime,
@@ -93,7 +92,8 @@ function kill(players: GamePlayer[], playerId: number | null, round: number, rea
   );
 }
 
-export function advanceDemoGame(game: GameState, me: GamePlayer | undefined, myTarget: number | null): GameState {
+// hasShield — у меня куплен щит: если я житель и мафия выбрала меня, удар отражается
+export function advanceDemoGame(game: GameState, me: GamePlayer | undefined, myTarget: number | null, hasShield = false): GameState {
   const alive = game.players.filter((player) => player.isAlive);
   const iCanAct = me?.isAlive && myTarget !== null;
 
@@ -105,7 +105,8 @@ export function advanceDemoGame(game: GameState, me: GamePlayer | undefined, myT
     const healTarget = !doctorAlive ? null : iCanAct && me?.role === "doctor" ? myTarget : randomItem(alive)?.id ?? null;
 
     const isSaved = mafiaTarget !== null && mafiaTarget === healTarget;
-    const players = isSaved ? game.players : kill(game.players, mafiaTarget, game.round, "NIGHT_KILL");
+    const isShielded = !isSaved && hasShield && me?.role === "civilian" && mafiaTarget === me.id;
+    const players = isSaved || isShielded ? game.players : kill(game.players, mafiaTarget, game.round, "NIGHT_KILL");
 
     return {
       ...game,
@@ -113,7 +114,14 @@ export function advanceDemoGame(game: GameState, me: GamePlayer | undefined, myT
       phase: "DAY",
       winner: findWinner(players),
       nightActions: [],
-      lastRound: { roundNumber: game.round, killedPlayerId: isSaved ? null : mafiaTarget, savedByDoctor: isSaved, savedPlayerId: isSaved ? mafiaTarget : null, eliminatedPlayerId: null },
+      lastRound: {
+        roundNumber: game.round,
+        killedPlayerId: isSaved || isShielded ? null : mafiaTarget,
+        savedByDoctor: isSaved,
+        savedPlayerId: isSaved ? mafiaTarget : null,
+        eliminatedPlayerId: null,
+        shieldedPlayerId: isShielded ? mafiaTarget : null,
+      },
     };
   }
 

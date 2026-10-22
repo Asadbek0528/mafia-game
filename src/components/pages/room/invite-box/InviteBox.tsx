@@ -38,7 +38,8 @@ export default function InviteBox({ roomId, roomName }: InviteBoxProps) {
 
   return (
     <section className="panel invite-box">
-      <h2 className="panel-title">Пригласить друзей</h2>
+      <span className="invite-box-art" aria-hidden="true" />
+      <h2 className="panel-title">Пригласить</h2>
 
       {social.myId && (
         <button type="button" className="btn btn-red btn-full invite-box-friends" onClick={() => setIsFriendsOpen(true)}>
@@ -50,10 +51,6 @@ export default function InviteBox({ roomId, roomName }: InviteBoxProps) {
           {onlineFriends > 0 && <span className="invite-box-badge">{onlineFriends} в сети</span>}
         </button>
       )}
-
-      <p className="invite-box-link" onClick={handleCopy} title="Нажмите, чтобы скопировать">
-        {link}
-      </p>
 
       <button className="btn btn-dark btn-full" onClick={handleCopy}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -81,8 +78,6 @@ export default function InviteBox({ roomId, roomName }: InviteBoxProps) {
           WhatsApp
         </a>
       </div>
-
-      <div className="invite-box-image" aria-hidden="true" />
 
       <InviteFriendsDialog isOpen={isFriendsOpen} roomId={roomId} roomName={roomName} onClose={() => setIsFriendsOpen(false)} />
     </section>

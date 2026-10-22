@@ -76,28 +76,53 @@
 }
 
 .game-chat-list {
-  display: grid;
-  align-content: start;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
-  height: 300px;
+  height: 340px;
   margin: 0;
   padding: 0 2px 0 0;
   overflow-y: auto;
   list-style: none;
   overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #6a2a30 rgba(255, 255, 255, 0.04);
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #6a2a30;
+    border-radius: 6px;
+  }
+
+  // Сообщения прижаты к низу, как в мессенджере
+  > :first-child {
+    margin-top: auto;
+  }
 }
 
 .game-chat-empty {
+  margin: auto;
   font-size: 14px;
+  text-align: center;
   color: var(--color-text-muted);
 }
 
 .game-chat-message {
   display: flex;
+  flex: none;
   align-items: flex-start;
+  align-self: flex-start;
   gap: 8px;
-  justify-self: start;
   max-width: 92%;
+  animation: game-chat-in 0.2s ease-out;
 
   .avatar {
     border: 2px solid rgba(255, 255, 255, 0.2);
@@ -112,9 +137,16 @@
   border-radius: 4px 14px 14px 14px;
 }
 
+@keyframes game-chat-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
 .game-chat-message-mine {
   flex-direction: row-reverse;
-  justify-self: end;
+  align-self: flex-end;
 
   .game-chat-bubble {
     background: #2a0b0e;
@@ -190,9 +222,43 @@
   }
 }
 
+// Телефон: чат всегда внизу экрана, открывается поверх игры
 @media (max-width: 960px) {
+  .game-chat {
+    position: fixed;
+    left: 8px;
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    z-index: 60;
+    gap: 10px;
+    padding: 8px;
+    background: rgba(12, 8, 9, 0.97);
+    border-color: #3a1d20;
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.65);
+  }
+
+  .game-chat-tab {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .game-chat-closed {
+    display: none;
+  }
+
+  // Чат раскрывается вверх: у свёрнутого стрелка смотрит вверх
+  .game-chat-tab .game-chat-arrow {
+    transform: rotate(180deg);
+  }
+
+  .game-chat-tab-open .game-chat-arrow {
+    transform: none;
+  }
+
   .game-chat-list {
-    height: 240px;
+    height: auto;
+    min-height: 140px;
+    max-height: min(46dvh, 380px);
   }
 }
 
