@@ -1,6 +1,7 @@
 import Link from "next/link";
 
-import type { RoomShort } from "@/lib/api";
+import type { RoomShort } from "@/utils/api";
+import { roomCardView } from "@/utils/home/rooms";
 import "./rooms-table.scss";
 
 type RoomsTableProps = {
@@ -61,24 +62,7 @@ export default function RoomsTable({ rooms, onCreateRoom }: RoomsTableProps) {
 }
 
 function RoomCard({ room }: { room: RoomShort }) {
-  const isPlaying = room.status === "playing";
-  const isFull = room.players >= room.max_players;
-  const canJoin = !isPlaying && !isFull;
-  const fill = Math.min(100, Math.round((room.players / Math.max(1, room.max_players)) * 100));
-
-  let buttonText = "Войти";
-  if (isPlaying) buttonText = "Игра уже идёт";
-  else if (isFull) buttonText = "Мест нет";
-
-  let badgeClass = "rooms-badge";
-  let badgeText = "Набор";
-  if (isPlaying) {
-    badgeClass = "rooms-badge rooms-badge-live";
-    badgeText = "В игре";
-  } else if (isFull) {
-    badgeClass = "rooms-badge rooms-badge-full";
-    badgeText = "Заполнена";
-  }
+  const { canJoin, fill, buttonText, badgeClass, badgeText, ageText } = roomCardView(room);
 
   return (
     <li className={canJoin ? "rooms-card" : "rooms-card rooms-card-closed"}>
@@ -99,7 +83,7 @@ function RoomCard({ room }: { room: RoomShort }) {
             <b>{room.players}</b>/{room.max_players}
           </span>
         </span>
-        <span className="rooms-card-age">{room.age > 0 ? `${room.age}+` : "0+"}</span>
+        <span className="rooms-card-age">{ageText}</span>
       </div>
 
       <span className="rooms-card-bar" aria-hidden="true">

@@ -119,6 +119,7 @@ async function cleanAbandonedGames() {
   for (const game of games) {
     if (game.winner !== null) {
       gameRoles.delete(String(game.id));
+      gameRooms.delete(String(game.id));
       continue;
     }
     const id = String(game.id);
@@ -236,10 +237,10 @@ async function answerCheck(socket, gameId, token, targetId) {
   };
 
   const rounds = await backend(`/game-round/list?game_id=${gameId}`, token);
+  const actionLists = await Promise.all(rounds.map((round) => backend(`/night-action/list?round_id=${round.id}`, token).catch(() => [])));
   const killers = new Set();
   let checked = false;
-  for (const round of rounds) {
-    const actions = await backend(`/night-action/list?round_id=${round.id}`, token).catch(() => []);
+  for (const actions of actionLists) {
     for (const action of actions) {
       if (action.action_type === "KILL") killers.add(action.actor_id);
       if (action.action_type !== "CHECK" || action.actor_id !== me.playerId || action.target_id !== targetId) continue;
@@ -253,20 +254,26 @@ async function answerCheck(socket, gameId, token, targetId) {
   if (roles.has(targetId)) return reply(roles.get(targetId) === "mafia");
   if (killers.has(targetId)) return reply(true);
 
-  const game = await backend(`/game/detail?game_id=${gameId}`, token);
-  const room = await backend(`/room/detail?room_id=${game.room_id}`, token);
+  const room = await gameRoom(gameId, token);
   const knownMafia = new Set(killers);
   for (const [id, role] of roles) if (role === "mafia") knownMafia.add(id);
   reply(knownMafia.size >= room.mafia_count ? false : null);
 }
 
+const gameRooms = new Map();
+
+function gameRoom(gameId, token) {
+  const cached = gameRooms.get(gameId);
+  if (cached) return cached;
+  const promise = backend(`/game/detail?game_id=${gameId}`, token).then((game) => backend(`/room/detail?room_id=${game.room_id}`, token));
+  gameRooms.set(gameId, promise);
+  promise.catch(() => gameRooms.delete(gameId));
+  return promise;
+}
+
 async function answerNightRoles(socket, gameId, token) {
   await socket.rolePromise;
-  const [players, game] = await Promise.all([
-    backend(`/game-player/list?game_id=${gameId}`, token),
-    backend(`/game/detail?game_id=${gameId}`, token),
-  ]);
-  const room = await backend(`/room/detail?room_id=${game.room_id}`, token);
+  const [players, room] = await Promise.all([backend(`/game-player/list?game_id=${gameId}`, token), gameRoom(gameId, token)]);
   const known = gameRoles.get(gameId) ?? new Map();
   for (const player of players) if (player.role) known.set(player.id, player.role);
   const counts = { mafia: room.mafia_count, doctor: room.doctor_count, commissar: room.commissar_count };
@@ -302,10 +309,8 @@ async function finishIfMafiaWon(gameId, token) {
   ]);
   const mafia = new Set();
   for (const [id, role] of gameRoles.get(gameId) ?? []) if (role === "mafia") mafia.add(id);
-  for (const round of rounds) {
-    const actions = await backend(`/night-action/list?round_id=${round.id}`, token).catch(() => []);
-    for (const action of actions) if (action.action_type === "KILL") mafia.add(action.actor_id);
-  }
+  const actionLists = await Promise.all(rounds.map((round) => backend(`/night-action/list?round_id=${round.id}`, token).catch(() => [])));
+  for (const action of actionLists.flat()) if (action.action_type === "KILL") mafia.add(action.actor_id);
   const alive = players.filter((player) => player.is_alive);
   const aliveMafia = alive.filter((player) => mafia.has(player.id)).length;
   if (aliveMafia === 0 || aliveMafia * 2 < alive.length) return false;

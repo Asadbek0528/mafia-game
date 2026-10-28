@@ -1,12 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+
+import { CONNECTION_TEXT, CONNECTION_TITLE } from "@/utils/game/game-logic";
+import type { GameConnection } from "@/utils/game/types";
+import { useDropdown } from "@/utils/use-dropdown";
 
 import SoundControl from "../sound-control/SoundControl";
 import "./game-topbar.scss";
-
-export type GameConnection = "live" | "slow" | "offline" | "demo";
 
 type GameTopBarProps = {
   aliveCount: number;
@@ -20,75 +21,37 @@ type GameTopBarProps = {
   onEndGame: () => void;
 };
 
-const CONNECTION_TEXT: Record<GameConnection, string> = {
-  live: "Онлайн",
-  slow: "Слабая связь",
-  offline: "Нет связи",
-  demo: "Демо",
-};
-
-const CONNECTION_TITLE: Record<GameConnection, string> = {
-  live: "Связь с сервером есть",
-  slow: "Нет связи с сервером чата: игра обновляется раз в пару секунд, чат недоступен",
-  offline: "Сервер не отвечает. Переподключаемся…",
-  demo: "Игра с ботами без сервера",
-};
-
 export default function GameTopBar(props: GameTopBarProps) {
   const { aliveCount, totalCount, connection, canShowRole, canEndGame, isEnding, onShowRole, onExit, onEndGame } = props;
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!isMenuOpen) return;
-
-    function handleClick(event: MouseEvent) {
-      if (!menuRef.current?.contains(event.target as Node)) setIsMenuOpen(false);
-    }
-    function handleKey(event: KeyboardEvent) {
-      if (event.key === "Escape") setIsMenuOpen(false);
-    }
-
-    document.addEventListener("click", handleClick);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("click", handleClick);
-      document.removeEventListener("keydown", handleKey);
-    };
-  }, [isMenuOpen]);
-
-  function choose(action: () => void) {
-    setIsMenuOpen(false);
-    action();
-  }
+  const menu = useDropdown();
 
   return (
     <header className="game-topbar">
-      <div className="game-topbar-menu" ref={menuRef}>
+      <div className="game-topbar-menu" ref={menu.rootRef}>
         <button
           type="button"
           className="game-topbar-button"
           aria-label="Меню игры"
-          aria-expanded={isMenuOpen}
-          onClick={() => setIsMenuOpen((old) => !old)}
+          aria-expanded={menu.isOpen}
+          onClick={menu.toggle}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
             <path d="M4 7h16M4 12h16M4 17h16" />
           </svg>
         </button>
 
-        {isMenuOpen && (
+        {menu.isOpen && (
           <div className="game-topbar-list" role="menu">
             {canShowRole && (
-              <button type="button" role="menuitem" onClick={() => choose(onShowRole)}>
+              <button type="button" role="menuitem" onClick={() => menu.choose(onShowRole)}>
                 Моя роль
               </button>
             )}
-            <button type="button" role="menuitem" onClick={() => choose(onExit)}>
+            <button type="button" role="menuitem" onClick={() => menu.choose(onExit)}>
               В главное меню
             </button>
             {canEndGame && (
-              <button type="button" role="menuitem" className="game-topbar-danger" disabled={isEnding} onClick={() => choose(onEndGame)}>
+              <button type="button" role="menuitem" className="game-topbar-danger" disabled={isEnding} onClick={() => menu.choose(onEndGame)}>
                 {isEnding ? "Завершаем…" : "Завершить игру"}
               </button>
             )}

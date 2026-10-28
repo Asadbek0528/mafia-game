@@ -1,47 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
 
-import { showToast } from "@/components/pages/widgets/toast/Toast";
-import { api } from "@/lib/api";
-import { saveLogin, takePageAfterLogin } from "@/lib/auth";
+import { useGoogleCallback } from "@/utils/google-callback";
 import "./google-callback.scss";
 
 export default function GoogleCallbackPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const code = searchParams.get("code");
-  const state = searchParams.get("state");
-
-  const [error, setError] = useState("");
-  const isStarted = useRef(false);
-
-  useEffect(() => {
-    if (isStarted.current) return;
-    isStarted.current = true;
-
-    if (!code) {
-      setError("Google не вернул код входа. Попробуйте ещё раз.");
-      return;
-    }
-
-    api
-      .finishGoogleLogin(code, state)
-      .then((result) => {
-        if (!result.accessToken) throw new Error("Сервер не выдал токен.");
-
-        saveLogin(
-          { id: result.userId ?? undefined, username: result.username ?? "Игрок" },
-          result.accessToken,
-          result.refreshToken,
-        );
-        showToast("Вы вошли через Google.", "success");
-        router.replace(takePageAfterLogin());
-      })
-      .catch((reason: Error) => setError(reason.message));
-  }, [code, state, router]);
+  const error = useGoogleCallback();
 
   return (
     <main className="google-callback">

@@ -1,83 +1,28 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 
 import Avatar from "@/components/pages/widgets/avatar/Avatar";
 import AvatarPicker from "@/components/pages/widgets/avatar-picker/AvatarPicker";
 import CoinIcon from "@/components/pages/widgets/coin-icon/CoinIcon";
 import PlayerBackground from "@/components/pages/widgets/player-background/PlayerBackground";
-import { api, type User } from "@/lib/api";
-import { getRefreshToken, getToken, logout, saveLogin, useCurrentUser } from "@/lib/auth";
-import { formatPlayerId, toPlayerId } from "@/lib/player-id";
-import { copyText } from "@/lib/share";
-import { coinsWord, useShop } from "@/lib/shop";
-import { showToast } from "@/components/pages/widgets/toast/Toast";
+import { useProfileCard } from "@/utils/widgets/profile-card";
 import "./profile-card.scss";
 
 // showStats=false — на странице профиля, где рядом уже есть подробная статистика
 export default function ProfileCard({ showStats = true }: { showStats?: boolean }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const { user: savedUser } = useCurrentUser();
-  const shop = useShop();
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    if (!savedUser) return;
-    setUser(savedUser);
-
-    const token = getToken();
-    if (!token || !savedUser.id) return;
-
-    api
-      .getMe()
-      .then((freshUser) => {
-        setUser(freshUser);
-        saveLogin(freshUser, token, getRefreshToken());
-      })
-      .catch(() => {
-      });
-  }, [savedUser]);
-
-  async function copyId() {
-    if (!user?.id) return;
-    const playerId = toPlayerId(user.id);
-    if (await copyText(playerId)) showToast(`ID ${playerId} скопирован — отправьте его другу.`, "success");
-    else showToast(`Ваш ID: ${playerId}`);
-  }
-
-  async function savePhoto(image: string) {
-    await api.updatePhoto(image);
-    setUser((old) => {
-      if (!old) return old;
-      const next = { ...old, profile_image: image };
-      saveLogin(next, getToken(), getRefreshToken());
-      return next;
-    });
-  }
-
-  async function handleLogout() {
-    await api.logout();
-    logout();
-    router.push("/register");
-  }
+  const { user, shownId, canPickPhoto, equipped, background, coinsText, coinsWord, shields, editHref, games, wins, winRate, copyId, savePhoto, handleLogout } = useProfileCard();
 
   if (!user) {
     return <section className="panel profile-card" aria-busy="true" />;
   }
 
-  const games = user.games_played ?? 0;
-  const wins = user.wins ?? 0;
-  const winRate = games > 0 ? Math.round((wins / games) * 100) : 0;
-
   return (
-    <section className={shop.state.equipped ? "panel profile-card profile-card-skin" : "panel profile-card"}>
-      <PlayerBackground id={user.guest ? null : shop.state.equipped} />
+    <section className={equipped ? "panel profile-card profile-card-skin" : "panel profile-card"}>
+      <PlayerBackground id={background} />
 
       <div className="profile-card-top">
-        {user.guest || !user.id ? (
+        {!canPickPhoto ? (
           <Avatar name={user.username} image={user.profile_image} size={64} />
         ) : (
           <AvatarPicker name={user.username} image={user.profile_image} size={64} onPick={savePhoto} />
@@ -85,9 +30,9 @@ export default function ProfileCard({ showStats = true }: { showStats?: boolean 
 
         <div className="profile-card-info">
           <p className="profile-card-name">{user.username}</p>
-          {user.id ? (
+          {shownId ? (
             <button type="button" className="profile-card-id" onClick={copyId} title="Скопировать ID">
-              ID <b>{formatPlayerId(toPlayerId(user.id))}</b>
+              ID <b>{shownId}</b>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
                 <rect x="9" y="9" width="11" height="11" rx="2" />
                 <path d="M5 15V5a1 1 0 0 1 1-1h9" />
@@ -102,7 +47,7 @@ export default function ProfileCard({ showStats = true }: { showStats?: boolean 
         </div>
 
         {!user.guest && (
-          <Link href={pathname === "/" ? "/profile/edit?from=home" : "/profile/edit"} className="profile-card-action" title="Редактировать профиль" aria-label="Редактировать профиль">
+          <Link href={editHref} className="profile-card-action" title="Редактировать профиль" aria-label="Редактировать профиль">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">
               <path d="M4 20h4L19 9l-4-4L4 16v4Z" />
               <path d="m13.5 6.5 4 4" />
@@ -121,14 +66,14 @@ export default function ProfileCard({ showStats = true }: { showStats?: boolean 
         <div className="profile-card-wallet">
           <Link href="/shop" className="profile-card-coins" title="Магазин">
             <CoinIcon />
-            <b>{shop.isReady ? shop.coins : "…"}</b>
-            <span>{coinsWord(shop.coins)}</span>
-            {shop.state.shields > 0 && (
+            <b>{coinsText}</b>
+            <span>{coinsWord}</span>
+            {shields > 0 && (
               <i title="Щитов в запасе">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
                   <path d="M12 2.5 4 5.5v6c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10v-6l-8-3Z" />
                 </svg>
-                {shop.state.shields}
+                {shields}
               </i>
             )}
             <em>Магазин →</em>

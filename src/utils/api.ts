@@ -524,6 +524,16 @@ function getGameRoom(gameId: string, roomId: number): Promise<BackendRoom> {
   return promise;
 }
 // Кого спас доктор в уже закончившейся ночи — больше не меняется
+const roundDetailCache = new Map<number, BackendRoundDetail>();
+
+async function getRoundDetail(round: BackendRoundShort, isFinished: boolean): Promise<BackendRoundDetail> {
+  const cached = roundDetailCache.get(round.id);
+  if (cached) return cached;
+  const detail = await request<BackendRoundDetail>(ENDPOINTS.gameRoundDetail(round.id));
+  if (isFinished) roundDetailCache.set(round.id, detail);
+  return detail;
+}
+
 const savedInRoundCache = new Map<number, { saved: number | null; kills: number[] }>();
 
 const myGamesCache = new Map<string, MyGame | null>();
@@ -1178,12 +1188,14 @@ export const api = {
   // шаг 1 — игра, игроки, раунды и комната; шаг 2 — имена, выбывшие, ночные ходы, голоса и итог раунда.
   async getGame(gameId: string): Promise<GameState> {
     const gameRequest = request<BackendGame>(ENDPOINTS.gameDetail(gameId));
-    const [game, players, rounds, room] = await Promise.all([
-      gameRequest,
-      request<BackendGamePlayer[]>(ENDPOINTS.gamePlayers(gameId)),
-      request<BackendRoundShort[]>(ENDPOINTS.gameRounds(gameId)),
-      gameRequest.then((loaded) => getGameRoom(gameId, loaded.room_id)),
-    ]);
+    const playersRequest = request<BackendGamePlayer[]>(ENDPOINTS.gamePlayers(gameId));
+    const roundsRequest = request<BackendRoundShort[]>(ENDPOINTS.gameRounds(gameId));
+    const roomRequest = gameRequest.then((loaded) => getGameRoom(gameId, loaded.room_id));
+    const namesRequest = playersRequest.then((list) => Promise.all(list.map((player) => getUsername(player.user_id))));
+    const eliminationsRequest = playersRequest.then((list) => Promise.all(list.map(getElimination)));
+    for (const pending of [roomRequest, namesRequest, eliminationsRequest]) pending.catch(() => {});
+
+    const [game, players, rounds] = await Promise.all([gameRequest, playersRequest, roundsRequest]);
 
     type BackendNightActionFull = { actor_id: number; target_id: number; action_type: NightActionInfo["type"]; created_at: string };
     const loadNightActions = async (roundNumber: number): Promise<NightActionInfo[]> => {
@@ -1221,16 +1233,17 @@ export const api = {
       return result;
     };
 
-    const [names, eliminations, nightActions, votes, latestDetail, nightResult] = await Promise.all([
-      Promise.all(players.map((player) => getUsername(player.user_id))),
-      Promise.all(players.map(getElimination)),
+    const [room, names, eliminations, nightActions, votes, latestDetail, nightResult] = await Promise.all([
+      roomRequest,
+      namesRequest,
+      eliminationsRequest,
       isNight ? loadNightActions(game.current_round) : Promise.resolve([]),
       votingRound
         ? request<{ voter_id: number; target_id: number }[]>(ENDPOINTS.voteList(votingRound.id))
             .then((list) => list.map((vote) => ({ voterId: vote.voter_id, targetId: vote.target_id })))
             .catch(() => [])
         : Promise.resolve([]),
-      latest ? request<BackendRoundDetail>(ENDPOINTS.gameRoundDetail(latest.id)) : Promise.resolve(null),
+      latest ? getRoundDetail(latest, game.current_round > latest.round_number) : Promise.resolve(null),
       latest && nightIsOver ? loadSaved(latest.id) : Promise.resolve(null),
     ]);
 

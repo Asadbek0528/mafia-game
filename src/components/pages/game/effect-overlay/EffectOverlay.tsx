@@ -1,38 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
 import ShieldOrb from "@/components/pages/widgets/shield-orb/ShieldOrb";
-import { bloodVideoSrc, canPlayBloodVideo, warmBloodVideo } from "@/lib/blood-video";
+import { BLOOD_DRIPS, useBloodSplash, useEffectOverlay } from "@/utils/game/effect-overlay";
+import type { GameEffect } from "@/utils/game/types";
 
 import "./effect-overlay.scss";
-
-export type GameEffect = {
-  key: string;
-  kind: "blood" | "heal" | "mafia" | "clean" | "info" | "shield";
-  title: string;
-  text?: string;
-};
 
 type EffectOverlayProps = {
   effect: GameEffect | null;
   onDone: () => void;
 };
 
-const DURATION_MS = 4200;
-
 export default function EffectOverlay({ effect, onDone }: EffectOverlayProps) {
-  // Ролик с брызгами качаем заранее, пока идёт игра, — в момент убийства он начнётся без задержки
-  useEffect(() => {
-    warmBloodVideo("pool");
-  }, []);
-
-  useEffect(() => {
-    if (!effect) return;
-    if ("vibrate" in navigator && navigator.userActivation?.hasBeenActive) navigator.vibrate?.(effect.kind === "blood" ? [120, 60, 220] : 120);
-    const timer = setTimeout(onDone, DURATION_MS);
-    return () => clearTimeout(timer);
-  }, [effect, onDone]);
+  useEffectOverlay(effect, onDone);
 
   if (!effect) return null;
 
@@ -42,8 +22,8 @@ export default function EffectOverlay({ effect, onDone }: EffectOverlayProps) {
 
       {effect.kind === "blood" && (
         <div className="effect-overlay-drips" aria-hidden="true">
-          {Array.from({ length: 14 }, (_, index) => (
-            <span key={index} style={{ left: `${(index * 7.3 + 3) % 100}%`, animationDelay: `${(index % 5) * 0.12}s`, height: `${18 + ((index * 13) % 30)}vh` }} />
+          {BLOOD_DRIPS.map((style, index) => (
+            <span key={index} style={style} />
           ))}
         </div>
       )}
@@ -75,14 +55,8 @@ export default function EffectOverlay({ effect, onDone }: EffectOverlayProps) {
   );
 }
 
-// Настоящие брызги крови на весь экран; пока видео не началось (или выключено) — видны нарисованные подтёки
 function BloodSplash() {
-  const [src, setSrc] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-
-  useEffect(() => {
-    if (canPlayBloodVideo()) setSrc(bloodVideoSrc("pool"));
-  }, []);
+  const { src, isPlaying, onLoadedMetadata, onPlaying, onError } = useBloodSplash();
 
   if (!src) return null;
 
@@ -94,13 +68,9 @@ function BloodSplash() {
       muted
       playsInline
       aria-hidden="true"
-      onLoadedMetadata={(event) => {
-        // Удар брызгами — первые секунды ролика, чуть быстрее обычного
-        event.currentTarget.currentTime = 0.15;
-        event.currentTarget.playbackRate = 1.3;
-      }}
-      onPlaying={() => setIsPlaying(true)}
-      onError={() => setSrc(null)}
+      onLoadedMetadata={onLoadedMetadata}
+      onPlaying={onPlaying}
+      onError={onError}
     />
   );
 }

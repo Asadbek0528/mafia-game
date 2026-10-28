@@ -1,3 +1,4 @@
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { User } from "./api";
 
@@ -82,4 +83,18 @@ export function takePageAfterLogin(): string {
   } catch {
     return "/";
   }
+}
+
+export function useRequiredUser(rememberPath?: string) {
+  const router = useRouter();
+  const current = useCurrentUser();
+  const { user, isLoaded } = current;
+
+  useEffect(() => {
+    if (!isLoaded || user) return;
+    if (rememberPath) rememberPageAfterLogin(rememberPath);
+    router.replace("/register");
+  }, [isLoaded, user, router, rememberPath]);
+
+  return current;
 }

@@ -6,7 +6,7 @@ import "./globals.scss";
 import Header from "@/components/layout/header/Header";
 import SocialNotices from "@/components/pages/widgets/social-notices/SocialNotices";
 import Toast from "@/components/pages/widgets/toast/Toast";
-import { SocialProvider } from "@/lib/social";
+import { SocialProvider } from "@/utils/social";
 
 const onest = Onest({
   subsets: ["latin", "cyrillic"],

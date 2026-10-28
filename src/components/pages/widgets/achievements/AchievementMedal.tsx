@@ -1,5 +1,5 @@
-import type { AchievementCode } from "@/lib/api";
-import { ACHIEVEMENT_TONE } from "@/lib/achievements";
+import type { AchievementCode } from "@/utils/api";
+import { ACHIEVEMENT_TONE } from "@/utils/achievements";
 
 import "./achievement-medal.scss";
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { getUser } from "./auth";
-import { BACKGROUNDS, type BackgroundId } from "./shop";
+import { BACKGROUNDS, type BackgroundId, useShop } from "./shop";
 
 // Фоны других игроков в комнате и в игре. В backend фона пока нет, поэтому каждый игрок
 // сам рассказывает о своём фоне через WebSocket: при подключении и в ответ на «hello» новичка.
@@ -51,4 +51,10 @@ export function useSkins(): Map<string, BackgroundId> {
     return () => window.removeEventListener(CHANGE_EVENT, refresh);
   }, []);
   return snapshot;
+}
+
+export function useBackgroundOf(myName: string): (username: string) => BackgroundId | null {
+  const myEquipped = useShop().state.equipped;
+  const others = useSkins();
+  return (username) => (username === myName ? myEquipped : (others.get(username) ?? null));
 }

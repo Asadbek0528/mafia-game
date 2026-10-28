@@ -1,88 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { usePeekingEyes } from "@/utils/register/peeking-eyes";
 
 import "./peeking-eyes.scss";
 
-type Mood = "watch" | "closed" | "peek";
-
-// Мафиози выглядывает из-за карточки и следит за вами:
-// глаза идут за курсором или за полем, в котором вы печатаете;
-// на пароле зажмуривается, а если пароль показать — подглядывает; при ошибке злится.
 export default function PeekingEyes({ isAngry }: { isAngry: boolean }) {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const [mood, setMood] = useState<Mood>("watch");
-
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    let focusTarget: HTMLElement | null = null;
-
-    // Зрачки смещаем через CSS-переменные — без перерисовки React на каждое движение мыши
-    function lookAt(x: number, y: number) {
-      if (!root) return;
-      const box = root.getBoundingClientRect();
-      const cx = box.left + box.width / 2;
-      const cy = box.top + box.height * 0.6;
-      const dx = x - cx;
-      const dy = y - cy;
-      const length = Math.hypot(dx, dy) || 1;
-      const reach = Math.min(1, length / 220);
-      root.style.setProperty("--look-x", `${((dx / length) * 2.6 * reach).toFixed(2)}px`);
-      root.style.setProperty("--look-y", `${((dy / length) * 1.6 * reach).toFixed(2)}px`);
-    }
-
-    function lookAtFocus() {
-      if (!focusTarget) return;
-      const box = focusTarget.getBoundingClientRect();
-      lookAt(box.left + Math.min(box.width * 0.35, 140), box.top + box.height / 2);
-    }
-
-    function updateMood() {
-      const input = document.activeElement;
-      if (input instanceof HTMLInputElement && input.id === "password") {
-        setMood(input.type === "password" ? "closed" : "peek");
-      } else {
-        setMood("watch");
-      }
-    }
-
-    const onMove = (event: PointerEvent) => {
-      if (!focusTarget) lookAt(event.clientX, event.clientY);
-    };
-    const onFocusIn = (event: FocusEvent) => {
-      const target = event.target;
-      focusTarget = target instanceof HTMLInputElement ? target : null;
-      lookAtFocus();
-      updateMood();
-    };
-    const onFocusOut = () => {
-      focusTarget = null;
-      setTimeout(updateMood, 0);
-    };
-    // Кнопка «глаз» меняет type у поля пароля — следим за этим
-    const observer = new MutationObserver(updateMood);
-    const password = document.getElementById("password");
-    if (password) observer.observe(password, { attributes: true, attributeFilter: ["type"] });
-
-    window.addEventListener("pointermove", onMove);
-    document.addEventListener("focusin", onFocusIn);
-    document.addEventListener("focusout", onFocusOut);
-    window.addEventListener("input", lookAtFocus);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("pointermove", onMove);
-      document.removeEventListener("focusin", onFocusIn);
-      document.removeEventListener("focusout", onFocusOut);
-      window.removeEventListener("input", lookAtFocus);
-    };
-  }, []);
-
-  let className = `peeking-eyes peeking-eyes-${mood}`;
-  if (isAngry) className += " peeking-eyes-angry";
+  const { rootRef, mood } = usePeekingEyes();
 
   return (
-    <div ref={rootRef} className={className} aria-hidden="true">
+    <div ref={rootRef} className={`peeking-eyes peeking-eyes-${mood}${isAngry ? " peeking-eyes-angry" : ""}`} aria-hidden="true">
       <svg className="peeking-eyes-figure" viewBox="0 0 96 64">
         <defs>
           <radialGradient id="peeking-eye-glow" cx="0.5" cy="0.45" r="0.6">

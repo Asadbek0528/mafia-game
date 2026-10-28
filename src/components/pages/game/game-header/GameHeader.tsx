@@ -1,4 +1,6 @@
-import type { GamePhase } from "@/lib/api";
+import type { GamePhase } from "@/utils/api";
+import { formatClock } from "@/utils/format";
+import { getPhaseSteps, PHASE_STEP_INDEX, PHASE_TITLE, PHASE_UNTIL, phaseIcon, type PhaseIconName, phaseProgress, stepClassName } from "@/utils/game/game-logic";
 import "./game-header.scss";
 
 type GameHeaderProps = {
@@ -9,18 +11,7 @@ type GameHeaderProps = {
   hint: string;
 };
 
-type StepIcon = "night" | "day" | "voting";
-
-const TITLE: Record<GamePhase, string> = { NIGHT: "Ночь", DAY: "День", VOTING: "Голосование" };
-const UNTIL: Record<GamePhase, string> = { NIGHT: "До утра", DAY: "До голосования", VOTING: "До ночи" };
-const STEP_INDEX: Record<GamePhase, number> = { NIGHT: 0, DAY: 1, VOTING: 2 };
-
-function formatTime(seconds: number): string {
-  const safe = Math.max(0, seconds);
-  return `${String(Math.floor(safe / 60)).padStart(2, "0")}:${String(safe % 60).padStart(2, "0")}`;
-}
-
-function PhaseIcon({ icon }: { icon: StepIcon }) {
+function PhaseIcon({ icon }: { icon: PhaseIconName }) {
   if (icon === "night") {
     return (
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -45,60 +36,48 @@ function PhaseIcon({ icon }: { icon: StepIcon }) {
 }
 
 export default function GameHeader({ phase, round, secondsLeft, duration, hint }: GameHeaderProps) {
-  const progress = duration > 0 ? Math.min(1, Math.max(0, 1 - secondsLeft / duration)) : 0;
-  const activeStep = STEP_INDEX[phase];
-  const steps: { icon: StepIcon; label: string }[] = [
-    { icon: "night", label: `Ночь ${round}` },
-    { icon: "day", label: `День ${round}` },
-    { icon: "voting", label: "Голосование" },
-    { icon: "night", label: `Ночь ${round + 1}` },
-  ];
+  const activeStep = PHASE_STEP_INDEX[phase];
 
   return (
-    <section className={`game-header game-header-${phase.toLowerCase()}`} aria-label={`${TITLE[phase]}, осталось ${secondsLeft} секунд`}>
+    <section className={`game-header game-header-${phase.toLowerCase()}`} aria-label={`${PHASE_TITLE[phase]}, осталось ${secondsLeft} секунд`}>
       <div className="game-header-top">
         <span className="game-header-icon">
-          <PhaseIcon icon={phase === "NIGHT" ? "night" : phase === "DAY" ? "day" : "voting"} />
+          <PhaseIcon icon={phaseIcon(phase)} />
         </span>
 
         <div className="game-header-info">
           <h1 className="game-header-title">
-            {TITLE[phase]}
+            {PHASE_TITLE[phase]}
             {phase !== "VOTING" && ` ${round}`}
           </h1>
           <p className="game-header-hint">{hint}</p>
         </div>
 
         <div className={secondsLeft <= 10 ? "game-header-timer game-header-timer-hurry" : "game-header-timer"}>
-          <span>{UNTIL[phase]}</span>
+          <span>{PHASE_UNTIL[phase]}</span>
           <b>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
               <circle cx="12" cy="13" r="7.5" />
               <path d="M12 9v4l2.5 2M4.5 4.5 7 6.5M19.5 4.5 17 6.5" />
             </svg>
-            {formatTime(secondsLeft)}
+            {formatClock(secondsLeft)}
           </b>
         </div>
       </div>
 
       <ol className="game-header-steps" aria-label="Порядок фаз">
-        {steps.map((step, index) => {
-          let className = "game-header-step";
-          if (index === activeStep) className += " game-header-step-active";
-          else if (index < activeStep) className += " game-header-step-done";
-          return (
-            <li key={step.label} className={className} aria-current={index === activeStep ? "step" : undefined}>
-              <span className="game-header-step-dot">
-                <PhaseIcon icon={step.icon} />
-              </span>
-              <span className="game-header-step-label">{step.label}</span>
-            </li>
-          );
-        })}
+        {getPhaseSteps(round).map((step, index) => (
+          <li key={step.label} className={stepClassName(index, activeStep)} aria-current={index === activeStep ? "step" : undefined}>
+            <span className="game-header-step-dot">
+              <PhaseIcon icon={step.icon} />
+            </span>
+            <span className="game-header-step-label">{step.label}</span>
+          </li>
+        ))}
       </ol>
 
       <div className="game-header-progress" aria-hidden="true">
-        <span style={{ width: `${progress * 100}%` }} />
+        <span style={{ width: `${phaseProgress(secondsLeft, duration) * 100}%` }} />
       </div>
     </section>
   );

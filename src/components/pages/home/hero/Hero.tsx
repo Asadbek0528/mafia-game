@@ -1,3 +1,4 @@
+import { heroEyebrow } from "@/utils/home/rooms";
 import "./hero.scss";
 
 type HeroProps = {
@@ -12,7 +13,7 @@ export default function Hero({ openRooms, onPlay, onCreateRoom }: HeroProps) {
       <div className="hero-content">
         <p className="hero-eyebrow">
           <span className="hero-live" aria-hidden="true" />
-          {openRooms === null ? "Город засыпает…" : openRooms > 0 ? `Открыто комнат: ${openRooms}` : "Город ждёт игроков"}
+          {heroEyebrow(openRooms)}
         </p>
 
         <h1 className="hero-title">Mafia</h1>

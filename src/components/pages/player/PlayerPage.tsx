@@ -1,50 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 
 import ProfileStats from "@/components/pages/profile/profile-stats/ProfileStats";
 import Avatar from "@/components/pages/widgets/avatar/Avatar";
 import AchievementsPanel from "@/components/pages/widgets/achievements/AchievementsPanel";
 import GameHistory from "@/components/pages/widgets/game-history/GameHistory";
-import { showToast } from "@/components/pages/widgets/toast/Toast";
-import { api, type PublicUser } from "@/lib/api";
-import { rememberPageAfterLogin, useCurrentUser } from "@/lib/auth";
-import { formatPlayerId, fromPlayerId } from "@/lib/player-id";
-import { copyText } from "@/lib/share";
-import { statusText, useSocial } from "@/lib/social";
+import { usePlayerPage } from "@/utils/player-page";
 import "./player-page.scss";
 
 export default function PlayerPage() {
-  const router = useRouter();
-  const params = useParams<{ id: string }>();
-  const playerId = params.id;
-  const userId = fromPlayerId(playerId);
-
-  const { user, isLoaded } = useCurrentUser();
-  const social = useSocial();
-  const [player, setPlayer] = useState<PublicUser | null>(null);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (isLoaded && !user) {
-      rememberPageAfterLogin(`/player/${playerId}`);
-      router.replace("/register");
-    }
-  }, [isLoaded, user, router, playerId]);
-
-  useEffect(() => {
-    if (!user) return;
-    if (!userId) {
-      setError("Такого ID нет. Проверьте цифры.");
-      return;
-    }
-    api
-      .getPublicUser(userId)
-      .then(setPlayer)
-      .catch(() => setError("Игрок с таким ID не найден."));
-  }, [user, userId]);
+  const { user, error, player, shownId, isMe, canAddFriend, friend, friendStatus, isSocialReady, friendLabel, copyId, handleFriendButton } = usePlayerPage();
 
   if (!user) return null;
 
@@ -61,35 +27,13 @@ export default function PlayerPage() {
     );
   }
 
-  if (!player || !userId) {
+  if (!player) {
     return (
       <main className="player-page">
         <p className="player-page-loading">Загружаем игрока…</p>
       </main>
     );
   }
-
-  const isMe = user.id === player.id;
-  const friend = social.friends.find((item) => item.id === player.id);
-
-  async function copyId() {
-    if (await copyText(playerId)) showToast("ID скопирован.", "success");
-    else showToast(`ID игрока: ${playerId}`);
-  }
-
-  function handleFriendButton() {
-    if (!player) return;
-    if (friend) {
-      if (!window.confirm(`Удалить ${player.username} из друзей?`)) return;
-      social.remove(player.id);
-      showToast(`${player.username} удалён из друзей.`);
-    } else {
-      social.sendRequest(player.id, player.username);
-    }
-  }
-
-  let friendLabel = "Добавить в друзья";
-  if (friend) friendLabel = "В друзьях ✓";
 
   return (
     <main className="player-page">
@@ -106,12 +50,12 @@ export default function PlayerPage() {
         <div className="player-page-info">
           <h1 className="player-page-name">{player.username}</h1>
           <button type="button" className="player-page-id" onClick={copyId} title="Скопировать ID">
-            ID <b>{formatPlayerId(playerId)}</b>
+            ID <b>{shownId}</b>
           </button>
           {friend && (
             <p className={friend.online ? "player-page-status player-page-status-online" : "player-page-status"}>
               <span />
-              {statusText(friend)}
+              {friendStatus}
             </p>
           )}
         </div>
@@ -121,15 +65,15 @@ export default function PlayerPage() {
             Это вы
           </Link>
         ) : (
-          !user.guest && (
+          canAddFriend && (
             <button
               type="button"
               className={friend ? "btn btn-dark btn-small" : "btn btn-red btn-small"}
               onClick={handleFriendButton}
-              disabled={!social.isReady}
-              title={social.isReady ? undefined : "Нет связи с сервером"}
+              disabled={!isSocialReady}
+              title={isSocialReady ? undefined : "Нет связи с сервером"}
             >
-              {social.isReady ? friendLabel : "Подключаемся…"}
+              {friendLabel}
             </button>
           )
         )}

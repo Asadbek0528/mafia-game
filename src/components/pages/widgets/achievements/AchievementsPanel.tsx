@@ -1,19 +1,12 @@
 "use client";
 
-import { useAchievements } from "@/lib/achievements";
+import { useAchievementsPanel } from "@/utils/widgets/achievements";
 
 import AchievementMedal from "./AchievementMedal";
 import "./achievements-panel.scss";
 
-function formatDate(value: string): string {
-  return new Date(value).toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
-}
-
-// Достижения в профиле: полученные — медальоны с датой, остальные — железо с замком и условием
 export default function AchievementsPanel({ userId }: { userId: number }) {
-  const { list, isError, reload } = useAchievements(userId);
-  const unlocked = list?.filter((item) => item.unlockedAt).length ?? 0;
-  const total = list?.length ?? 0;
+  const { list, isError, reload, unlocked, total, progress } = useAchievementsPanel(userId);
 
   return (
     <section className="panel achievements-panel">
@@ -28,7 +21,7 @@ export default function AchievementsPanel({ userId }: { userId: number }) {
 
       {list && total > 0 && (
         <div className="achievements-panel-progress" aria-hidden="true">
-          <span style={{ width: `${(unlocked / total) * 100}%` }} />
+          <span style={{ width: `${progress}%` }} />
         </div>
       )}
 
@@ -51,19 +44,16 @@ export default function AchievementsPanel({ userId }: { userId: number }) {
 
       {list && (
         <ul className="achievements-panel-grid">
-          {list.map((item) => {
-            const isUnlocked = Boolean(item.unlockedAt);
-            return (
-              <li key={item.id} className={isUnlocked ? "achievements-panel-item achievements-panel-item-unlocked" : "achievements-panel-item"}>
-                <AchievementMedal code={item.code} isUnlocked={isUnlocked} size={64} />
-                <div className="achievements-panel-text">
-                  <p className="achievements-panel-name">{item.title}</p>
-                  <p className="achievements-panel-about">{item.description}</p>
-                  {item.unlockedAt && <p className="achievements-panel-date">Получено {formatDate(item.unlockedAt)}</p>}
-                </div>
-              </li>
-            );
-          })}
+          {list.map((item) => (
+            <li key={item.id} className={item.isUnlocked ? "achievements-panel-item achievements-panel-item-unlocked" : "achievements-panel-item"}>
+              <AchievementMedal code={item.code} isUnlocked={item.isUnlocked} size={64} />
+              <div className="achievements-panel-text">
+                <p className="achievements-panel-name">{item.title}</p>
+                <p className="achievements-panel-about">{item.description}</p>
+                {item.dateText && <p className="achievements-panel-date">{item.dateText}</p>}
+              </div>
+            </li>
+          ))}
         </ul>
       )}
     </section>

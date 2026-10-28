@@ -1,23 +1,10 @@
 "use client";
 
+import { voteWord } from "@/utils/format";
+import type { VotingEndInfo } from "@/utils/game/types";
+
 import { VoteIcon } from "../target-picker/TargetPicker";
 import "./voting-end.scss";
-
-export type VotingEndInfo =
-  | { kind: "countdown"; seconds: number }
-  | { kind: "counting" }
-  | { kind: "result"; key: string; name: string; votes: number | null; isMe: boolean }
-  | { kind: "tie"; key: string };
-
-export const VOTING_RESULT_MS = 4000;
-
-function voteWord(count: number): string {
-  const last = count % 10;
-  const lastTwo = count % 100;
-  if (last === 1 && lastTwo !== 11) return "голос";
-  if (last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14)) return "голоса";
-  return "голосов";
-}
 
 export default function VotingEnd({ info }: { info: VotingEndInfo | null }) {
   if (!info) return null;

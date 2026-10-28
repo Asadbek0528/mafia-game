@@ -1,17 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useBloodVideo } from "@/utils/blood-video";
 
-import { bloodVideoSrc, canPlayBloodVideo } from "@/lib/blood-video";
-
-// Настоящее видео крови («drops», см. lib/blood-video.ts): играет один раз и замирает на последнем кадре.
 export default function BloodVideo() {
-  const [src, setSrc] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-
-  useEffect(() => {
-    if (canPlayBloodVideo()) setSrc(bloodVideoSrc("drops"));
-  }, []);
+  const { src, isPlaying, onPlaying, onError } = useBloodVideo();
 
   if (!src) return null;
 
@@ -24,8 +16,8 @@ export default function BloodVideo() {
       playsInline
       preload="auto"
       aria-hidden="true"
-      onPlaying={() => setIsPlaying(true)}
-      onError={() => setSrc(null)}
+      onPlaying={onPlaying}
+      onError={onError}
     />
   );
 }

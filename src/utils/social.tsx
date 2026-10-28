@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
-import { showToast } from "@/components/pages/widgets/toast/Toast";
+import { showToast } from "@/utils/toast";
 
 import { api as backendApi, ApiError, type PublicUser, SESSION_EXPIRED_EVENT, type User } from "./api";
 import { getUser, logout, rememberPageAfterLogin } from "./auth";

@@ -1,8 +1,7 @@
 import Avatar from "@/components/pages/widgets/avatar/Avatar";
 import PlayerBackground from "@/components/pages/widgets/player-background/PlayerBackground";
-import type { RoomPlayer } from "@/lib/api";
-import { useShop } from "@/lib/shop";
-import { useSkins } from "@/lib/skins";
+import type { RoomPlayer } from "@/utils/api";
+import { useBackgroundOf } from "@/utils/skins";
 import "./players-list.scss";
 
 type PlayersListProps = {
@@ -14,8 +13,7 @@ type PlayersListProps = {
 
 export default function PlayersList({ players, owner, me, maxPlayers }: PlayersListProps) {
   const emptySlots = Math.max(0, maxPlayers - players.length);
-  const myBackground = useShop().state.equipped;
-  const skins = useSkins();
+  const backgroundOf = useBackgroundOf(me);
 
   return (
     <section className="panel players-list">
@@ -32,7 +30,7 @@ export default function PlayersList({ players, owner, me, maxPlayers }: PlayersL
             key={player.username}
             className={player.username === me ? "players-list-item players-list-item-me" : "players-list-item"}
           >
-            <PlayerBackground id={player.username === me ? myBackground : (skins.get(player.username) ?? null)} />
+            <PlayerBackground id={backgroundOf(player.username)} />
             <Avatar name={player.username} size={42} />
 
             <div className="players-list-info">

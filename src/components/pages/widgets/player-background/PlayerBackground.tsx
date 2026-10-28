@@ -1,4 +1,4 @@
-import type { BackgroundId } from "@/lib/shop";
+import type { BackgroundId } from "@/utils/shop";
 import "./player-background.scss";
 
 // Купленный в магазине фон: слой на всю карточку, родителю нужны position: relative и isolation: isolate
