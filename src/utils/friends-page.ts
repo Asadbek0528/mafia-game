@@ -99,7 +99,6 @@ export function useSearchPlayers(myId: number | null) {
         setIsShuffling(false);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [myId],
   );
 

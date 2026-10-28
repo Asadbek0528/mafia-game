@@ -8,7 +8,6 @@
   padding: 20px;
 }
 
-// Всё содержимое комнаты — поверх страшного фона RoomBackdrop
 .room-page > :not(.room-backdrop, dialog) {
   position: relative;
   z-index: 1;
@@ -39,7 +38,6 @@
     grid-template-columns: 280px minmax(0, 1fr);
   }
 
-  // «Пригласить» уходит под обе колонки на всю ширину
   .room-page-side {
     grid-column: 1 / -1;
   }

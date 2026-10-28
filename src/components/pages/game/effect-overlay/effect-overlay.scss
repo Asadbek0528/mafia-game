@@ -33,7 +33,6 @@
   background: radial-gradient(ellipse at center, rgba(20, 90, 50, 0.4), rgba(0, 0, 0, 0.9));
 }
 
-// Щит: всё вокруг заливает ярко-синим, щит раскрывается на 360°
 .effect-overlay-shield {
   background:
     radial-gradient(circle at 50% 42%, rgba(56, 189, 255, 0.4), rgba(10, 40, 90, 0.45) 35%, transparent 75%),
@@ -56,7 +55,6 @@
   background: radial-gradient(ellipse at center, rgba(40, 20, 20, 0.6), rgba(0, 0, 0, 0.9));
 }
 
-// Видео брызг: чёрный фон ролика исчезает через screen, остаётся только кровь
 .effect-overlay-splash {
   position: absolute;
   inset: 0;
@@ -76,7 +74,6 @@
   animation: effect-overlay-splash-hit 0.5s cubic-bezier(0.2, 1, 0.3, 1);
 }
 
-// Удар: кадр резко «прилетает» на экран
 @keyframes effect-overlay-splash-hit {
   from {
     transform: scale(1.35);
@@ -86,7 +83,6 @@
   }
 }
 
-// Когда идёт видео, нарисованные подтёки не нужны
 .effect-overlay-splash-playing ~ .effect-overlay-drips {
   display: none;
 }
@@ -172,7 +168,6 @@
   text-shadow: 0 0 24px rgba(0, 0, 0, 0.9);
 }
 
-// Поверх брызг текст должен читаться: белый с красным свечением на тёмной подложке
 .effect-overlay-blood .effect-overlay-text {
   padding: 18px 28px;
   background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.82) 30%, rgba(0, 0, 0, 0.5) 60%, transparent 75%);

@@ -25,7 +25,6 @@
   }
 }
 
-// Кровавый дождь: косые полосы бегут сверху вниз
 .room-omen-rain {
   position: absolute;
   inset: -20% 0 0;
@@ -44,7 +43,6 @@
   }
 }
 
-// Фонарь мигает, как будто вот-вот погаснет
 .room-omen-lamp {
   position: absolute;
   inset: 0;
@@ -92,9 +90,6 @@
   color: #cdbcbd;
 }
 
-// Адаптив
-
-// В две колонки и на телефоне места под карточку нет — убираем
 @media (max-width: 1100px) {
   .room-omen {
     display: none;

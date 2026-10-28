@@ -1,4 +1,3 @@
-// Плашка-поздравление сверху по центру: золото на чёрном, медальон вращается и садится на место
 .achievement-unlocked {
   position: fixed;
   top: 20px;
@@ -33,7 +32,6 @@
   animation: achievement-unlocked-spin 1.1s cubic-bezier(0.2, 0.9, 0.3, 1) both;
 }
 
-// Монета прилетает, крутится и встаёт лицом
 @keyframes achievement-unlocked-spin {
   from {
     transform: scale(0.3) rotateY(720deg);

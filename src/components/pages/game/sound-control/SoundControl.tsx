@@ -5,7 +5,6 @@ import { useDropdown } from "@/utils/use-dropdown";
 
 import "./sound-control.scss";
 
-// Кнопка-динамик в шапке игры: по нажатию — панель громкости
 export default function SoundControl() {
   const [settings, setSettings] = useSoundSettings();
   const { isOpen, rootRef, toggle } = useDropdown();

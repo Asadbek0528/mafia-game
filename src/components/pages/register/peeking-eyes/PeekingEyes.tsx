@@ -18,13 +18,11 @@ export default function PeekingEyes({ isAngry }: { isAngry: boolean }) {
           </radialGradient>
         </defs>
 
-        {/* Голова в тени и шляпа */}
         <ellipse className="peeking-eyes-head" cx="48" cy="50" rx="21" ry="22" />
         <path className="peeking-eyes-hat" d="M28 25c0-11 4.5-19 20-19s20 8 20 19Z" />
         <path className="peeking-eyes-band" d="M28.6 20.5h38.8V25H28.6Z" />
         <ellipse className="peeking-eyes-brim" cx="48" cy="26" rx="34" ry="5" />
 
-        {/* Глаза: светятся в темноте, зрачки следят */}
         <g className="peeking-eyes-eye">
           <ellipse cx="40" cy="38" rx="5" ry="3.1" fill="url(#peeking-eye-glow)" />
           <circle className="peeking-eyes-pupil" cx="40" cy="38" r="1.5" />
@@ -36,7 +34,6 @@ export default function PeekingEyes({ isAngry }: { isAngry: boolean }) {
           <rect className="peeking-eyes-lid" x="50" y="34" width="12" height="8" />
         </g>
 
-        {/* Брови — только когда злится */}
         <path className="peeking-eyes-brow" d="M34.5 32.5 45 35M61.5 32.5 51 35" />
       </svg>
     </div>

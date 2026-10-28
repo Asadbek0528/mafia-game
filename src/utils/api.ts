@@ -78,7 +78,6 @@ export type Achievement = {
   code: AchievementCode;
   title: string;
   description: string;
-  // null — ещё не получено
   unlockedAt: string | null;
 };
 
@@ -151,7 +150,6 @@ export type RoundResult = {
   savedByDoctor: boolean;
   savedPlayerId: number | null;
   eliminatedPlayerId: number | null;
-  // Мафия пришла за игроком, доктор его не лечил, а он жив — сработал купленный щит
   shieldedPlayerId?: number | null;
 };
 
@@ -275,7 +273,6 @@ export class ApiError extends Error {
   }
 }
 
-// Напарник по роли уже сделал ход этой ночью: у команды один выбор на всех
 export class TeamActedError extends Error {
   targetId: number;
 
@@ -292,7 +289,6 @@ export function isServerDown(error: unknown): boolean {
 type RequestOptions = {
   method?: "GET" | "POST" | "PUT" | "DELETE";
   body?: object;
-  // Не писать ошибку в консоль — вызывающий код сам обрабатывает сбой
   quiet?: boolean;
 };
 
@@ -322,8 +318,6 @@ function tokenExpiresSoon(token: string): boolean {
   }
 }
 
-// Сервер упал (нет ответа или 5xx) — это не ошибка сайта: пишем короткое предупреждение,
-// не чаще раза в минуту на адрес, чтобы не всплывало красное окно Next.js при каждом опросе
 const SERVER_WARN_EVERY_MS = 60_000;
 const serverWarnedAt = new Map<string, number>();
 
@@ -340,8 +334,6 @@ function logBackendProblem(method: string, path: string, status: number, details
   console.error(`[backend] ${method} ${path} → ${status}`, details);
 }
 
-// Одинаковые GET-запросы, отправленные одновременно (опрос + сигнал WebSocket + соседний блок),
-// делят один запрос к серверу
 const pendingGets = new Map<string, Promise<unknown>>();
 
 function request<T>(path: string, options: RequestOptions = {}, isRetry = false): Promise<T> {
@@ -513,7 +505,6 @@ async function getElimination(player: BackendGamePlayer) {
     return null;
   }
 }
-// Настройки комнаты во время игры не меняются — берём их один раз на игру
 const gameRoomCache = new Map<string, Promise<BackendRoom>>();
 function getGameRoom(gameId: string, roomId: number): Promise<BackendRoom> {
   const cached = gameRoomCache.get(gameId);
@@ -523,7 +514,6 @@ function getGameRoom(gameId: string, roomId: number): Promise<BackendRoom> {
   promise.catch(() => gameRoomCache.delete(gameId));
   return promise;
 }
-// Кого спас доктор в уже закончившейся ночи — больше не меняется
 const roundDetailCache = new Map<number, BackendRoundDetail>();
 
 async function getRoundDetail(round: BackendRoundShort, isFinished: boolean): Promise<BackendRoundDetail> {
@@ -538,12 +528,8 @@ const savedInRoundCache = new Map<number, { saved: number | null; kills: number[
 
 const myGamesCache = new Map<string, MyGame | null>();
 
-// Итоги законченных игр больше не меняются — храним их в браузере,
-// чтобы история и статистика открывались сразу, без десятков запросов в Сидней
 const GAMES_STORAGE_KEY = "mafia_games_v2";
 
-// В ключе — ещё комната и победитель: если backend переехал и номера игр начались заново,
-// старая запись с тем же номером игры не подойдёт к новой игре
 function gameCacheKey(userId: number, game: { id: number; room_id: number; winner: string | null }) {
   return `${userId}:${game.id}:${game.room_id}:${game.winner}`;
 }
@@ -559,7 +545,6 @@ function loadStoredGames() {
       myGamesCache.set(key, value);
     }
   } catch {
-    // испорченная запись — просто начнём заново
   }
 }
 loadStoredGames();
@@ -574,7 +559,6 @@ function rememberGame(key: string, value: MyGame | null) {
     try {
       localStorage.setItem(GAMES_STORAGE_KEY, JSON.stringify([...storedGames].slice(-MAX_STORED_GAMES)));
     } catch {
-      // нет места или доступа — останется только в памяти
     }
   }, 500);
 }
@@ -608,7 +592,6 @@ type ListedUser = BackendUserShort & { profile_image?: string | null };
 const USER_LIST_KEEP_MS = 30_000;
 let userList: { at: number; promise: Promise<ListedUser[]> } | null = null;
 
-// Список всех игроков с фото весит много — берём его с сервера не чаще раза в 30 секунд
 function getUserList(): Promise<ListedUser[]> {
   if (userList && Date.now() - userList.at < USER_LIST_KEEP_MS) return userList.promise;
   const promise = request<ListedUser[]>(ENDPOINTS.userList).then((users) => {
@@ -795,8 +778,6 @@ export const api = {
       .sort((a, b) => b.id - a.id)
       .slice(0, 40);
 
-    // Если /game-player/list у backend падает (5xx) на нескольких играх подряд, не шлём ещё 40 одинаковых запросов.
-    // Одна сломанная игра (500 только на ней) не должна прятать всю историю — её просто пропускаем.
     const probes = finished.filter((game) => !myGamesCache.has(gameCacheKey(myId, game))).slice(0, 3);
     const brokenGames: BackendGame[] = [];
     for (const game of probes) {
@@ -899,7 +880,6 @@ export const api = {
 
   async getMe(): Promise<User> {
     const myId = getMyId();
-    // Профиль, статистика backend и своя статистика по играм — одновременно, а не по очереди
     const [user, stats, mine] = await Promise.all([
       request<BackendUser>(ENDPOINTS.userDetail(myId)),
       request<Record<string, number>>(ENDPOINTS.statistic(myId)).catch(() => null),
@@ -980,7 +960,6 @@ export const api = {
       .map((user) => ({ id: user.id, username: user.username, profileImage: user.profile_image ?? null }));
   },
 
-  // Несколько случайных игроков для «Найти друзей» (без вас, ваших друзей и ботов)
   async getSuggestedPlayers(excludeIds: number[], count = 6): Promise<PublicUser[]> {
     const users = await getUserList();
     const skip = new Set(excludeIds);
@@ -1184,8 +1163,6 @@ export const api = {
     return { gameId: String(active.id), roomName };
   },
 
-  // Backend далеко (Сидней, ~0,8 с на запрос), поэтому всё, что можно, запрашиваем параллельно:
-  // шаг 1 — игра, игроки, раунды и комната; шаг 2 — имена, выбывшие, ночные ходы, голоса и итог раунда.
   async getGame(gameId: string): Promise<GameState> {
     const gameRequest = request<BackendGame>(ENDPOINTS.gameDetail(gameId));
     const playersRequest = request<BackendGamePlayer[]>(ENDPOINTS.gamePlayers(gameId));
@@ -1219,8 +1196,6 @@ export const api = {
       [...rounds].sort((a, b) => b.round_number - a.round_number)[0];
     const nightIsOver = latest ? game.current_round > latest.round_number || game.current_phase !== "NIGHT" : false;
 
-    // Кого спас доктор: считаем один раз, когда ночь уже закончилась
-    // Кого спас доктор и на кого был удар мафии: считаем один раз, когда ночь уже закончилась
     const loadSaved = async (roundId: number): Promise<{ saved: number | null; kills: number[] } | null> => {
       const cached = savedInRoundCache.get(roundId);
       if (cached) return cached;
@@ -1263,7 +1238,6 @@ export const api = {
         lastRound.savedByDoctor = true;
         lastRound.savedPlayerId = savedId;
       }
-      // Удар мафии был, доктор не лечил, а никто не погиб — жертву закрыл щит (/game/exchange-protection)
       const kills = nightResult?.kills ?? [];
       if (lastRound.killedPlayerId === null && !lastRound.savedByDoctor && kills.length > 0) {
         lastRound.shieldedPlayerId = kills[0];
@@ -1297,7 +1271,6 @@ export const api = {
     };
   },
 
-  // Все достижения игры и какие из них уже получил игрок (выдаёт их сам backend по итогам игр)
   async getAchievements(userId: number): Promise<Achievement[]> {
     const [all, mine] = await Promise.all([
       request<{ id: number; code: AchievementCode; title: string }[]>(ENDPOINTS.achievementList),
@@ -1316,7 +1289,6 @@ export const api = {
     }));
   },
 
-  // Включить купленный щит в текущей игре: backend берёт игрока из токена, тела у запроса нет
   exchangeProtection() {
     return request<unknown>(ENDPOINTS.exchangeProtection, { method: "POST" });
   },
@@ -1327,8 +1299,6 @@ export const api = {
     targetId: number,
     type: "KILL" | "HEAL" | "CHECK",
   ): Promise<{ isMafia: boolean | null }> {
-    // Одна жертва на всю мафию, одно лечение на всех докторов, одна проверка на всех комиссаров:
-    // если кто-то из команды уже сходил — второй ход не отправляем
     const done = await request<{ actor_id: number; target_id: number; action_type: string }[]>(ENDPOINTS.nightActionList(roundId)).catch(() => []);
     const teammate = done.find((action) => action.action_type === type && action.actor_id !== actorId);
     if (teammate) throw new TeamActedError(teammate.target_id);

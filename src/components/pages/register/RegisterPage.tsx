@@ -9,7 +9,6 @@ import PeekingEyes from "./peeking-eyes/PeekingEyes";
 import RegisterForm from "./register-form/RegisterForm";
 import "./register-page.scss";
 
-// Индекс в углу, как на картах ролей: корона и «M»
 function CardIndex({ position }: { position: "top" | "bottom" }) {
   return (
     <span className={`register-card-index register-card-index-${position}`} aria-hidden="true">
@@ -29,7 +28,6 @@ export default function RegisterPage() {
       <BloodBackground />
 
       <main className="register-page-center">
-        {/* Карточка оформлена как карта из колоды — та же рамка и индексы, что у карт ролей */}
         <section
           className={isShaking ? "register-card register-card-shake" : "register-card"}
           aria-labelledby="register-title"

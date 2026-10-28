@@ -2,11 +2,9 @@ import "./shield-orb.scss";
 
 type ShieldOrbProps = {
   size?: number;
-  // burst — волны расходятся во все стороны, как в момент удара (для экрана в игре)
   burst?: boolean;
 };
 
-// Синий щит: кольца крутятся на 360°, купол из сот светится, от центра бегут волны
 export default function ShieldOrb({ size = 200, burst = false }: ShieldOrbProps) {
   return (
     <span className={burst ? "shield-orb shield-orb-burst" : "shield-orb"} style={{ width: size, height: size }} aria-hidden="true">

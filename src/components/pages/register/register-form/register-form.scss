@@ -17,7 +17,6 @@
 .register-input-box {
   position: relative;
 
-  // В фокусе снизу поля «прорезается» алая линия — от центра к краям
   &::after {
     content: "";
     position: absolute;
@@ -134,7 +133,6 @@
   }
 }
 
-// Низ карточки: самый быстрый способ попасть в игру — отдельной зоной, а не мелким текстом
 .register-guest {
   display: grid;
   justify-items: center;
@@ -174,7 +172,6 @@
   }
 }
 
-// Боковые отступы — чтобы текст не налезал на перевёрнутый индекс карты в углу
 .register-guest-hint {
   padding: 0 44px;
   font-size: 12.5px;
@@ -182,7 +179,6 @@
   color: var(--color-text-muted);
 }
 
-// Надёжность пароля: три деления, цвет по уровню
 .register-strength {
   display: flex;
   align-items: center;
@@ -227,8 +223,6 @@
     background: var(--color-green);
   }
 }
-
-// Адаптив
 
 @media (max-width: 480px) {
   .register-guest {

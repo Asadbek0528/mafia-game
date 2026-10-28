@@ -3,7 +3,6 @@ import { useCallback, useEffect, useState } from "react";
 import { api, type Achievement, type AchievementCode } from "./api";
 import { getUser } from "./auth";
 
-// Оформление медальонов: тексты (название и условие) приходят из backend, здесь только цвет металла
 export const ACHIEVEMENT_TONE: Record<AchievementCode, "gold" | "blood" | "silver"> = {
   FIRST_WIN: "gold",
   MAFIA_MASTERMIND: "blood",
@@ -13,7 +12,6 @@ export const ACHIEVEMENT_TONE: Record<AchievementCode, "gold" | "blood" | "silve
   PERFECT_TOWN: "gold",
 };
 
-// Какие достижения игрок уже видел — чтобы поздравлять только с новыми
 function seenKey(userId: number) {
   return `mafia_achievements_seen_${userId}`;
 }
@@ -32,12 +30,9 @@ export function markAchievementsSeen(userId: number, ids: number[]) {
     const old = readSeen(userId) ?? [];
     localStorage.setItem(seenKey(userId), JSON.stringify([...new Set([...old, ...ids])]));
   } catch {
-    // без хранилища поздравим ещё раз — не страшно
   }
 }
 
-// Новые достижения после игры. В первый раз ничего не показываем, а запоминаем всё, что уже есть,
-// — иначе давний игрок получил бы пачку «новых» поздравлений
 export async function fetchNewAchievements(): Promise<Achievement[]> {
   const user = getUser();
   if (!user?.id || user.guest) return [];
@@ -64,7 +59,6 @@ export function useAchievements(userId: number | undefined) {
       .getAchievements(userId)
       .then((items) => {
         setList(items);
-        // Достижения, которые человек увидел в профиле, после игры повторно не поздравляем
         const user = getUser();
         if (user?.id === userId) markAchievementsSeen(userId, items.filter((item) => item.unlockedAt).map((item) => item.id));
       })

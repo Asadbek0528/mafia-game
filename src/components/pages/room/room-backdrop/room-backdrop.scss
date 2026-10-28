@@ -10,7 +10,6 @@
     #030001;
 }
 
-// Ночной город по краям: тонируем в кровавый цвет и растворяем к центру
 .room-backdrop-art {
   position: absolute;
   top: 0;
@@ -23,7 +22,6 @@
 
 .room-backdrop-art-left {
   left: 0;
-  // Чёрно-белую улицу умножаем на красный: белая луна становится кровавой, а не жёлтой
   background-image: linear-gradient(#d61a28, #d61a28), url("/img/street.webp");
   background-position: center top;
   background-blend-mode: multiply;
@@ -49,7 +47,6 @@
   }
 }
 
-// Туман медленно ползёт по низу экрана
 .room-backdrop-fog {
   position: absolute;
   left: -50%;
@@ -83,7 +80,6 @@
   }
 }
 
-// Шёпот: едва заметные надписи, то проступают, то исчезают
 .room-backdrop-whisper {
   position: absolute;
   margin: 0;
@@ -128,7 +124,6 @@
   }
 }
 
-// Ширина как у экрана, высота по пропорциям; капли падают ниже рамки svg
 .room-backdrop-blood {
   position: absolute;
   top: 0;
@@ -139,7 +134,6 @@
   transform: translateX(-50%);
 }
 
-// Настоящая кровь по краям: поля между краем экрана и панелями комнаты (до 1280px по центру)
 .room-backdrop-video {
   --room-stream: calc((100vw - 1280px) / 2 + 80px);
 }
@@ -175,13 +169,11 @@
   opacity: 0.9;
 }
 
-// Пошла настоящая кровь — нарисованные подтёки убираем
 .room-backdrop-video-on ~ .room-backdrop-blood {
   opacity: 0;
   transition: opacity 0.8s ease;
 }
 
-// Редкая вспышка, как молния за окном
 .room-backdrop-flash {
   position: absolute;
   inset: 0;
@@ -210,7 +202,6 @@
   }
 }
 
-// Зерно старой плёнки
 .room-backdrop-grain {
   position: absolute;
   inset: -50%;
@@ -236,8 +227,6 @@
   inset: 0;
   background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
 }
-
-// Адаптив
 
 @media (max-width: 760px) {
   .room-backdrop-art {

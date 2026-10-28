@@ -124,8 +124,6 @@ export const NIGHT_TURNS: { role: RoleKey; title: string }[] = [
 export const MIN_PLAYERS = 4;
 export const MAX_PLAYERS = 16;
 
-// Рекомендуемый баланс: мафии примерно четверть стола, по одному доктору и комиссару.
-// 4 → 1/1/0, 6 → 2/1/1, 8 → 2/1/1, 10 → 3/1/1, 12 → 3/1/1, 14 → 4/1/1, 16 → 4/1/1
 export function countRoles(players: number): RoleCounts {
   return {
     mafia: Math.max(1, Math.round(players / 4)),
@@ -138,8 +136,6 @@ export function countCivilians(players: number, roles: RoleCounts): number {
   return players - roles.mafia - roles.doctor - roles.commissar;
 }
 
-// Сколько каждой роли создатель может поставить сам. Строгих правил нет —
-// только мафии меньше половины стола. «Честный баланс» (countRoles) — лишь рекомендация.
 export function getRoleLimits(players: number) {
   return {
     mafia: { min: 1, max: Math.max(1, Math.ceil(players / 2) - 1) },
@@ -148,7 +144,6 @@ export function getRoleLimits(players: number) {
   };
 }
 
-// Подгоняем роли под новое число игроков: всё, что выше лимита, срезаем
 export function fitRoles(players: number, roles: RoleCounts): RoleCounts {
   const limits = getRoleLimits(players);
   const fitted = {

@@ -12,9 +12,7 @@ const statuses = new Map();
 const names = new Map();
 const watching = new Map();
 
-// Заявки в друзья: кому → (от кого → { id, username, at }). Хранятся, пока получатель не ответит.
 const requests = new Map();
-// Принятые заявки для тех, кто был не в сети: кому → [{ id, username }]
 const accepted = new Map();
 
 function loadRequests() {
@@ -23,7 +21,6 @@ function loadRequests() {
     for (const [to, list] of saved.requests ?? []) requests.set(Number(to), new Map(list.map((item) => [item.id, item])));
     for (const [to, list] of saved.accepted ?? []) accepted.set(Number(to), list);
   } catch {
-    // файла ещё нет — начинаем с пустого списка
   }
 }
 
@@ -39,7 +36,6 @@ function saveRequests() {
     try {
       writeFileSync(REQUESTS_FILE, JSON.stringify(data));
     } catch {
-      // не страшно: заявки останутся в памяти
     }
   }, 500);
 }
@@ -158,7 +154,6 @@ export function onUserMessage(id, message) {
       if (typeof message.username === "string" && message.username.trim()) {
         names.set(other, message.username.trim().slice(0, 40));
       }
-      // Встречная заявка уже есть — значит оба хотят дружить
       if (requests.get(id)?.has(other)) {
         removeRequest(id, other);
         send(id, { type: "friend-mutual", from: { id: other, username: nameOf(other) } });

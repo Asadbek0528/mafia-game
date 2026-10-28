@@ -1,6 +1,5 @@
 import "./room-omen.scss";
 
-// Страшная карточка под «Пригласить»: заполняет пустое место и задаёт настроение перед игрой
 export default function RoomOmen() {
   return (
     <aside className="room-omen" aria-hidden="true">

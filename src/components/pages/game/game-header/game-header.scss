@@ -119,7 +119,6 @@
   }
 }
 
-// Красный цвет только когда время правда кончается — иначе он ничего не значит
 .game-header-timer-hurry {
   border-color: var(--color-red);
   box-shadow: 0 0 18px var(--color-red-glow);

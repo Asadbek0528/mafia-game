@@ -17,7 +17,6 @@ function isPortFree(port) {
   });
 }
 
-// Next сам ищет свободный порт и может занять порт WebSocket-сервера — выбираем порт сами
 async function pickNextPort() {
   const wsPort = Number(process.env.WS_PORT);
   for (let port = Number(setting("PORT", "3000")); port < 3100; port += 1) {

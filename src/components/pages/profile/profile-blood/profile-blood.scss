@@ -1,4 +1,3 @@
-// Лужа у нижнего края экрана: центр лужи прячется под край, видна только её верхняя часть
 .profile-blood {
   position: fixed;
   left: 104px;
@@ -8,7 +7,6 @@
   height: 58vh;
   overflow: hidden;
   pointer-events: none;
-  // Мягкий овал: у лужи нет жёстких краёв кадра
   mask-image: radial-gradient(ellipse 58% 100% at 50% 100%, #000000 45%, transparent 100%);
   -webkit-mask-image: radial-gradient(ellipse 58% 100% at 50% 100%, #000000 45%, transparent 100%);
 }
@@ -22,7 +20,6 @@
   opacity: 0;
   filter: brightness(0.5) saturate(1.2) contrast(1.35);
   mix-blend-mode: screen;
-  // Середина лужи (≈ 35% по ширине кадра) — под центром экрана, её центр уходит под нижний край
   transform: translate(-35%, 42%);
   transition: opacity 1.2s ease;
 }
@@ -30,8 +27,6 @@
 .profile-blood-playing {
   opacity: 0.8;
 }
-
-// Адаптив
 
 @media (max-width: 860px) {
   .profile-blood {

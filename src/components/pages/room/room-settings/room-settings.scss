@@ -172,12 +172,10 @@
 }
 
 @media (max-width: 760px) {
-  // Карты ролей в один ряд, чтобы кнопка «Я готов» не уезжала далеко вниз
   .room-settings-roles {
     gap: 8px;
   }
 
-  // У создателя под каждой картой кнопки −/+ — им нужно больше места
   .room-settings-roles:has(.room-settings-stepper) {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
@@ -192,7 +190,6 @@
     font-size: 11.5px;
   }
 
-  // Главная кнопка всегда под рукой, пока видна панель настроек
   .room-settings-main-button {
     position: sticky;
     bottom: calc(12px + env(safe-area-inset-bottom, 0px));

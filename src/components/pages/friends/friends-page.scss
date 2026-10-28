@@ -381,7 +381,6 @@
   animation: friends-shimmer 1.2s infinite;
 }
 
-// Заготовка карточки: аватар, имя, ID и кнопка мигают, пока ищем игроков
 .friends-page-skeleton-avatar,
 .friends-page-skeleton-line,
 .friends-page-skeleton-button {
@@ -427,7 +426,6 @@
   }
 }
 
-// Новые игроки появляются по одному после загрузки
 .friends-page-player-in {
   animation: friends-player-in 0.4s ease-out both;
 }

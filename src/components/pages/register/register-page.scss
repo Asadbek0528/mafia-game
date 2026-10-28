@@ -12,7 +12,6 @@
   padding: 84px 16px 28px;
 }
 
-// Карта из колоды: внешняя кровавая рамка, внутренняя тонкая линия и уголки, как на картах ролей
 .register-card {
   position: relative;
   width: min(100%, 420px);
@@ -29,7 +28,6 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(8px);
 
-  // Внутренняя линия рамки
   &::before {
     content: "";
     position: absolute;
@@ -39,7 +37,6 @@
     pointer-events: none;
   }
 
-  // Уголки внутренней рамки
   &::after {
     content: "";
     position: absolute;
@@ -75,7 +72,6 @@
   }
 }
 
-// Индекс карты: корона и «M» в левом верхнем углу, перевёрнутые — в правом нижнем
 .register-card-index {
   position: absolute;
   display: grid;
@@ -117,7 +113,6 @@
     0 0 40px rgba(224, 32, 43, 0.45);
 }
 
-// Переключатель вместо заголовка: сразу видно, что можно войти, а не только зарегистрироваться
 .register-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -161,8 +156,6 @@
   font-size: 14px;
   color: var(--color-text-muted);
 }
-
-// Адаптив
 
 @media (max-width: 480px) {
   .register-card {

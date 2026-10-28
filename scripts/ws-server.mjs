@@ -177,7 +177,6 @@ function rememberChat(channel, message) {
   chatHistory.set(channel, history);
 }
 
-// Кто пропустил голосование: { voterId, round } — новые игроки получают список при подключении
 function rememberSkip(channel, data) {
   const voterId = Number(data.voterId);
   const round = Number(data.round);

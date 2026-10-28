@@ -1,4 +1,3 @@
-// Профиль, друзья и история игр — на странице «Профиль», главная целиком под игру
 .home-page {
   position: relative;
   display: grid;
@@ -9,7 +8,6 @@
   padding: 18px;
 }
 
-// Контент главной — поверх видео с кровью
 .home-page > :not(.home-blood, dialog) {
   position: relative;
   z-index: 1;

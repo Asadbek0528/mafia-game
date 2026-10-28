@@ -102,7 +102,6 @@
     border-radius: 6px;
   }
 
-  // Сообщения прижаты к низу, как в мессенджере
   > :first-child {
     margin-top: auto;
   }
@@ -222,7 +221,6 @@
   }
 }
 
-// Телефон: чат всегда внизу экрана, открывается поверх игры
 @media (max-width: 960px) {
   .game-chat {
     position: fixed;
@@ -246,7 +244,6 @@
     display: none;
   }
 
-  // Чат раскрывается вверх: у свёрнутого стрелка смотрит вверх
   .game-chat-tab .game-chat-arrow {
     transform: rotate(180deg);
   }

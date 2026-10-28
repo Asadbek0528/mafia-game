@@ -20,7 +20,6 @@ export default function RoomBackdrop() {
 
       <svg className="room-backdrop-blood" viewBox={`0 0 ${BACKDROP_WIDTH} ${BACKDROP_HEIGHT}`} preserveAspectRatio="xMidYMin slice">
         <defs>
-          {/* Жидкость: сливаем круги, даём объём и маленькие резкие блики, как у свежей крови */}
           <filter id="room-blood-liquid" x="-5%" y="-10%" width="110%" height="140%" colorInterpolationFilters="sRGB">
             <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
             <feColorMatrix in="blur" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -9" result="liquid" />
@@ -33,7 +32,6 @@ export default function RoomBackdrop() {
             <feDropShadow in="lit" dx="0" dy="3" stdDeviation="3" floodColor="#1a0002" floodOpacity="0.8" />
           </filter>
 
-          {/* Наверху кровь густая и тёмная, к кончикам подтёков — свежая алая */}
           <linearGradient id="room-blood-fill" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="220">
             <stop offset="0" stopColor="#3a0006" />
             <stop offset="0.18" stopColor="#7a000c" />

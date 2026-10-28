@@ -17,7 +17,6 @@
 
 .game-page-content {
   display: grid;
-  // Без этого широкий ребёнок (шапка, таблица) растягивал страницу шире экрана телефона
   grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   max-width: 1100px;
@@ -172,7 +171,6 @@
   animation: game-page-todo-pulse 1.6s ease-in-out infinite;
 }
 
-// Результат проверки комиссара: подпись сверху, имя и вердикт крупно, цвет — по вердикту
 .game-page-check {
   display: grid;
   gap: 2px;
@@ -254,7 +252,6 @@
     position: static;
   }
 
-  // Место под закреплённый внизу чат
   .game-page:has(.game-chat) {
     padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   }
@@ -266,7 +263,6 @@
     background-attachment: scroll;
   }
 
-  // Ведущий на телефоне — компактная строка, а не крупный баннер
   .game-page-host,
   .game-page-last-word,
   .game-page-todo {

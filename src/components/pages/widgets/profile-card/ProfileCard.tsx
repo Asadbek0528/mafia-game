@@ -9,7 +9,6 @@ import PlayerBackground from "@/components/pages/widgets/player-background/Playe
 import { useProfileCard } from "@/utils/widgets/profile-card";
 import "./profile-card.scss";
 
-// showStats=false — на странице профиля, где рядом уже есть подробная статистика
 export default function ProfileCard({ showStats = true }: { showStats?: boolean }) {
   const { user, shownId, canPickPhoto, equipped, background, coinsText, coinsWord, shields, editHref, games, wins, winRate, copyId, savePhoto, handleLogout } = useProfileCard();
 

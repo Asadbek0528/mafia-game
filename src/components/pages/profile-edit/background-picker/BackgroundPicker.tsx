@@ -8,7 +8,6 @@ import type { User } from "@/utils/api";
 import { useBackgroundPicker } from "@/utils/profile/profile";
 import "./background-picker.scss";
 
-// «Оформление»: надеть купленный фон, сменить его или вернуть обычный вид
 export default function BackgroundPicker({ user }: { user: User }) {
   const { owned, notOwned, equippedId, equippedText, choose } = useBackgroundPicker();
 
@@ -21,7 +20,6 @@ export default function BackgroundPicker({ user }: { user: User }) {
         </Link>
       </div>
 
-      {/* Живое превью: так сейчас выглядит ваша карточка */}
       <div className="background-picker-preview">
         <PlayerBackground id={equippedId} />
         <span className="background-picker-preview-player">
