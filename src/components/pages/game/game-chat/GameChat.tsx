@@ -1,5 +1,7 @@
 "use client";
 
+import { memo } from "react";
+
 import Avatar from "@/components/pages/widgets/avatar/Avatar";
 import { formatTimeOfDay } from "@/utils/format";
 import { chatMessageClassName, useGameChat } from "@/utils/game/game-chat";
@@ -42,20 +44,7 @@ export default function GameChat({ messages, myName, canWrite, scope, hint, forc
         <>
           <ul ref={listRef} className="game-chat-list">
             {messages.length === 0 && <li className="game-chat-empty">Сообщений пока нет — начните обсуждение первым.</li>}
-            {messages.map((message) => (
-              <li key={message.id} className={chatMessageClassName(message, myName)}>
-                <Avatar name={message.name} size={38} />
-                <div className="game-chat-bubble">
-                  <p className="game-chat-meta">
-                    <b>{message.name}</b>
-                    {message.scope === "dead" && <i>погибший</i>}
-                    {message.lastWord && <i>последнее слово</i>}
-                    <time>{formatTimeOfDay(message.time)}</time>
-                  </p>
-                  <p className="game-chat-text">{message.text}</p>
-                </div>
-              </li>
-            ))}
+            <ChatMessages messages={messages} myName={myName} />
           </ul>
 
           <form className="game-chat-form" onSubmit={handleSubmit}>
@@ -79,3 +68,20 @@ export default function GameChat({ messages, myName, canWrite, scope, hint, forc
     </section>
   );
 }
+
+const ChatMessages = memo(function ChatMessages({ messages, myName }: { messages: ChatMessage[]; myName: string }) {
+  return messages.map((message) => (
+    <li key={message.id} className={chatMessageClassName(message, myName)}>
+      <Avatar name={message.name} size={38} />
+      <div className="game-chat-bubble">
+        <p className="game-chat-meta">
+          <b>{message.name}</b>
+          {message.scope === "dead" && <i>погибший</i>}
+          {message.lastWord && <i>последнее слово</i>}
+          <time>{formatTimeOfDay(message.time)}</time>
+        </p>
+        <p className="game-chat-text">{message.text}</p>
+      </div>
+    </li>
+  ));
+});

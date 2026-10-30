@@ -624,7 +624,21 @@ export function useGamePage() {
 
   async function handleConfirm() {
     if (!game || !me || selectedId === null) return;
-    const target = game.players.find((player) => player.id === selectedId);
+    const targetId = selectedId;
+    const target = game.players.find((player) => player.id === targetId);
+    const nightType = game.phase === "NIGHT" && me.role ? NIGHT_ACTION[me.role] : undefined;
+    const optimistic: NightActionInfo | null = nightType ? { type: nightType, actorId: me.id, targetId, at: Date.now() } : null;
+
+    sentTarget.current = targetId;
+    setIsSent(true);
+    play("confirm");
+    if (optimistic) setGame((old) => (old ? { ...old, nightActions: [...old.nightActions, optimistic] } : old));
+
+    const undo = () => {
+      sentTarget.current = null;
+      setIsSent(false);
+      if (optimistic) setGame((old) => (old ? { ...old, nightActions: old.nightActions.filter((action) => action !== optimistic) } : old));
+    };
 
     try {
       let isMafia: boolean | null = null;
@@ -633,25 +647,13 @@ export function useGamePage() {
         if (game.roundId === null) throw new Error("Раунд не найден. Обновите страницу.");
 
         if (game.phase === "VOTING") {
-          await api.vote(game.roundId, me.id, selectedId);
-        } else {
-          const action = me.role ? NIGHT_ACTION[me.role] : undefined;
-          if (action) {
-            const result = await api.nightAction(game.roundId, me.id, selectedId, action);
-            isMafia = result.isMafia;
-          }
+          await api.vote(game.roundId, me.id, targetId);
+        } else if (nightType) {
+          const result = await api.nightAction(game.roundId, me.id, targetId, nightType);
+          isMafia = result.isMafia;
         }
+        notify("action");
       }
-
-      sentTarget.current = selectedId;
-      setIsSent(true);
-      play("confirm");
-      const nightType = game.phase === "NIGHT" && me.role ? NIGHT_ACTION[me.role] : undefined;
-      if (nightType) {
-        const action: NightActionInfo = { type: nightType, actorId: me.id, targetId: selectedId, at: Date.now() };
-        setGame((old) => (old ? { ...old, nightActions: [...old.nightActions, action] } : old));
-      }
-      if (!isDemo) notify("action");
 
       if (isMafia === null && target?.role) isMafia = target.role === "mafia";
 
@@ -673,10 +675,10 @@ export function useGamePage() {
       if (game.phase === "NIGHT" && me.role === "mafia" && target) showToast(`Жертва выбрана: ${target.username}`, "success");
       if (game.phase === "NIGHT" && me.role === "doctor" && target) showToast(`Этой ночью вы лечите: ${target.username}`, "success");
     } catch (error) {
+      undo();
       if (error instanceof TeamActedError) {
-        const type = me.role ? NIGHT_ACTION[me.role] : undefined;
-        if (type) {
-          const teamAction: NightActionInfo = { type, actorId: -1, targetId: error.targetId, at: Date.now() };
+        if (nightType) {
+          const teamAction: NightActionInfo = { type: nightType, actorId: -1, targetId: error.targetId, at: Date.now() };
           setGame((old) => (old ? { ...old, nightActions: [...old.nightActions, teamAction] } : old));
         }
         setSelectedId(null);
@@ -703,6 +705,11 @@ export function useGamePage() {
       showToast((error as Error).message, "error");
     }
   }
+
+  const visibleChat = useMemo(
+    () => chat.filter((message) => message.scope === "all" || isFinished || (message.scope === "dead" && amDead)),
+    [chat, isFinished, amDead],
+  );
 
   const goHome = () => router.push("/");
   const openRole = () => setIsRoleOpen(true);
@@ -904,7 +911,6 @@ export function useGamePage() {
     chatHint = "Чат недоступен: нет связи с сервером чата. Переподключаемся…";
   }
 
-  const visibleChat = chat.filter((message) => message.scope === "all" || isGameOver || (message.scope === "dead" && amDead));
 
   function sendChat(text: string) {
     if (!myName) return;

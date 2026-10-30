@@ -4,6 +4,7 @@ import { Onest, Oswald, Rubik_Wet_Paint } from "next/font/google";
 import "./globals.scss";
 
 import Header from "@/components/layout/header/Header";
+import PerformanceMode from "@/components/layout/performance-mode/PerformanceMode";
 import SocialNotices from "@/components/pages/widgets/social-notices/SocialNotices";
 import Toast from "@/components/pages/widgets/toast/Toast";
 import { SocialProvider } from "@/utils/social";
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Header />
             <div className="app-content">{children}</div>
           </div>
+          <PerformanceMode />
           <Toast />
           <SocialNotices />
         </SocialProvider>

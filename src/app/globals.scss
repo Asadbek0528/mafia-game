@@ -291,3 +291,17 @@ input {
     transition-duration: 0.01ms !important;
   }
 }
+
+.lite *,
+.lite *::before,
+.lite *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.lite .room-backdrop-grain,
+.lite .room-backdrop-fog,
+.lite .room-backdrop-flash,
+.lite .blood-grain {
+  display: none;
+}
