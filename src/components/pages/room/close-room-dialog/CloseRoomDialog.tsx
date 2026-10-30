@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { playersWord } from "@/utils/format";
+import { AUTO_CLOSE_SECONDS, useCloseRoomDialog } from "@/utils/room/close-room-dialog";
 
 import "./close-room-dialog.scss";
-
-const AUTO_CLOSE_SECONDS = 20;
 
 type CloseRoomDialogProps = {
   isOpen: boolean;
@@ -15,69 +14,15 @@ type CloseRoomDialogProps = {
   onStay: () => void;
 };
 
-function playersWord(count: number): string {
-  const last = count % 10;
-  const lastTwo = count % 100;
-  if (last === 1 && lastTwo !== 11) return "игрок";
-  if (last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14)) return "игрока";
-  return "игроков";
-}
-
 export default function CloseRoomDialog({ isOpen, roomName, playersCount, isClosing, onClose, onStay }: CloseRoomDialogProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const stayRef = useRef<HTMLButtonElement>(null);
-  const [secondsLeft, setSecondsLeft] = useState(AUTO_CLOSE_SECONDS);
-  // Новый ключ на каждое открытие — кольцо отсчёта начинается заново
-  const [openKey, setOpenKey] = useState(0);
-
-  const onCloseRef = useRef(onClose);
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  });
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (isOpen && !dialog.open) {
-      dialog.showModal();
-      setOpenKey((key) => key + 1);
-      // Безопасный выбор по умолчанию: Enter не удалит комнату случайно
-      stayRef.current?.focus();
-    }
-    if (!isOpen && dialog.open) dialog.close();
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen || isClosing) return;
-    setSecondsLeft(AUTO_CLOSE_SECONDS);
-
-    const endsAt = Date.now() + AUTO_CLOSE_SECONDS * 1000;
-    const timer = setInterval(() => {
-      const left = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
-      setSecondsLeft(left);
-      if (left === 0) {
-        clearInterval(timer);
-        onCloseRef.current();
-      }
-    }, 250);
-
-    return () => clearInterval(timer);
-  }, [isOpen, isClosing]);
-
-  const others = Math.max(0, playersCount - 1);
-  const isHurry = secondsLeft <= 5;
+  const { dialogRef, stayRef, secondsLeft, openKey, others, isHurry, handleCancel, handleMouseDown } = useCloseRoomDialog({ isOpen, isClosing, playersCount, onClose, onStay });
 
   return (
     <dialog
       ref={dialogRef}
       className="close-room"
-      onCancel={(event) => {
-        event.preventDefault();
-        onStay();
-      }}
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !isClosing) onStay();
-      }}
+      onCancel={handleCancel}
+      onMouseDown={handleMouseDown}
       aria-labelledby="close-room-title"
       aria-describedby="close-room-text"
     >

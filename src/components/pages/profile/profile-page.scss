@@ -4,7 +4,6 @@
   padding: 18px;
 }
 
-// Содержимое профиля — поверх лужи крови
 .profile-page > :not(.profile-blood) {
   position: relative;
   z-index: 1;

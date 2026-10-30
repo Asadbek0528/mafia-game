@@ -1,7 +1,6 @@
 .background-picker {
   display: grid;
   gap: 16px;
-  // Ссылка «Сменить фон» из карточки профиля ведёт сюда — не прячемся под край экрана
   scroll-margin-top: 18px;
 
   .panel-top {
@@ -9,7 +8,6 @@
   }
 }
 
-// Превью вашей карточки с выбранным фоном
 .background-picker-preview {
   position: relative;
   isolation: isolate;

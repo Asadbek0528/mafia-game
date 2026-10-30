@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { getUser } from "./auth";
-import { BACKGROUNDS, type BackgroundId } from "./shop";
-
-// Фоны других игроков в комнате и в игре. В backend фона пока нет, поэтому каждый игрок
-// сам рассказывает о своём фоне через WebSocket: при подключении и в ответ на «hello» новичка.
-// Ключ — имя игрока: оно есть и в комнате, и в игре.
+import { BACKGROUNDS, type BackgroundId, useShop } from "./shop";
 
 const CHANGE_EVENT = "mafia-skins-change";
 const skins = new Map<string, BackgroundId>();
@@ -22,7 +18,6 @@ export function rememberSkin(data: unknown) {
   window.dispatchEvent(new Event(CHANGE_EVENT));
 }
 
-// Свой надетый фон — из магазина в этом браузере
 function myBackground(): BackgroundId | null {
   const user = getUser();
   if (!user) return null;
@@ -34,14 +29,12 @@ function myBackground(): BackgroundId | null {
   }
 }
 
-// Сообщить остальным свой фон (null — без фона)
 export function announceSkin(notify: (type?: string, extra?: Record<string, unknown>) => void) {
   const user = getUser();
   if (!user) return;
   notify("skin", { username: user.username, background: myBackground() });
 }
 
-// Фоны других игроков по имени
 export function useSkins(): Map<string, BackgroundId> {
   const [snapshot, setSnapshot] = useState(() => new Map(skins));
   useEffect(() => {
@@ -51,4 +44,10 @@ export function useSkins(): Map<string, BackgroundId> {
     return () => window.removeEventListener(CHANGE_EVENT, refresh);
   }, []);
   return snapshot;
+}
+
+export function useBackgroundOf(myName: string): (username: string) => BackgroundId | null {
+  const myEquipped = useShop().state.equipped;
+  const others = useSkins();
+  return (username) => (username === myName ? myEquipped : (others.get(username) ?? null));
 }

@@ -2,9 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 
 import { getUser } from "./auth";
 
-// Монеты: в backend их пока нет, поэтому считаем от настоящей статистики игрока
-// (сыгранные игры и победы приходят с /statistic), а покупки храним в браузере.
-// Когда backend добавит баланс и покупки — заменить readState/saveState на запросы к API.
 export const COINS = {
   start: 200,
   perGame: 10,
@@ -36,7 +33,6 @@ type ShopState = {
   owned: BackgroundId[];
   equipped: BackgroundId | null;
   shields: number;
-  // Игры, в которых щит уже включён на сервере, и ночи, где он уже сработал
   armedGames: string[];
   usedNights: string[];
 };
@@ -90,7 +86,6 @@ export function useShop() {
       setIsReady(true);
     };
     refresh();
-    // Другие вкладки и другие блоки на странице (карточка профиля, магазин) видят покупку сразу
     window.addEventListener(CHANGE_EVENT, refresh);
     window.addEventListener("storage", refresh);
     return () => {
@@ -122,7 +117,6 @@ export function useShop() {
     return true;
   }
 
-  // Щит сработал этой ночью: списываем одну защиту (один раз на ночь)
   const spendShield = useCallback(
     (nightKey: string) => {
       update((old) =>

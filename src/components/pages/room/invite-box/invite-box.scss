@@ -7,7 +7,6 @@
   isolation: isolate;
 }
 
-// Ночная улица с луной: кровавый оттенок, к кнопкам растворяется в темноте
 .invite-box-art {
   position: absolute;
   inset: 0;
@@ -17,7 +16,6 @@
     linear-gradient(180deg, rgba(12, 5, 6, 0.05) 0%, rgba(12, 5, 6, 0.45) 45%, rgba(12, 5, 6, 0.85) 100%),
     linear-gradient(#d61a28, #d61a28) center / cover,
     url("/img/street.webp") center 8% / cover no-repeat;
-  // Как и в фоне комнаты: чёрно-белую улицу умножаем на красный
   background-blend-mode: normal, normal, multiply, normal;
   filter: brightness(1.05) contrast(1.15);
 }

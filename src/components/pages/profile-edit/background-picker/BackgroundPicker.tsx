@@ -4,24 +4,12 @@ import Link from "next/link";
 
 import Avatar from "@/components/pages/widgets/avatar/Avatar";
 import PlayerBackground from "@/components/pages/widgets/player-background/PlayerBackground";
-import { showToast } from "@/components/pages/widgets/toast/Toast";
-import type { User } from "@/lib/api";
-import { BACKGROUNDS, type BackgroundId, useShop } from "@/lib/shop";
+import type { User } from "@/utils/api";
+import { useBackgroundPicker } from "@/utils/profile/profile";
 import "./background-picker.scss";
 
-// «Оформление»: надеть купленный фон, сменить его или вернуть обычный вид
 export default function BackgroundPicker({ user }: { user: User }) {
-  const shop = useShop();
-  const owned = BACKGROUNDS.filter((item) => shop.state.owned.includes(item.id));
-  const notOwned = BACKGROUNDS.length - owned.length;
-  const equipped = BACKGROUNDS.find((item) => item.id === shop.state.equipped) ?? null;
-
-  function choose(id: BackgroundId | null) {
-    if (id === shop.state.equipped) return;
-    shop.equip(id);
-    const name = BACKGROUNDS.find((item) => item.id === id)?.name;
-    showToast(name ? `Фон «${name}» надет.` : "Фон снят — карточка в обычном виде.", "success");
-  }
+  const { owned, notOwned, equippedId, equippedText, choose } = useBackgroundPicker();
 
   return (
     <section className="panel background-picker" id="appearance">
@@ -32,14 +20,13 @@ export default function BackgroundPicker({ user }: { user: User }) {
         </Link>
       </div>
 
-      {/* Живое превью: так сейчас выглядит ваша карточка */}
       <div className="background-picker-preview">
-        <PlayerBackground id={shop.state.equipped} />
+        <PlayerBackground id={equippedId} />
         <span className="background-picker-preview-player">
           <Avatar name={user.username} image={user.profile_image} size={56} />
           <span>
             <b>{user.username}</b>
-            <small>{equipped ? `Фон: ${equipped.name}` : "Без фона"}</small>
+            <small>{equippedText}</small>
           </span>
         </span>
       </div>
@@ -58,8 +45,8 @@ export default function BackgroundPicker({ user }: { user: User }) {
             <button
               type="button"
               role="radio"
-              aria-checked={shop.state.equipped === null}
-              className={shop.state.equipped === null ? "background-picker-tile background-picker-tile-active" : "background-picker-tile"}
+              aria-checked={equippedId === null}
+              className={equippedId === null ? "background-picker-tile background-picker-tile-active" : "background-picker-tile"}
               onClick={() => choose(null)}
             >
               <span className="background-picker-swatch background-picker-swatch-none">
@@ -72,25 +59,22 @@ export default function BackgroundPicker({ user }: { user: User }) {
             </button>
           </li>
 
-          {owned.map((item) => {
-            const isActive = shop.state.equipped === item.id;
-            return (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={isActive}
-                  className={isActive ? "background-picker-tile background-picker-tile-active" : "background-picker-tile"}
-                  onClick={() => choose(item.id)}
-                >
-                  <span className="background-picker-swatch">
-                    <PlayerBackground id={item.id} />
-                  </span>
-                  <span className="background-picker-name">{item.name}</span>
-                </button>
-              </li>
-            );
-          })}
+          {owned.map((item) => (
+            <li key={item.id}>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={equippedId === item.id}
+                className={equippedId === item.id ? "background-picker-tile background-picker-tile-active" : "background-picker-tile"}
+                onClick={() => choose(item.id)}
+              >
+                <span className="background-picker-swatch">
+                  <PlayerBackground id={item.id} />
+                </span>
+                <span className="background-picker-name">{item.name}</span>
+              </button>
+            </li>
+          ))}
 
           {notOwned > 0 && (
             <li>

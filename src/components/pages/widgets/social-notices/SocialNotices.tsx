@@ -1,23 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-
 import Avatar from "@/components/pages/widgets/avatar/Avatar";
-import { useSocial } from "@/lib/social";
+import { useSocialNotices } from "@/utils/widgets/social-notices";
 import "./social-notices.scss";
 
-const AUTO_HIDE_MS = { invite: 60_000, request: 60_000, text: 6_000 };
-
 export default function SocialNotices() {
-  const router = useRouter();
-  const social = useSocial();
-  const { notices, dismiss } = social;
-
-  useEffect(() => {
-    const timers = notices.map((notice) => setTimeout(() => dismiss(notice.key), AUTO_HIDE_MS[notice.kind]));
-    return () => timers.forEach(clearTimeout);
-  }, [notices, dismiss]);
+  const { notices, dismiss, accept, decline, joinRoom } = useSocialNotices();
 
   if (notices.length === 0) return null;
 
@@ -36,10 +24,7 @@ export default function SocialNotices() {
                   <button
                     type="button"
                     className="btn btn-red btn-small"
-                    onClick={() => {
-                      dismiss(notice.key);
-                      router.push(`/room/${invite.roomId}`);
-                    }}
+                    onClick={() => joinRoom(notice.key, invite.roomId)}
                   >
                     Зайти
                   </button>
@@ -60,10 +45,10 @@ export default function SocialNotices() {
                 <p className="social-notice-title">{notice.from.username} хочет дружить</p>
                 <p className="social-notice-text">Заявка в друзья</p>
                 <div className="social-notice-buttons">
-                  <button type="button" className="btn btn-red btn-small" onClick={() => social.accept(notice.from.id)}>
+                  <button type="button" className="btn btn-red btn-small" onClick={() => accept(notice.from.id)}>
                     Принять
                   </button>
-                  <button type="button" className="btn btn-dark btn-small" onClick={() => social.decline(notice.from.id)}>
+                  <button type="button" className="btn btn-dark btn-small" onClick={() => decline(notice.from.id)}>
                     Отклонить
                   </button>
                 </div>

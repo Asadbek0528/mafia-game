@@ -1,9 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef } from "react";
 
-import type { Role } from "@/lib/roles";
+import type { Role } from "@/utils/roles";
+import { useRoleModal } from "@/utils/widgets/role-modal";
 import "./role-modal.scss";
 
 type RoleModalProps = {
@@ -12,23 +12,14 @@ type RoleModalProps = {
 };
 
 export default function RoleModal({ role, onClose }: RoleModalProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (role && !dialog.open) dialog.showModal();
-    if (!role && dialog.open) dialog.close();
-  }, [role]);
+  const { dialogRef, handleClick } = useRoleModal(role, onClose);
 
   return (
     <dialog
       ref={dialogRef}
       className="role-modal"
       onClose={onClose}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+      onClick={handleClick}
       aria-labelledby="role-modal-title"
     >
       {role && (

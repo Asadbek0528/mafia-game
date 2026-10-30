@@ -3,26 +3,25 @@
 import Link from "next/link";
 
 import Avatar from "@/components/pages/widgets/avatar/Avatar";
-import { toPlayerId } from "@/lib/player-id";
-import { statusText, useSocial } from "@/lib/social";
+import { toPlayerId } from "@/utils/player-id";
+import { useFriendsPanel } from "@/utils/profile/profile";
+import { statusText } from "@/utils/social";
 import "./friends-panel.scss";
 
 export default function FriendsPanel() {
-  const social = useSocial();
-  const online = social.friends.filter((friend) => friend.online);
-  const shown = (online.length > 0 ? online : social.friends).slice(0, 5);
+  const { hasFriends, shown, countText, linkText } = useFriendsPanel();
 
   return (
     <section className="panel friends-panel">
       <div className="panel-top">
         <h2 className="panel-title">Друзья</h2>
         <span className="friends-panel-count">
-          {social.isReady ? `в сети ${online.length} из ${social.friends.length}` : "подключаемся…"}
+          {countText}
         </span>
       </div>
 
       <ul className="friends-panel-list">
-        {social.friends.length === 0 && <li className="friends-panel-empty">Друзей пока нет — найдите их по ID.</li>}
+        {!hasFriends && <li className="friends-panel-empty">Друзей пока нет — найдите их по ID.</li>}
         {shown.map((friend) => (
           <li key={friend.id}>
             <Link href={`/player/${toPlayerId(friend.id)}`} className="friends-panel-item">
@@ -40,7 +39,7 @@ export default function FriendsPanel() {
       </ul>
 
       <Link href="/friends" className="btn btn-dark btn-small btn-full">
-        {social.friends.length > 0 ? "Все друзья и заявки →" : "Найти друзей →"}
+        {linkText}
       </Link>
     </section>
   );

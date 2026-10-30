@@ -157,7 +157,6 @@
   }
 }
 
-// Телефон: всё в одну строку без прокрутки вбок — связь становится цветной точкой, надпись MAFIA меньше
 @media (max-width: 520px) {
   .game-topbar {
     gap: 6px;
@@ -177,7 +176,6 @@
     width: 34px;
     padding: 0;
 
-    // Текст остаётся для скринридера и в подсказке
     .game-topbar-connection-text {
       position: absolute;
       width: 1px;

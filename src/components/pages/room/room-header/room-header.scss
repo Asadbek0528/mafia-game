@@ -13,7 +13,6 @@
   border-radius: var(--radius-big);
   box-shadow: var(--shadow-panel), 0 0 40px rgba(160, 0, 12, 0.15);
 
-  // Тонкая красная линия снизу, по ней медленно пробегает свет
   &::after {
     content: "";
     position: absolute;
@@ -38,7 +37,6 @@
   }
 }
 
-// Мафиози в шляпе справа, к тексту слева растворяется в темноте
 .room-header-art {
   position: absolute;
   inset: 0;

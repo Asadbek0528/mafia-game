@@ -1,4 +1,3 @@
-// Окошко над правым краем карточки: всё, что ниже края, спрятано — мафиози будто стоит за карточкой
 .peeking-eyes {
   --look-x: 0px;
   --look-y: 0px;
@@ -16,9 +15,7 @@
   display: block;
   width: 96px;
   height: 64px;
-  // Медленно поднимается из-за края после загрузки
   transform: translateY(0);
-  // backwards: после подъёма transform снова свободен — работает «спрятаться при наведении»
   animation: peeking-eyes-rise 1.1s cubic-bezier(0.2, 0.9, 0.3, 1) 1.4s backwards;
   transition: transform 0.35s cubic-bezier(0.3, 1.3, 0.5, 1);
 }
@@ -29,7 +26,6 @@
   }
 }
 
-// Навели курсор — прячется обратно
 .peeking-eyes:hover .peeking-eyes-figure {
   transform: translateY(62%);
 }
@@ -67,7 +63,6 @@
   transition: transform 0.12s ease-out;
 }
 
-// Веко: обычно поднято, иногда моргает
 .peeking-eyes-lid {
   fill: #0a0405;
   transform-box: fill-box;
@@ -88,7 +83,6 @@
   }
 }
 
-// Поле пароля: зажмурился, не подглядывает
 .peeking-eyes-closed .peeking-eyes-lid {
   transform: scaleY(0.85);
   animation: none;
@@ -98,7 +92,6 @@
   filter: drop-shadow(0 0 2px rgba(255, 140, 40, 0.5));
 }
 
-// Пароль показали — глаза распахнулись, подглядывает
 .peeking-eyes-peek .peeking-eyes-eye ellipse {
   transform-box: fill-box;
   transform-origin: center;
@@ -118,7 +111,6 @@
   transition: opacity 0.2s;
 }
 
-// Ошибка в форме: злится — глаза краснеют, брови сдвинуты
 .peeking-eyes-angry {
   .peeking-eyes-eye {
     filter: drop-shadow(0 0 4px #ff2a36) drop-shadow(0 0 12px rgba(255, 0, 20, 0.9)) hue-rotate(-25deg) saturate(1.6);
@@ -133,8 +125,6 @@
     animation: none;
   }
 }
-
-// Адаптив
 
 @media (max-width: 480px) {
   .peeking-eyes {

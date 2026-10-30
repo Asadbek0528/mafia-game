@@ -1,26 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 
 import Avatar from "@/components/pages/widgets/avatar/Avatar";
 import CoinIcon from "@/components/pages/widgets/coin-icon/CoinIcon";
 import PlayerBackground from "@/components/pages/widgets/player-background/PlayerBackground";
 import ShieldOrb from "@/components/pages/widgets/shield-orb/ShieldOrb";
-import { showToast } from "@/components/pages/widgets/toast/Toast";
-import { useCurrentUser } from "@/lib/auth";
-import { BACKGROUNDS, COINS, coinsWord, SHIELD_PRICE, type ShopBackground, useShop } from "@/lib/shop";
+import { useShopPage } from "@/utils/shop-page";
+import { COINS, SHIELD_PRICE } from "@/utils/shop";
 import "./shop-page.scss";
 
 export default function ShopPage() {
-  const router = useRouter();
-  const { user, isLoaded } = useCurrentUser();
-  const shop = useShop();
-
-  useEffect(() => {
-    if (isLoaded && !user) router.replace("/register");
-  }, [isLoaded, user, router]);
+  const { user, coinsText, coinsWord, shields, canBuyShield, hasEquipped, items, handleBuyShield, handleBuyBackground, equip, unequip } = useShopPage();
 
   if (!user) return null;
 
@@ -40,16 +31,6 @@ export default function ShopPage() {
     );
   }
 
-  function handleBuyShield() {
-    if (shop.buyShield()) showToast("Щит куплен. Он включится сам, если мафия придёт за вами.", "success");
-    else showToast(`Не хватает монет: нужно ${SHIELD_PRICE}.`, "error");
-  }
-
-  function handleBuyBackground(item: ShopBackground) {
-    if (shop.buyBackground(item.id)) showToast(`Фон «${item.name}» куплен и надет.`, "success");
-    else showToast(`Не хватает монет: нужно ${item.price}.`, "error");
-  }
-
   return (
     <main className="shop-page">
       <header className="shop-page-top">
@@ -61,8 +42,8 @@ export default function ShopPage() {
         </div>
         <p className="shop-page-balance" aria-live="polite">
           <CoinIcon />
-          <b>{shop.isReady ? shop.coins : "…"}</b>
-          <span>{coinsWord(shop.coins)}</span>
+          <b>{coinsText}</b>
+          <span>{coinsWord}</span>
         </p>
       </header>
 
@@ -78,12 +59,12 @@ export default function ShopPage() {
             что никто не погиб. Работает, когда ваша роль — житель. Один щит — одна спасённая ночь.
           </p>
           <div className="shop-page-shield-buy">
-            <button type="button" className="btn btn-red" onClick={handleBuyShield} disabled={!shop.isReady || shop.coins < SHIELD_PRICE}>
+            <button type="button" className="btn btn-red" onClick={handleBuyShield} disabled={!canBuyShield}>
               Купить за {SHIELD_PRICE}
               <CoinIcon />
             </button>
             <span className="shop-page-owned">
-              У вас: <b>{shop.state.shields}</b>
+              У вас: <b>{shields}</b>
             </span>
           </div>
         </div>
@@ -92,27 +73,23 @@ export default function ShopPage() {
       <section className="panel">
         <div className="panel-top">
           <h2 className="panel-title">Фоны профиля</h2>
-          {shop.state.equipped && (
-            <button type="button" className="btn btn-dark btn-small" onClick={() => shop.equip(null)}>
+          {hasEquipped && (
+            <button type="button" className="btn btn-dark btn-small" onClick={unequip}>
               Снять фон
             </button>
           )}
         </div>
 
         <ul className="shop-page-grid">
-          {BACKGROUNDS.map((item) => {
-            const isOwned = shop.state.owned.includes(item.id);
-            const isEquipped = shop.state.equipped === item.id;
-
-            return (
-              <li key={item.id} className={isEquipped ? "shop-page-item shop-page-item-equipped" : "shop-page-item"}>
+          {items.map((item) => (
+              <li key={item.id} className={item.isEquipped ? "shop-page-item shop-page-item-equipped" : "shop-page-item"}>
                 <div className="shop-page-preview">
                   <PlayerBackground id={item.id} />
                   <span className="shop-page-preview-player">
                     <Avatar name={user.username} image={user.profile_image} size={46} />
                     <b>{user.username}</b>
                   </span>
-                  {isEquipped && <span className="shop-page-badge">Надето</span>}
+                  {item.isEquipped && <span className="shop-page-badge">Надето</span>}
                 </div>
 
                 <div className="shop-page-item-info">
@@ -120,30 +97,29 @@ export default function ShopPage() {
                   <p className="shop-page-item-about">{item.about}</p>
                 </div>
 
-                {!isOwned && (
+                {!item.isOwned && (
                   <button
                     type="button"
                     className="btn btn-red btn-small btn-full"
                     onClick={() => handleBuyBackground(item)}
-                    disabled={!shop.isReady || shop.coins < item.price}
+                    disabled={!item.canBuy}
                   >
                     {item.price}
                     <CoinIcon />
                   </button>
                 )}
-                {isOwned && !isEquipped && (
-                  <button type="button" className="btn btn-dark btn-small btn-full" onClick={() => shop.equip(item.id)}>
+                {item.isOwned && !item.isEquipped && (
+                  <button type="button" className="btn btn-dark btn-small btn-full" onClick={() => equip(item.id)}>
                     Надеть
                   </button>
                 )}
-                {isEquipped && (
+                {item.isEquipped && (
                   <button type="button" className="btn btn-green btn-small btn-full" disabled>
                     Надето ✓
                   </button>
                 )}
               </li>
-            );
-          })}
+          ))}
         </ul>
       </section>
     </main>

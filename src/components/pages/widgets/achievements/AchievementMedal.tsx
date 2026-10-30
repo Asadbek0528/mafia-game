@@ -1,13 +1,10 @@
-import type { AchievementCode } from "@/lib/api";
-import { ACHIEVEMENT_TONE } from "@/lib/achievements";
+import type { AchievementCode } from "@/utils/api";
+import { ACHIEVEMENT_TONE } from "@/utils/achievements";
 
 import "./achievement-medal.scss";
 
-// Гравировка на медальоне — своя для каждого достижения
 const ICONS: Record<AchievementCode, React.ReactNode> = {
-  // Корона — первая победа
   FIRST_WIN: <path d="M4 17 3 7l5 4 4-6 4 6 5-4-1 10Z M5 20h14" />,
-  // Шляпа дона
   MAFIA_MASTERMIND: (
     <>
       <path d="M6 14c0-5 2-9 6-9s6 4 6 9" />
@@ -15,28 +12,24 @@ const ICONS: Record<AchievementCode, React.ReactNode> = {
       <path d="M6.5 11.5h11" />
     </>
   ),
-  // Нимб и крест — ангел-хранитель
   GUARDIAN_ANGEL: (
     <>
       <ellipse cx="12" cy="4.5" rx="5" ry="1.6" />
       <path d="M12 9v11M7.5 13.5h9" />
     </>
   ),
-  // Лупа — Шерлок
   SHERLOCK: (
     <>
       <circle cx="10.5" cy="10.5" r="5.5" />
       <path d="m15 15 5.5 5.5" />
     </>
   ),
-  // Сердце с пульсом — выживший
   SURVIVOR: (
     <>
       <path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10Z" />
       <path d="M6 12h3l1.5-2.5 2 5 1.5-2.5H18" />
     </>
   ),
-  // Дом со звездой — идеальный город
   PERFECT_TOWN: (
     <>
       <path d="M4 11 12 4l8 7v9H4Z" />

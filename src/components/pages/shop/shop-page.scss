@@ -46,7 +46,6 @@
   }
 }
 
-// Щит — главный товар: крупная карточка в синих тонах
 .shop-page-shield {
   position: relative;
   display: grid;
@@ -141,7 +140,6 @@
   box-shadow: 0 0 18px rgba(47, 211, 107, 0.18);
 }
 
-// Превью: так фон будет выглядеть за вашей карточкой
 .shop-page-preview {
   position: relative;
   isolation: isolate;
@@ -205,8 +203,6 @@
   font-size: 18px;
   font-weight: 700;
 }
-
-// Адаптив
 
 @media (max-width: 860px) {
   .shop-page {

@@ -279,7 +279,6 @@ async function actIfNeeded(bot, gameId, state) {
       }
       const previous = PREVIOUS_ACTION[me.role];
       const isPreviousDone = !previous || actions.some((item) => item.action_type === previous);
-      // Как на сайте: ход — «ночь ÷ 3 роли», но не дольше 30 секунд (при ночи 60 сек — по 20)
       const phaseEnd = parseServerDate(game.phase_ends_at);
       const nightMs = phaseEnd ? Math.max(0, phaseEnd - state.seenAt.get(key)) : PHASE_SECONDS.NIGHT * 1000;
       const turnMs = Math.min(NIGHT_TURN_MS, Math.floor(nightMs / 3));

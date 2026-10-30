@@ -1,11 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
 
-import { api, type MyStats } from "@/lib/api";
-import { useCurrentUser } from "@/lib/auth";
-import { getRole, ROLES } from "@/lib/roles";
+import { useProfileStats } from "@/utils/profile/profile";
 import "./profile-stats.scss";
 
 type ProfileStatsProps = {
@@ -13,26 +10,9 @@ type ProfileStatsProps = {
 };
 
 export default function ProfileStats({ userId }: ProfileStatsProps) {
-  const { user } = useCurrentUser();
-  const [stats, setStats] = useState<MyStats | null>(null);
-  const [isFailed, setIsFailed] = useState(false);
+  const { hasTarget, isGuest, isMine, stats, isFailed, roleRows, favoriteRole, avgText } = useProfileStats(userId);
 
-  const targetId = userId ?? user?.id;
-  const isMine = userId === undefined || userId === user?.id;
-
-  const isGuest = user?.guest === true;
-
-  useEffect(() => {
-    if (!targetId || isGuest) return;
-    setStats(null);
-    setIsFailed(false);
-    api
-      .getUserStats(targetId)
-      .then(setStats)
-      .catch(() => setIsFailed(true));
-  }, [targetId, isGuest]);
-
-  if (!targetId) return null;
+  if (!hasTarget) return null;
 
   if (isGuest) {
     return (
@@ -81,37 +61,30 @@ export default function ProfileStats({ userId }: ProfileStatsProps) {
             </div>
             <div>
               <dt>Средняя игра</dt>
-              <dd>{stats.avgMinutes > 0 ? `${stats.avgMinutes} мин` : "—"}</dd>
+              <dd>{avgText}</dd>
             </div>
           </dl>
 
-          {stats.favoriteRole && (
+          {favoriteRole && (
             <p className="profile-stats-favorite">
-              {isMine ? "Чаще всего играете за" : "Чаще всего играет за"}: <b>{getRole(stats.favoriteRole).name}</b>
+              {isMine ? "Чаще всего играете за" : "Чаще всего играет за"}: <b>{favoriteRole}</b>
             </p>
           )}
 
           <ul className="profile-stats-roles">
-            {ROLES.map((role) => {
-              const item = stats.byRole[role.key];
-              const rate = item.played ? Math.round((item.wins / item.played) * 100) : 0;
-
-              return (
-                <li key={role.key} className={item.played ? "profile-stats-role" : "profile-stats-role profile-stats-role-empty"}>
-                  <Image className="profile-stats-card" src={role.image} alt={role.name} width={120} height={180} />
-                  <div className="profile-stats-role-info">
-                    <p className="profile-stats-role-name">{role.name}</p>
-                    <p className="profile-stats-role-line">
-                      {item.played} {item.played === 1 ? "игра" : "игр"} · {item.wins} {item.wins === 1 ? "победа" : "побед"}
-                    </p>
-                    <div className="profile-stats-bar" aria-label={`Процент побед ${rate}%`}>
-                      <span style={{ width: `${rate}%` }} />
-                    </div>
+            {roleRows.map((role) => (
+              <li key={role.key} className={role.isEmpty ? "profile-stats-role profile-stats-role-empty" : "profile-stats-role"}>
+                <Image className="profile-stats-card" src={role.image} alt={role.name} width={120} height={180} />
+                <div className="profile-stats-role-info">
+                  <p className="profile-stats-role-name">{role.name}</p>
+                  <p className="profile-stats-role-line">{role.line}</p>
+                  <div className="profile-stats-bar" aria-label={`Процент побед ${role.rate}%`}>
+                    <span style={{ width: `${role.rate}%` }} />
                   </div>
-                  <span className="profile-stats-rate">{item.played ? `${rate}%` : "—"}</span>
-                </li>
-              );
-            })}
+                </div>
+                <span className="profile-stats-rate">{role.rateText}</span>
+              </li>
+            ))}
           </ul>
         </>
       )}

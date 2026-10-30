@@ -123,9 +123,6 @@
   }
 }
 
-// Адаптив
-
-// На телефоне пустые слоты съедают пол-экрана — вместо них одна строка
 @media (max-width: 760px) {
   .players-list-item-empty {
     display: none;

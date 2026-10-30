@@ -92,7 +92,6 @@ function kill(players: GamePlayer[], playerId: number | null, round: number, rea
   );
 }
 
-// hasShield — у меня куплен щит: если я житель и мафия выбрала меня, удар отражается
 export function advanceDemoGame(game: GameState, me: GamePlayer | undefined, myTarget: number | null, hasShield = false): GameState {
   const alive = game.players.filter((player) => player.isAlive);
   const iCanAct = me?.isAlive && myTarget !== null;

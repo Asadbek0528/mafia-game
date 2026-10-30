@@ -1,26 +1,17 @@
 import { useEffect, useState } from "react";
 
-// Звуковой дизайн игры. Всё синтезируется в браузере (Web Audio) — без файлов.
-// Схема: эффекты → (сухой сигнал + ревербератор «пустой собор») → общая громкость;
-//        атмосфера (гул, ветер, далёкий колокол) → своя громкость → общая громкость.
-// Браузер разрешает звук только после первого клика/касания, поэтому всё создаётся лениво.
-
 export type SoundName = "tick" | "select" | "confirm" | "night" | "morning" | "gavel" | "kill" | "heal" | "shield" | "win" | "lose";
 export type Ambience = "night" | "day" | null;
 
 export type SoundSettings = {
   on: boolean;
-  // 0…1 — общая громкость
   volume: number;
-  // 0…1 — фон (гул, ветер), 0 — без фона
   ambience: number;
 };
 
 const STORAGE_KEY = "mafia_sound_v2";
 const CHANGE_EVENT = "mafia-sound-change";
 const DEFAULTS: SoundSettings = { on: true, volume: 0.7, ambience: 0.5 };
-
-// ---------- Настройки ----------
 
 export function getSoundSettings(): SoundSettings {
   if (typeof window === "undefined") return DEFAULTS;
@@ -37,7 +28,6 @@ export function setSoundSettings(change: Partial<SoundSettings>) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   } catch {
-    // без хранилища настройки живут до перезагрузки
   }
   applySettings(next);
   window.dispatchEvent(new Event(CHANGE_EVENT));
@@ -54,8 +44,6 @@ export function useSoundSettings(): [SoundSettings, (change: Partial<SoundSettin
   return [settings, setSoundSettings];
 }
 
-// ---------- Аудиограф ----------
-
 type Graph = {
   ctx: AudioContext;
   master: GainNode;
@@ -66,7 +54,6 @@ type Graph = {
 
 let graph: Graph | null = null;
 
-// Импульс «пустого собора»: стерео-шум с долгим затуханием — даёт длинный мягкий хвост
 function makeImpulse(ctx: AudioContext, seconds: number, decay: number): AudioBuffer {
   const length = Math.floor(ctx.sampleRate * seconds);
   const impulse = ctx.createBuffer(2, length, ctx.sampleRate);
@@ -84,7 +71,6 @@ function getGraph(): Graph | null {
     if (!Ctor) return null;
     const ctx = new Ctor();
 
-    // Мягкий компрессор на выходе — никаких резких пиков для уха
     const limiter = ctx.createDynamicsCompressor();
     limiter.threshold.value = -18;
     limiter.knee.value = 20;
@@ -105,7 +91,6 @@ function getGraph(): Graph | null {
     const reverbSend = ctx.createGain();
     reverbSend.connect(reverb);
 
-    // Сухой сигнал чуть приглушён сверху — звук «тёплый», не колючий
     const fx = ctx.createGain();
     const warm = ctx.createBiquadFilter();
     warm.type = "lowpass";
@@ -127,12 +112,9 @@ function getGraph(): Graph | null {
 function applySettings(settings: SoundSettings) {
   if (!graph) return;
   const now = graph.ctx.currentTime;
-  // Громкость воспринимается логарифмически — квадрат даёт плавную регулировку
   graph.master.gain.setTargetAtTime(settings.on ? settings.volume * settings.volume * 0.9 : 0, now, 0.08);
   graph.ambienceBus.gain.setTargetAtTime(settings.ambience * settings.ambience * 0.6, now, 0.3);
 }
-
-// ---------- Кирпичики ----------
 
 type ToneOptions = {
   type?: OscillatorType;
@@ -140,7 +122,6 @@ type ToneOptions = {
   attack?: number;
   slideTo?: number;
   detune?: number;
-  // Насколько звук уходит в ревербератор (0…1)
   wet?: number;
   lowpass?: number;
   vibrato?: number;
@@ -234,7 +215,6 @@ function connectOut(node: AudioNode, options: { wet?: number; output?: AudioNode
     return;
   }
   node.connect(g.fx);
-  // Дополнительная посылка в ревербератор — звук «уходит вдаль»
   if (options.wet) {
     const send = g.ctx.createGain();
     send.gain.value = options.wet;
@@ -242,7 +222,6 @@ function connectOut(node: AudioNode, options: { wet?: number; output?: AudioNode
   }
 }
 
-// Колокол: неровные обертоны настоящего колокола и долгий хвост
 function bell(freq: number, start: number, volume: number, wet = 0.8) {
   [
     [0.5, 1, 6],
@@ -255,7 +234,6 @@ function bell(freq: number, start: number, volume: number, wet = 0.8) {
   ].forEach(([ratio, level, length]) => tone(freq * ratio, start, length, { volume: volume * level, attack: 0.004, wet }));
 }
 
-// Удар сердца: низкое «тук» и чуть выше «тук» следом
 function heartbeat(start: number, volume = 0.5) {
   [
     [0, 1],
@@ -266,28 +244,22 @@ function heartbeat(start: number, volume = 0.5) {
   });
 }
 
-// ---------- Звуки ----------
-
 let tickBeat = 0;
 
 const SOUNDS: Record<SoundName, () => void> = {
-  // Последние секунды — сердцебиение в тишине
   tick: () => {
     tickBeat += 1;
     heartbeat(0, 0.55 + Math.min(tickBeat, 5) * 0.04);
   },
-  // Мягкий деревянный щипок
   select: () => {
     tone(740, 0, 0.18, { type: "triangle", volume: 0.09, lowpass: 2400, wet: 0.2 });
     noise(0, 0.03, { filter: "bandpass", freq: 2200, q: 3, volume: 0.06 });
   },
-  // Решение принято: два низких тона, как печать на документе
   confirm: () => {
     tone(220, 0, 0.7, { type: "triangle", volume: 0.16, lowpass: 1800, wet: 0.4 });
     tone(330, 0.12, 0.9, { type: "triangle", volume: 0.12, lowpass: 1800, wet: 0.5 });
     noise(0, 0.06, { filter: "lowpass", freq: 900, volume: 0.15 });
   },
-  // Город засыпает: опускающийся хор и ветер, вдалеке тритон колокола
   night: () => {
     [110, 110 * 1.2, 110 * 1.5].forEach((freq, index) =>
       [-9, 9].forEach((detune) =>
@@ -298,44 +270,36 @@ const SOUNDS: Record<SoundName, () => void> = {
     bell(196, 1.4, 0.06, 1);
     bell(196 * Math.SQRT2, 2.3, 0.035, 1);
   },
-  // Утро: колокол на рассвете
   morning: () => {
     bell(262, 0, 0.12);
     bell(392, 0.9, 0.07);
     noise(0, 2.4, { filter: "highpass", freq: 4000, volume: 0.03, attack: 0.8, wet: 0.5 });
   },
-  // Голосование: два деревянных удара молотка в пустом зале
   gavel: () => {
     [0, 0.32].forEach((start, index) => {
       noise(start, 0.16, { filter: "bandpass", freq: 620, q: 2.2, volume: 0.55 - index * 0.1, wet: 0.7 });
       tone(150, start, 0.22, { volume: 0.35 - index * 0.05, slideTo: 85, lowpass: 900, wet: 0.6 });
     });
   },
-  // Убийство: нарастающий шорох, удар, звон и диссонанс, тающий в эхе
   kill: () => {
     noise(0, 0.45, { filter: "bandpass", freq: 300, freqTo: 3200, q: 1.5, volume: 0.22, attack: 0.4, wet: 0.4 });
     tone(70, 0.42, 1.4, { volume: 0.7, slideTo: 28, attack: 0.005, lowpass: 300, wet: 0.5 });
     noise(0.42, 0.5, { filter: "lowpass", freq: 900, freqTo: 70, volume: 0.6, wet: 0.5 });
-    // Скрипичный кластер: малая секунда наверху — от неё мурашки
     [1318, 1397, 1975].forEach((freq, index) =>
       tone(freq, 0.5 + index * 0.05, 3.2, { type: "sawtooth", volume: 0.018, attack: 0.25, vibrato: 7, lowpass: 3500, wet: 1 }),
     );
   },
-  // Доктор спас: тихая челеста
   heal: () => [523, 659, 784, 1046].forEach((freq, index) => tone(freq, index * 0.13, 1.6, { volume: 0.08, wet: 0.9 })),
-  // Щит: стеклянное мерцание вверх
   shield: () => {
     [784, 988, 1175, 1568, 1976, 2349].forEach((freq, index) => tone(freq, index * 0.06, 1.8, { volume: 0.05, vibrato: 3, wet: 1 }));
     noise(0, 1.2, { filter: "highpass", freq: 6000, volume: 0.05, attack: 0.3, wet: 0.8 });
   },
-  // Победа: тёплый аккорд, который разгорается
   win: () => {
     [262, 330, 392, 523].forEach((freq, index) =>
       tone(freq, index * 0.12, 3.2, { type: "triangle", volume: 0.07, attack: 0.4, lowpass: 2500, wet: 0.8 }),
     );
     bell(523, 0.5, 0.05);
   },
-  // Поражение: минорный спуск в гул
   lose: () => {
     [392, 311, 262, 196].forEach((freq, index) => tone(freq, index * 0.3, 1.8, { type: "triangle", volume: 0.07, lowpass: 1600, wet: 0.8 }));
     tone(55, 0.6, 3.5, { volume: 0.2, attack: 0.8, wet: 0.5 });
@@ -347,21 +311,16 @@ export function play(name: SoundName) {
   try {
     SOUNDS[name]();
   } catch {
-    // звук — украшение, игра работает и без него
   }
 }
 
-// Сердцебиение снова начинается тихо в следующей фазе
 export function resetTick() {
   tickBeat = 0;
 }
 
-// ---------- Атмосфера ----------
-
 type AmbienceVoice = { stop: () => void };
 let currentAmbience: { kind: Ambience; voice: AmbienceVoice } | null = null;
 
-// Ночь: низкий гул (две чуть разные частоты «плывут» друг относительно друга), ветер порывами, редкий далёкий колокол
 function startNight(): AmbienceVoice | null {
   const g = getGraph();
   if (!g) return null;
@@ -381,7 +340,6 @@ function startNight(): AmbienceVoice | null {
     return osc;
   });
 
-  // Ветер: шум через полосовой фильтр, частота которого медленно «дышит»
   const length = ctx.sampleRate * 4;
   const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
   const data = buffer.getChannelData(0);
@@ -404,7 +362,6 @@ function startNight(): AmbienceVoice | null {
   wind.start();
   gust.start();
 
-  // Далёкий колокол раз в 18–30 секунд
   let bellTimer: ReturnType<typeof setTimeout>;
   const ringLater = () => {
     bellTimer = setTimeout(() => {
@@ -428,7 +385,6 @@ function startNight(): AmbienceVoice | null {
   };
 }
 
-// День: еле слышный тревожный аккорд с медленным «дыханием»
 function startDay(): AmbienceVoice | null {
   const g = getGraph();
   if (!g) return null;
@@ -476,7 +432,6 @@ function startDay(): AmbienceVoice | null {
   };
 }
 
-// Включить фон нужной фазы (плавная смена) или выключить (null)
 export function setAmbience(kind: Ambience) {
   if (currentAmbience?.kind === kind) return;
   currentAmbience?.voice.stop();
@@ -486,7 +441,6 @@ export function setAmbience(kind: Ambience) {
   if (voice) currentAmbience = { kind, voice };
 }
 
-// Браузер включает звук только после действия человека — «будим» звук на первом касании
 export function unlockSoundOnGesture(onUnlock?: () => void) {
   if (typeof window === "undefined") return () => {};
   const unlock = () => {

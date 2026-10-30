@@ -1,26 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 
 import Avatar from "@/components/pages/widgets/avatar/Avatar";
-import { getUser } from "@/lib/auth";
-import { toPlayerId } from "@/lib/player-id";
-import { statusText, useSocial } from "@/lib/social";
+import { useOnlinePlayers } from "@/utils/home/online-players";
+import { toPlayerId } from "@/utils/player-id";
+import { statusText } from "@/utils/social";
 import "./online-players.scss";
 
-const MAX_SHOWN = 6;
-
 export default function OnlinePlayers() {
-  const social = useSocial();
-  const [isGuest, setIsGuest] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    const user = getUser();
-    setIsGuest(!user || Boolean(user.guest) || !user.id);
-  }, []);
-
-  const online = social.friends.filter((friend) => friend.online);
+  const { isGuest, online, shown, hiddenCount, countText, hasNoFriends, nobodyOnline } = useOnlinePlayers();
 
   return (
     <section className="panel">
@@ -29,7 +18,7 @@ export default function OnlinePlayers() {
         {!isGuest && (
           <span className="online-count">
             <span className={online.length > 0 ? "status-dot" : "status-dot online-dot-off"} />
-            {social.isReady ? `${online.length} из ${social.friends.length}` : "…"}
+            {countText}
           </span>
         )}
       </div>
@@ -40,19 +29,19 @@ export default function OnlinePlayers() {
         </p>
       )}
 
-      {isGuest === false && social.isReady && social.friends.length === 0 && (
+      {hasNoFriends && (
         <p className="online-empty">
           Друзей пока нет. <Link href="/friends" className="online-link">Найти по ID или нику →</Link>
         </p>
       )}
 
-      {isGuest === false && social.isReady && social.friends.length > 0 && online.length === 0 && (
+      {nobodyOnline && (
         <p className="online-empty">Сейчас никого из друзей нет в сети.</p>
       )}
 
       {online.length > 0 && (
         <ul className="online-list">
-          {online.slice(0, MAX_SHOWN).map((friend) => (
+          {shown.map((friend) => (
             <li key={friend.id} className="online-player">
               <Link href={`/player/${toPlayerId(friend.id)}`} className="online-player-link">
                 <Avatar name={friend.username} />
@@ -74,9 +63,9 @@ export default function OnlinePlayers() {
         </ul>
       )}
 
-      {online.length > MAX_SHOWN && (
+      {hiddenCount > 0 && (
         <Link href="/friends" className="online-more">
-          Ещё {online.length - MAX_SHOWN} →
+          Ещё {hiddenCount} →
         </Link>
       )}
     </section>

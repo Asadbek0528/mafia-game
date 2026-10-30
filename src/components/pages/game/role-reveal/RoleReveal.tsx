@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 
-import type { RoleKey } from "@/lib/api";
-import { getRole } from "@/lib/roles";
+import type { RoleKey } from "@/utils/api";
+import { getRole } from "@/utils/roles";
 import "./role-reveal.scss";
 
 type RoleRevealProps = {

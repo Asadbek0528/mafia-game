@@ -1,19 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo } from "react";
 
 import Avatar from "@/components/pages/widgets/avatar/Avatar";
+import { formatTimeOfDay } from "@/utils/format";
+import { chatMessageClassName, useGameChat } from "@/utils/game/game-chat";
+import { CHAT_MAX_LENGTH } from "@/utils/game/game-logic";
+import type { ChatMessage } from "@/utils/game/types";
 
 import "./game-chat.scss";
-
-export type ChatMessage = {
-  id: string;
-  name: string;
-  text: string;
-  time: number;
-  scope: "all" | "mafia" | "dead";
-  lastWord?: boolean;
-};
 
 type GameChatProps = {
   messages: ChatMessage[];
@@ -25,60 +20,13 @@ type GameChatProps = {
   onSend: (text: string) => void;
 };
 
-const MAX_LENGTH = 200;
-
-function formatTime(time: number): string {
-  return new Date(time).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
-}
-
 export default function GameChat({ messages, myName, canWrite, scope, hint, forceOpen = false, onSend }: GameChatProps) {
-  const [text, setText] = useState("");
-  const [isOpen, setIsOpen] = useState(true);
-  const [seenCount, setSeenCount] = useState(0);
-  const listRef = useRef<HTMLUListElement>(null);
-
-  useEffect(() => {
-    if (window.matchMedia("(max-width: 960px)").matches) setIsOpen(false);
-  }, []);
-
-  useEffect(() => {
-    if (forceOpen) setIsOpen(true);
-  }, [forceOpen]);
-
-  // Новое сообщение (своё или чужое) — чат сам прокручивается вниз, к нему
-  const isFirstScroll = useRef(true);
-  useEffect(() => {
-    if (!isOpen) {
-      isFirstScroll.current = true;
-      return;
-    }
-    setSeenCount(messages.length);
-    const list = listRef.current;
-    if (!list) return;
-    const behavior = isFirstScroll.current ? "auto" : "smooth";
-    isFirstScroll.current = false;
-    requestAnimationFrame(() => list.scrollTo({ top: list.scrollHeight, behavior }));
-  }, [messages.length, isOpen]);
-
-  const unread = isOpen ? 0 : Math.max(0, messages.length - seenCount);
-
-  function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    const clean = text.trim().slice(0, MAX_LENGTH);
-    if (!clean || !canWrite) return;
-    onSend(clean);
-    setText("");
-  }
+  const { text, setText, isOpen, toggle, unread, listRef, handleSubmit } = useGameChat({ messageCount: messages.length, canWrite, forceOpen, onSend });
 
   return (
     <section className={isOpen ? "game-chat game-chat-open" : "game-chat"}>
       <h2 className="game-chat-title">
-        <button
-          type="button"
-          className={isOpen ? "game-chat-tab game-chat-tab-open" : "game-chat-tab"}
-          aria-expanded={isOpen}
-          onClick={() => setIsOpen((old) => !old)}
-        >
+        <button type="button" className={isOpen ? "game-chat-tab game-chat-tab-open" : "game-chat-tab"} aria-expanded={isOpen} onClick={toggle}>
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-8l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm4 5.2a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6zm4 0a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6zm4 0a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6z" />
           </svg>
@@ -94,49 +42,46 @@ export default function GameChat({ messages, myName, canWrite, scope, hint, forc
 
       {isOpen && (
         <>
-      <ul ref={listRef} className="game-chat-list">
-        {messages.length === 0 && <li className="game-chat-empty">Сообщений пока нет — начните обсуждение первым.</li>}
-        {messages.map((message) => {
-          let className = "game-chat-message";
-          if (message.name === myName) className += " game-chat-message-mine";
-          if (message.scope !== "all") className += " game-chat-message-private";
-          if (message.lastWord) className += " game-chat-message-last";
+          <ul ref={listRef} className="game-chat-list">
+            {messages.length === 0 && <li className="game-chat-empty">Сообщений пока нет — начните обсуждение первым.</li>}
+            <ChatMessages messages={messages} myName={myName} />
+          </ul>
 
-          return (
-            <li key={message.id} className={className}>
-              <Avatar name={message.name} size={38} />
-              <div className="game-chat-bubble">
-                <p className="game-chat-meta">
-                  <b>{message.name}</b>
-                  {message.scope === "dead" && <i>погибший</i>}
-                  {message.lastWord && <i>последнее слово</i>}
-                  <time>{formatTime(message.time)}</time>
-                </p>
-                <p className="game-chat-text">{message.text}</p>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-
-      <form className="game-chat-form" onSubmit={handleSubmit}>
-        <input
-          className="input game-chat-input"
-          placeholder={canWrite ? "Написать…" : hint}
-          value={text}
-          maxLength={MAX_LENGTH}
-          disabled={!canWrite}
-          onChange={(event) => setText(event.target.value)}
-          enterKeyHint="send"
-        />
-        <button className="btn btn-red game-chat-send" type="submit" disabled={!canWrite || !text.trim()} aria-label="Отправить">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M3 20.5 21 12 3 3.5 3 10l12 2-12 2z" />
-          </svg>
-        </button>
-      </form>
+          <form className="game-chat-form" onSubmit={handleSubmit}>
+            <input
+              className="input game-chat-input"
+              placeholder={canWrite ? "Написать…" : hint}
+              value={text}
+              maxLength={CHAT_MAX_LENGTH}
+              disabled={!canWrite}
+              onChange={(event) => setText(event.target.value)}
+              enterKeyHint="send"
+            />
+            <button className="btn btn-red game-chat-send" type="submit" disabled={!canWrite || !text.trim()} aria-label="Отправить">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M3 20.5 21 12 3 3.5 3 10l12 2-12 2z" />
+              </svg>
+            </button>
+          </form>
         </>
       )}
     </section>
   );
 }
+
+const ChatMessages = memo(function ChatMessages({ messages, myName }: { messages: ChatMessage[]; myName: string }) {
+  return messages.map((message) => (
+    <li key={message.id} className={chatMessageClassName(message, myName)}>
+      <Avatar name={message.name} size={38} />
+      <div className="game-chat-bubble">
+        <p className="game-chat-meta">
+          <b>{message.name}</b>
+          {message.scope === "dead" && <i>погибший</i>}
+          {message.lastWord && <i>последнее слово</i>}
+          <time>{formatTimeOfDay(message.time)}</time>
+        </p>
+        <p className="game-chat-text">{message.text}</p>
+      </div>
+    </li>
+  ));
+});

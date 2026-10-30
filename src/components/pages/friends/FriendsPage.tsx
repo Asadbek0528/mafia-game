@@ -1,35 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
 
 import Avatar from "@/components/pages/widgets/avatar/Avatar";
 import PlayerBackground from "@/components/pages/widgets/player-background/PlayerBackground";
-import { showToast } from "@/components/pages/widgets/toast/Toast";
-import { api, type PublicUser } from "@/lib/api";
-import { useCurrentUser } from "@/lib/auth";
-import { formatPlayerId, fromPlayerId, toPlayerId } from "@/lib/player-id";
-import { copyText } from "@/lib/share";
-import { useShop } from "@/lib/shop";
-import { type FriendInfo, type FriendRequest, statusText, useSocial } from "@/lib/social";
+import type { PublicUser } from "@/utils/api";
+import { copyMyId, SUGGESTED_COUNT, useFriendsList, useFriendsPage, usePlayerAction, useSearchPlayers } from "@/utils/friends-page";
+import { formatPlayerId, toPlayerId } from "@/utils/player-id";
+import { useShop } from "@/utils/shop";
+import { type FriendRequest, statusText, useSocial } from "@/utils/social";
 import "./friends-page.scss";
 
-type Tab = "friends" | "requests" | "search";
-
 export default function FriendsPage() {
-  const router = useRouter();
-  const { user, isLoaded } = useCurrentUser();
-  const social = useSocial();
-  const [tab, setTab] = useState<Tab>("friends");
-
-  useEffect(() => {
-    if (isLoaded && !user) router.replace("/register");
-  }, [isLoaded, user, router]);
+  const { user, tab, setTab, findFriends, isReady, total, online, requests } = useFriendsPage();
 
   if (!user) return null;
 
-  // Гостю не перекидываем молча на профиль, а объясняем, зачем нужен аккаунт
   if (user.guest) {
     return (
       <main className="friends-page">
@@ -49,18 +35,15 @@ export default function FriendsPage() {
     );
   }
 
-  const online = social.friends.filter((friend) => friend.online).length;
-  const requests = social.incoming.length;
-
   return (
     <main className="friends-page">
       <header className="friends-page-top">
         <div>
           <h1 className="friends-page-title">Друзья</h1>
           <p className="friends-page-summary">
-            {social.isReady ? (
+            {isReady ? (
               <>
-                <b>{social.friends.length}</b> в списке · <span className="friends-page-online">{online} в сети</span>
+                <b>{total}</b> в списке · <span className="friends-page-online">{online} в сети</span>
               </>
             ) : (
               "Подключаемся…"
@@ -82,27 +65,21 @@ export default function FriendsPage() {
         </TabButton>
       </div>
 
-      {tab === "friends" && <FriendsList onFind={() => setTab("search")} />}
-      {tab === "requests" && <Requests onFind={() => setTab("search")} />}
+      {tab === "friends" && <FriendsList onFind={findFriends} />}
+      {tab === "requests" && <Requests onFind={findFriends} />}
       {tab === "search" && <SearchPlayers myId={user.id ?? null} />}
     </main>
   );
 }
 
 function MyId({ id }: { id: number }) {
-  const playerId = toPlayerId(id);
   const myBackground = useShop().state.equipped;
 
-  async function copy() {
-    if (await copyText(playerId)) showToast(`ID ${playerId} скопирован — отправьте его другу.`, "success");
-    else showToast(`Ваш ID: ${playerId}`);
-  }
-
   return (
-    <button type="button" className="friends-page-myid" onClick={copy} title="Скопировать ваш ID">
+    <button type="button" className="friends-page-myid" onClick={() => copyMyId(id)} title="Скопировать ваш ID">
       <PlayerBackground id={myBackground} />
       <span>Ваш ID</span>
-      <b>{formatPlayerId(playerId)}</b>
+      <b>{formatPlayerId(toPlayerId(id))}</b>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
         <rect x="9" y="9" width="11" height="11" rx="2" />
         <path d="M5 15V5a1 1 0 0 1 1-1h9" />
@@ -137,10 +114,9 @@ function EmptyState({ title, text, action }: { title: string; text: string; acti
 }
 
 function FriendsList({ onFind }: { onFind: () => void }) {
-  const social = useSocial();
-  const router = useRouter();
+  const { friends, removeFriend, goToRoom } = useFriendsList();
 
-  if (social.friends.length === 0) {
+  if (friends.length === 0) {
     return (
       <EmptyState
         title="Пока никого"
@@ -154,15 +130,9 @@ function FriendsList({ onFind }: { onFind: () => void }) {
     );
   }
 
-  function removeFriend(friend: FriendInfo) {
-    if (!window.confirm(`Удалить ${friend.username} из друзей?`)) return;
-    social.remove(friend.id);
-    showToast(`${friend.username} удалён из друзей.`);
-  }
-
   return (
     <ul className="friends-page-list">
-      {social.friends.map((friend) => (
+      {friends.map((friend) => (
         <li key={friend.id} className="friends-page-card">
           <span className="friends-page-avatar">
             <Avatar name={friend.username} image={friend.profileImage} size={48} />
@@ -174,7 +144,7 @@ function FriendsList({ onFind }: { onFind: () => void }) {
           </Link>
           <div className="friends-page-actions">
             {friend.status === "room" && friend.roomId && (
-              <button type="button" className="btn btn-red btn-small" onClick={() => router.push(`/room/${friend.roomId}`)}>
+              <button type="button" className="btn btn-red btn-small" onClick={() => goToRoom(friend.roomId!)}>
                 В комнату
               </button>
             )}
@@ -261,26 +231,26 @@ function Requests({ onFind }: { onFind: () => void }) {
 }
 
 function PlayerAction({ player, myId }: { player: PublicUser; myId: number | null }) {
-  const social = useSocial();
+  const { relation, isReady, accept, cancel, send } = usePlayerAction(player, myId);
 
-  if (player.id === myId) return <span className="friends-page-pending">Это вы</span>;
-  if (social.friends.some((friend) => friend.id === player.id)) return <span className="friends-page-done">В друзьях ✓</span>;
-  if (social.incoming.some((item) => item.id === player.id)) {
+  if (relation === "me") return <span className="friends-page-pending">Это вы</span>;
+  if (relation === "friend") return <span className="friends-page-done">В друзьях ✓</span>;
+  if (relation === "incoming") {
     return (
-      <button type="button" className="btn btn-red btn-small" onClick={() => social.accept(player.id)}>
+      <button type="button" className="btn btn-red btn-small" onClick={accept}>
         Принять заявку
       </button>
     );
   }
-  if (social.outgoing.some((item) => item.id === player.id)) {
+  if (relation === "outgoing") {
     return (
-      <button type="button" className="btn btn-dark btn-small" onClick={() => social.cancel(player.id)}>
+      <button type="button" className="btn btn-dark btn-small" onClick={cancel}>
         Заявка отправлена ✓
       </button>
     );
   }
   return (
-    <button type="button" className="btn btn-red btn-small" disabled={!social.isReady} onClick={() => social.sendRequest(player.id, player.username)}>
+    <button type="button" className="btn btn-red btn-small" disabled={!isReady} onClick={send}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
         <path d="M12 5v14M5 12h14" />
       </svg>
@@ -289,63 +259,8 @@ function PlayerAction({ player, myId }: { player: PublicUser; myId: number | nul
   );
 }
 
-const SHUFFLE_MS = 1200;
-const SUGGESTED_COUNT = 10;
-
 function SearchPlayers({ myId }: { myId: number | null }) {
-  const social = useSocial();
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<PublicUser[] | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
-  const [suggested, setSuggested] = useState<PublicUser[] | null>(null);
-  const [isShuffling, setIsShuffling] = useState(false);
-
-  const friendIds = social.friends.map((friend) => friend.id).join(",");
-  // minMs — сколько минимум показывать загрузку: по «Другие» список приходит мгновенно,
-  // и без паузы не видно, что он вообще обновился
-  const loadSuggested = useCallback(async (minMs = 0) => {
-    setIsShuffling(true);
-    const pause = new Promise((resolve) => setTimeout(resolve, minMs));
-    try {
-      const exclude = friendIds ? friendIds.split(",").map(Number) : [];
-      if (myId) exclude.push(myId);
-      const players = await api.getSuggestedPlayers(exclude, SUGGESTED_COUNT);
-      await pause;
-      setSuggested(players);
-    } catch {
-      await pause;
-      setSuggested([]);
-    } finally {
-      setIsShuffling(false);
-    }
-    // friendIds нарочно не в зависимостях: после добавления друга список не должен перемешиваться
-  }, [myId]);
-
-  useEffect(() => {
-    loadSuggested();
-  }, [loadSuggested]);
-
-  async function handleSearch(event: React.FormEvent) {
-    event.preventDefault();
-    const text = query.trim();
-    if (!text) return;
-
-    setIsSearching(true);
-    try {
-      const digits = text.replace(/\s/g, "");
-      if (/^\d{7,8}$/.test(digits)) {
-        const userId = fromPlayerId(digits);
-        const player = userId ? await api.getPublicUser(userId).catch(() => null) : null;
-        setResults(player ? [player] : []);
-      } else {
-        setResults(await api.searchUsers(text));
-      }
-    } catch (error) {
-      showToast((error as Error).message, "error");
-    } finally {
-      setIsSearching(false);
-    }
-  }
+  const { query, results, isSearching, suggested, isShuffling, handleSearch, handleQueryChange, shuffle } = useSearchPlayers(myId);
 
   return (
     <div className="friends-page-search">
@@ -362,10 +277,7 @@ function SearchPlayers({ myId }: { myId: number | null }) {
               value={query}
               inputMode="search"
               aria-label="ID или ник игрока"
-              onChange={(event) => {
-                setQuery(event.target.value);
-                if (!event.target.value.trim()) setResults(null);
-              }}
+              onChange={handleQueryChange}
             />
           </span>
           <button type="submit" className="btn btn-red" disabled={isSearching || !query.trim()}>
@@ -389,7 +301,7 @@ function SearchPlayers({ myId }: { myId: number | null }) {
       <section className="panel">
         <div className="panel-top">
           <h2 className="panel-title">Игроки</h2>
-          <button type="button" className="btn btn-dark btn-small" onClick={() => loadSuggested(SHUFFLE_MS)} disabled={isShuffling} aria-label="Показать других игроков">
+          <button type="button" className="btn btn-dark btn-small" onClick={shuffle} disabled={isShuffling} aria-label="Показать других игроков">
             <svg className={isShuffling ? "friends-page-spin" : undefined} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" />
             </svg>

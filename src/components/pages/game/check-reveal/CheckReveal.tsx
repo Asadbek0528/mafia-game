@@ -1,21 +1,15 @@
 "use client";
 
 import Avatar from "@/components/pages/widgets/avatar/Avatar";
+import type { CheckRevealInfo } from "@/utils/game/types";
 
 import "./check-reveal.scss";
-
-export type CheckRevealInfo = {
-  key: string;
-  name: string;
-  isMafia: boolean;
-};
 
 type CheckRevealProps = {
   info: CheckRevealInfo | null;
   onClose: () => void;
 };
 
-// Результат проверки комиссара. Не исчезает сам и не перекрывается сменой фазы — только кнопкой.
 export default function CheckReveal({ info, onClose }: CheckRevealProps) {
   if (!info) return null;
 

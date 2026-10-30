@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
-import { showToast } from "@/components/pages/widgets/toast/Toast";
+import { showToast } from "@/utils/toast";
 
 import { api as backendApi, ApiError, type PublicUser, SESSION_EXPIRED_EVENT, type User } from "./api";
 import { getUser, logout, rememberPageAfterLogin } from "./auth";
@@ -164,7 +164,6 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     try {
       setList(await backendApi.getFriends());
     } catch {
-      // оставляем старый список, попробуем в следующий раз
     } finally {
       setIsListLoaded(true);
     }
@@ -293,7 +292,6 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     setNotices((old) => old.filter((item) => item.key !== key));
   }, []);
 
-  // Добавляет друга на backend. Если backend уже считает его другом (дружба взаимная) — это тоже успех.
   const saveFriend = useCallback(
     async (id: number): Promise<boolean> => {
       if (listRef.current.some((friend) => friend.id === id)) return true;

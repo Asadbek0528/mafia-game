@@ -1,32 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
-import { play, useSoundSettings } from "@/lib/sound";
+import { play, useSoundSettings } from "@/utils/sound";
+import { useDropdown } from "@/utils/use-dropdown";
 
 import "./sound-control.scss";
 
-// Кнопка-динамик в шапке игры: по нажатию — панель громкости
 export default function SoundControl() {
   const [settings, setSettings] = useSoundSettings();
-  const [isOpen, setIsOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const onClick = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setIsOpen(false);
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsOpen(false);
-    };
-    document.addEventListener("click", onClick);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("click", onClick);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [isOpen]);
+  const { isOpen, rootRef, toggle } = useDropdown();
 
   const isSilent = !settings.on || settings.volume === 0;
   const volumePercent = Math.round(settings.volume * 100);
@@ -40,7 +21,7 @@ export default function SoundControl() {
         aria-label="Звук"
         aria-expanded={isOpen}
         title="Звук"
-        onClick={() => setIsOpen((old) => !old)}
+        onClick={toggle}
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" />

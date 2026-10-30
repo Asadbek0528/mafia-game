@@ -1,11 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-
-import { showToast } from "@/components/pages/widgets/toast/Toast";
-import { api, ApiError } from "@/lib/api";
-import { countRoles, MAX_PLAYERS, MIN_PLAYERS } from "@/lib/roles";
+import { AGE_OPTIONS, DEFAULT_ROOM_NAME, rolesPreview, useCreateRoom } from "@/utils/home/create-room";
+import { MAX_PLAYERS, MIN_PLAYERS } from "@/utils/roles";
 import "./create-room-modal.scss";
 
 type CreateRoomModalProps = {
@@ -13,71 +9,18 @@ type CreateRoomModalProps = {
   onClose: () => void;
 };
 
-const DEFAULT_NAME = "Моя комната";
-
-const AGE_OPTIONS = [
-  { value: 0, label: "Для всех" },
-  { value: 12, label: "12+" },
-  { value: 16, label: "16+" },
-  { value: 18, label: "18+" },
-];
-
 export default function CreateRoomModal({
   isOpen,
   onClose,
 }: CreateRoomModalProps) {
-  const router = useRouter();
-  const dialogRef = useRef<HTMLDialogElement>(null);
-
-  const [name, setName] = useState("");
-  const [maxPlayers, setMaxPlayers] = useState(10);
-  const [age, setAge] = useState(16);
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-
-    if (isOpen && !dialog.open) dialog.showModal();
-    if (!isOpen && dialog.open) dialog.close();
-  }, [isOpen]);
-
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    const roomName = name.trim() || DEFAULT_NAME;
-
-    setIsLoading(true);
-    try {
-      const room = await api.createRoom(roomName, maxPlayers, age);
-      router.push(`/room/${room.id}`);
-    } catch (error) {
-      const status = error instanceof ApiError ? error.status : 0;
-
-      if (status === 0 || status >= 500) {
-        const demoId = String(Math.floor(10000 + Math.random() * 89999));
-        sessionStorage.setItem(
-          `demo_room_${demoId}`,
-          JSON.stringify({ name: roomName, maxPlayers }),
-        );
-        showToast("Сервер сейчас недоступен — пока можно сыграть тренировочную партию с ботами.");
-        router.push(`/room/${demoId}`);
-      } else {
-        showToast((error as Error).message, "error");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }
+  const { dialogRef, name, setName, maxPlayers, setMaxPlayers, age, setAge, isLoading, handleSubmit, rangeStyle, handleBackdrop } = useCreateRoom(isOpen, onClose);
 
   return (
     <dialog
       ref={dialogRef}
       className="create-room"
       onClose={onClose}
-      // Клик по затемнённому фону вокруг окна закрывает его
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+      onMouseDown={handleBackdrop}
       aria-labelledby="create-room-title"
     >
       <form className="create-room-form" onSubmit={handleSubmit}>
@@ -90,7 +33,7 @@ export default function CreateRoomModal({
           <input
             className="input"
             maxLength={30}
-            placeholder={DEFAULT_NAME}
+            placeholder={DEFAULT_ROOM_NAME}
             value={name}
             onChange={(event) => setName(event.target.value)}
           />
@@ -106,7 +49,7 @@ export default function CreateRoomModal({
             min={MIN_PLAYERS}
             max={MAX_PLAYERS}
             value={maxPlayers}
-            style={{ "--fill": `${((maxPlayers - MIN_PLAYERS) / (MAX_PLAYERS - MIN_PLAYERS)) * 100}%` } as React.CSSProperties}
+            style={rangeStyle}
             onChange={(event) => setMaxPlayers(Number(event.target.value))}
           />
           <span className="create-room-range-limits" aria-hidden="true">
@@ -151,23 +94,13 @@ export default function CreateRoomModal({
   );
 }
 
-// Сразу видно, какие роли получатся при таком числе игроков
 function RolesPreview({ players }: { players: number }) {
-  const roles = countRoles(players);
-  const civilians = players - roles.mafia - roles.doctor - roles.commissar;
-  const items = [
-    { label: "Мафия", count: roles.mafia, tone: "mafia" },
-    { label: "Доктор", count: roles.doctor, tone: "town" },
-    { label: "Комиссар", count: roles.commissar, tone: "town" },
-    { label: "Жители", count: civilians, tone: "town" },
-  ].filter((item) => item.count > 0);
-
   return (
     <div className="create-room-roles-box">
       <p className="create-room-roles-label">Роли по умолчанию — в комнате их можно поменять</p>
       <ul className="create-room-roles" aria-label="Роли по умолчанию">
-        {items.map((item) => (
-          <li key={item.label} className={item.tone === "mafia" ? "create-room-role create-room-role-mafia" : "create-room-role"}>
+        {rolesPreview(players).map((item) => (
+          <li key={item.label} className={item.className}>
             <b>{item.count}</b> {item.label}
           </li>
         ))}

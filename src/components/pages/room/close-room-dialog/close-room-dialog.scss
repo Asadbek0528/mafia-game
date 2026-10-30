@@ -35,7 +35,6 @@
   text-align: center;
 }
 
-// Кольцо обратного отсчёта: плавно убывает, в центре — секунды
 .close-room-countdown {
   position: relative;
   display: grid;
@@ -89,7 +88,6 @@
   }
 }
 
-// Последние секунды: кольцо и цифры пульсируют
 .close-room-countdown-hurry {
   animation: close-room-pulse 1s ease-in-out infinite;
 
@@ -152,8 +150,6 @@
   width: 17px;
   height: 17px;
 }
-
-// Адаптив
 
 @media (max-width: 400px) {
   .close-room-buttons {

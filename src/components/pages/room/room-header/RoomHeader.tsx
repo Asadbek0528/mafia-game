@@ -1,8 +1,7 @@
 import Image from "next/image";
 
-import { showToast } from "@/components/pages/widgets/toast/Toast";
-import type { RoomFull } from "@/lib/api";
-import { copyText } from "@/lib/share";
+import type { RoomFull } from "@/utils/api";
+import { copyRoomCode } from "@/utils/room/room-header";
 import "./room-header.scss";
 
 type RoomHeaderProps = {
@@ -11,11 +10,6 @@ type RoomHeaderProps = {
 };
 
 export default function RoomHeader({ room, onLeave }: RoomHeaderProps) {
-  async function copyCode() {
-    if (await copyText(room.id)) showToast("Код комнаты скопирован.", "success");
-    else showToast(`Код комнаты: ${room.id}`);
-  }
-
   return (
     <header className="room-header">
       <span className="room-header-art" aria-hidden="true" />
@@ -42,7 +36,7 @@ export default function RoomHeader({ room, onLeave }: RoomHeaderProps) {
         {room.players.length}/{room.max_players}
       </p>
 
-      <button className="btn btn-dark btn-small room-header-copy" onClick={copyCode}>
+      <button className="btn btn-dark btn-small room-header-copy" onClick={() => copyRoomCode(room.id)}>
         Копировать код
       </button>
     </header>
